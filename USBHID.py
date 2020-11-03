@@ -12,7 +12,7 @@ class USBHID:
     def __init__(self, device):
         self._device = device
         self._is_listening = False
-        self._listeners = set()
+        self._listener = None
         self._running = False
         self._packets = {}
         self._write_queue = Queue()
@@ -32,13 +32,13 @@ class USBHID:
     def add_transaction_to_queue(self, transaction: CTAPHIDTransaction):
         self._write_queue.put(transaction)
 
-    def add_listener(self, listener):
+    def set_listener(self, listener):
         logging.debug("listener added %s", listener)
-        self._listeners.add(listener)
+        self._listener = listener
     
     def remove_listener(self, listener):
         logging.debug("listener removed %s", listener)
-        self._listeners.remove(listener)
+        self._listener = None
 
     def shutdown(self):
         self._running = False
@@ -57,8 +57,8 @@ class USBHID:
                 #self._device.write(packet.get_bytes())
                 logging.debug("Finished writing")
                 #self._device.flush()
-            for listener in self._listeners: 
-                listener.response_sent(transaction)
+            self._listener.response_sent(transaction)
+            
 
     def _listen(self):
         while self._running:
@@ -66,8 +66,7 @@ class USBHID:
                 hid_packet = HIDPacket.from_bytes(os.read(self._device,64))
                 #hid_packet = HIDPacket.from_bytes(self._device.read(64))
                 logging.debug("Received data %s", hid_packet)
-                for listener in self._listeners: 
-                    listener.received_packet(hid_packet)
+                self._listener.received_packet(hid_packet)
             except Exception as e:
                 print("Exception reading from device")
                 traceback.print_exc()

@@ -141,7 +141,7 @@ class CTAPHIDErrorResponse(CTAPHIDCMD):
 
     def __init__(self,CID,error_code:CTAPHIDConstants.CTAPHID_ERROR):     
         logging.debug("Create initial Error response")
-        super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_ERROR,1,error_code)
+        super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_ERROR,1,error_code.value)
 
 
 """

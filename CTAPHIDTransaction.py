@@ -13,7 +13,7 @@ class TRANSACTION_STATE(Enum):
     REQUEST_RECV = 1
     RESPONSE_SET = 2
     CANCEL = 8
-    ERROR = 8
+    ERROR = 9
 
 class CTAPHIDTransaction:
     def __init__(self, channel_id:bytes):
@@ -21,9 +21,15 @@ class CTAPHIDTransaction:
         self.response = None
         self.state = TRANSACTION_STATE.EMPTY        
         self.channel_id = channel_id
-            
+         
     def get_channel_id(self):
         return self.channel_id
+
+    def get_CID(self):
+        return self.channel_id
+    def is_error_transaction(self):
+        return (self.state == TRANSACTION_STATE.ERROR)
+        
 
     def set_request(self, request: CTAPHIDCMD):
         if not self.verify_state(TRANSACTION_STATE.REQUEST_RECV):
@@ -55,6 +61,7 @@ class CTAPHIDTransaction:
         self.reset()
         self.state = TRANSACTION_STATE.ERROR
         self.response = response
+
 
     def verify_state(self, target_state: TRANSACTION_STATE):
         """Verifies the state machine of the CTAP HID Transaction.

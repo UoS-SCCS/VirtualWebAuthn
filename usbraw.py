@@ -19,7 +19,7 @@ usbdevice = os.open("/dev/hidg0", os.O_RDWR)
 usbhid = USBHID(usbdevice)
 ctaphid = CTAPHID(usbhid)
 #ctap2 = CTAP2Listener()
-usbhid.add_listener(ctaphid)
+usbhid.set_listener(ctaphid)
 usbhid.start()
 
 #broadcast_id = bytes([255,255,255,255])
