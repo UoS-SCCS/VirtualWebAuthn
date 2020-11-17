@@ -18,14 +18,27 @@ from CTAPHIDMsg import CTAPHIDPingResponse
 from CTAPHIDMsg import CTAPHIDCancelRequest
 from CTAPHIDMsg import CTAPHIDCancelResponse
 from CTAPHIDMsg import CTAPHIDErrorResponse
-
+from CTAPHIDMsg import CTAPHIDKeepAliveResponse
+from DICEAuthenticator import DICEAuthenticator
+from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from abc import ABC, abstractmethod
+
+
+
+
 class CTAPHID(USBHIDListener):
     _BROADCAST_ID = b'\xff\xff\xff\xff'
     def __init__(self, usbhid):
         self._usbhid = usbhid
         self._channels = {}
         self._transaction = None
+        self._authenticator:DICEAuthenticator = None
+        self._keepAlive = CTAPHIDKeepAlive(self)
+
+    def set_authenticator(self, authenticator:DICEAuthenticator):
+        self._authenticator=authenticator
+        print("Set Authenticator")
+        print(self._authenticator)
 
     def channel_exists(self, channel_id):
         return channel_id in self._channels
@@ -37,25 +50,44 @@ class CTAPHID(USBHIDListener):
         #return self._channels.get(channel_id)
 
     def received_packet(self, packet: HIDPacket):
-        #TODO add listener code
+        logging.debug("Received Packet")
         if packet.CMDTYPE == CTAPHIDConstants.CMD_TYPE.INITIALIZATION:
+            
+            
+            logging.debug("Packet is Initialization")
             ctap_msg = CTAPHIDCMD.create_message(packet)
+            self._keepAlive.set_CID(ctap_msg.get_CID())
+            logging.debug("Packet is size: %s", ctap_msg.get_length())
             if not self._transaction == None and not ctap_msg.get_CID() == self._transaction.get_channel_id():
                 self.send_error_response(CTAPHIDErrorResponse(ctap_msg.get_CID(),CTAPHIDConstants.CTAPHID_ERROR.ERR_CHANNEL_BUSY))
             else:
+                logging.debug("Created transaction")
                 self._transaction = CTAPHIDTransaction(ctap_msg.get_CID())
-                if ctap_msg.is_complete() and ctap_msg.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_INIT:
-                    self.process_init_request(ctap_msg)
-                elif ctap_msg.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_MSG:
-                    self.process_msg_request(ctap_msg)
-                elif ctap_msg.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR:
-                    self.process_cbor_request(ctap_msg)
-                elif ctap_msg.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_PING:
-                    self.process_ping_request(ctap_msg)
-                elif ctap_msg.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL:
-                    self.process_cancel_request(ctap_msg)
+                self._transaction.set_request(ctap_msg)
+        elif packet.CMDTYPE == CTAPHIDConstants.CMD_TYPE.CONTINUATION:
+            logging.debug("Received Continuation Packet: %s", packet.get_sequence())
+            self._transaction.request.append_continuation_packet(packet)
+        logging.debug("Is message complete: %s", self._transaction.request.is_complete())
+        logging.debug("Message remaining bytes: %s", self._transaction.request.remaining_bytes)
+        #If we have finished receiving packets, process the request
+        if self._transaction.request.is_complete(): 
+            if self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_INIT:
+                self.process_init_request(self._transaction.request)
+            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_MSG:
+                self.process_msg_request(self._transaction.request)
+            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR:
+                self.process_cbor_request(self._transaction.request)
+            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_PING:
+                self.process_ping_request(self._transaction.request)
+            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL:
+                self.process_cancel_request(self._transaction.request)
 
     def send_error_response(self, msg_response: CTAPHIDErrorResponse):
+        temp_transaction = CTAPHIDTransaction(msg_response.get_CID())
+        temp_transaction.error(msg_response)
+        self.send_response(temp_transaction) 
+    
+    def send_keep_alive_response(self, msg_response: CTAPHIDKeepAliveResponse):
         temp_transaction = CTAPHIDTransaction(msg_response.get_CID())
         temp_transaction.error(msg_response)
         self.send_response(temp_transaction) 
@@ -76,7 +108,7 @@ class CTAPHID(USBHIDListener):
             pass
         else:
             transaction  = self.get_channel(msg_request.get_CID())
-            transaction.set_request(msg_request)
+            #transaction.set_request(msg_request)
             if msg_request.is_complete():
                 response = CTAPHIDPingResponse(self._transaction.get_CID(),transaction.request.get_payload())
                 transaction.set_response(response)
@@ -87,8 +119,18 @@ class CTAPHID(USBHIDListener):
             #send error
             pass
         else:
+            
             transaction  = self.get_channel(msg_request.get_CID())
-            transaction.set_request(msg_request)
+            #transaction.set_request(msg_request)
+            if not self._authenticator is None:
+                #TODO add try catch to return error status code
+                resp = self._authenticator.process_cbor(msg_request.get_payload(), self._keepAlive)
+                print(resp)
+                transaction.set_response(CTAPHIDCBORResponse(self._transaction.get_CID(),CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_OK,resp))
+                self.send_response(transaction)
+                
+            
+
     
     def process_msg_request(self, msg_request: CTAPHIDMsgRequest):
         if self.channel_exists(msg_request.get_CID()) == False:
@@ -96,14 +138,15 @@ class CTAPHID(USBHIDListener):
             pass
         else:
             transaction  = self.get_channel(msg_request.get_CID())
-            transaction.set_request(msg_request)
+            logging.debug("Received CTAPHID MSG: %s", transaction)
+            #transaction.set_request(msg_request)
             
 
     def process_init_request(self, init_request: CTAPHIDInitRequest):
         
         if init_request.get_CID() == self._BROADCAST_ID:
             channel_id = self.create_channel_id()
-            self._transaction.set_request(init_request)
+            #self._transaction.set_request(init_request)
             response = CTAPHIDInitResponse()
             response.set_nonce(init_request.get_payload())
             response.set_channel_id(channel_id)

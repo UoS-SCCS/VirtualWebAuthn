@@ -2,6 +2,10 @@ from HIDPacket import HIDPacket
 from USBHID import USBHID
 from USBHID import USBHIDListener
 from CTAPHID import CTAPHID
+from JSONAuthenticatorStorage import JSONAuthenticatorStorage
+from MyAuthenticator import MyAuthenticator
+from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
+from ES256CryptoProvider import ES256CryptoProvider
 import sys
 import logging
 import os
@@ -15,9 +19,18 @@ class CTAP2Listener(USBHIDListener):
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 #usbdevice = open("/dev/hidg0","rb+") 
-usbdevice = os.open("/dev/hidg0", os.O_RDWR)
+usbdevice = os.open("/dev/dicekey", os.O_RDWR)
 usbhid = USBHID(usbdevice)
+
 ctaphid = CTAPHID(usbhid)
+authenticator_storage = JSONAuthenticatorStorage("my_authenticator.json")
+AuthenticatorCryptoProvider.add_provider(ES256CryptoProvider())
+providers = []
+providers.append(ES256CryptoProvider().get_alg())
+if not authenticator_storage.is_initialised():
+    authenticator_storage.init_new()
+authenticator = MyAuthenticator(authenticator_storage,providers)
+ctaphid.set_authenticator(authenticator)
 #ctap2 = CTAP2Listener()
 usbhid.set_listener(ctaphid)
 usbhid.start()

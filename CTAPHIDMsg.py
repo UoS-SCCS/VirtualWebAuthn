@@ -1,5 +1,5 @@
 from HIDPacket import HIDInitializationPacket
-
+from HIDPacket import HIDContinuationPacket
 
 from HIDPacket import HIDPacket
 
@@ -40,8 +40,21 @@ class CTAPHIDCMD(ABC):
 
     def get_HID_packets(self):
         if self._BCNT>CTAPHIDConstants.MAX_PAYLOAD:
-            #sequence
-            pass
+            packets = []
+            print("Full:%s",self._payload)
+            packet = HIDInitializationPacket(self._CID,self._CMD,self._BCNT,self._payload[:CTAPHIDConstants.MAX_PAYLOAD])
+            print("Init:%s",self._payload[:CTAPHIDConstants.MAX_PAYLOAD])
+            
+            packets.append(packet)
+            payload_index = CTAPHIDConstants.MAX_PAYLOAD
+            for seq in range(128):
+                end = min(self._BCNT-payload_index,CTAPHIDConstants.MAX_CONTINUATION_PAYLOAD)
+                packets.append(HIDContinuationPacket(self._CID,seq,self._payload[payload_index:payload_index+end]))
+                print("CONT:%s", self._payload[payload_index:payload_index+end])
+                payload_index = payload_index+end
+                if payload_index == self._BCNT:
+                    break 
+            return packets
         else:
             packet = HIDInitializationPacket(self._CID,self._CMD,self._BCNT,self._payload)
             return [packet]
@@ -52,11 +65,11 @@ class CTAPHIDCMD(ABC):
     def append_continuation_packet(self,packet:HIDPacket):
         if packet.CMDTYPE != CTAPHIDConstants.CMD_TYPE.CONTINUATION:
             raise Exception("Cannot append a non-continuation packet to a message")
-        if self.remaining_bytes > CTAPHIDConstants.MAX_PAYLOAD:
-            self._payload += packet.data
-            self.remaining_bytes = self.remaining_bytes - CTAPHIDConstants.MAX_PAYLOAD
+        if self.remaining_bytes > CTAPHIDConstants.MAX_CONTINUATION_PAYLOAD:
+            self._payload += packet.get_payload()
+            self.remaining_bytes = self.remaining_bytes - CTAPHIDConstants.MAX_CONTINUATION_PAYLOAD
         else:
-            self._payload += packet.data[:self.remaining_bytes]
+            self._payload += packet.get_payload()[:self.remaining_bytes]
             self.remaining_bytes = 0 
     
     @staticmethod
@@ -133,6 +146,22 @@ class CTAPHIDCancelResponse(CTAPHIDCMD):
 
 """
 Response at success
+CMD 	CTAPHID_KEEPALIVE
+BCNT 	1
+DATA 	Status code
+
+The following status codes are defined
+STATUS_PROCESSING 	1 	The authenticator is still processing the current request.
+STATUS_UPNEEDED 	2 	The authenticator is waiting for user presence. 
+"""
+class CTAPHIDKeepAliveResponse(CTAPHIDCMD):
+
+    def __init__(self,CID,status_code:CTAPHIDConstants.CTAPHID_KEEPALIVE_STATUS):     
+        logging.debug("Create Keep-alive response")
+        super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_KEEPALIVE,1,status_code.value)
+
+"""
+Response at success
 CMD 	CTAPHID_ERROR
 BCNT 	1
 DATA 	Error code 
@@ -197,9 +226,9 @@ DATA + 1 	n bytes of CBOR encoded data
 """
 class CTAPHIDCBORResponse(CTAPHIDCMD):
 
-    def __init__(self,CID, CTAP_Status,payload_data:bytes):     
+    def __init__(self,CID, CTAP_Status:CTAPHIDConstants.CTAP_STATUS_CODE,payload_data:bytes):     
         payload = bytearray(len(payload_data)+1)
-        payload[0] = CTAP_Status
+        payload[0] = CTAP_Status.value[0]
         payload[1:]=payload_data
         logging.debug("Create initial CBOR response %s",payload)
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR,len(payload),payload)

@@ -33,6 +33,7 @@ class CTAPHIDTransaction:
 
     def set_request(self, request: CTAPHIDCMD):
         if not self.verify_state(TRANSACTION_STATE.REQUEST_RECV):
+            print("State:%s",self.state)
             raise TransactionStateException("Invalid state, cannot set request")
         if request.get_CID() != CTAPHIDConstants.BROADCAST_ID and request.get_CID() != self.channel_id:
             raise TransactionChannelIDException("Invalid channel ID for transaction")

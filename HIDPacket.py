@@ -10,6 +10,10 @@ class HIDPacket:
     def get_bytes(self):
         return self._data
 
+    @abstractmethod
+    def get_payload(self)->bytes:
+        pass
+
     @classmethod
     def from_bytes(cls, packet:bytes):
         if (packet[4] & (1 << 7)):
@@ -55,7 +59,7 @@ class HIDInitializationPacket(HIDPacket):
     def get_length(self):
         return self._length
     
-    def get_payload(self):
+    def get_payload(self)->bytes:
         return self._payload
 
     def get_CID(self):
@@ -85,16 +89,20 @@ class HIDContinuationPacket(HIDPacket):
     
     CMDTYPE = CTAPHIDConstants.CMD_TYPE.CONTINUATION
     
-    def __init__(self, CID:bytes, seq, data):
+    def __init__(self, CID:bytes, seq, payload:bytes):
         self._CID=CID
         self._seq=seq
-        self._data=data
+        self._payload=payload
         packet = bytearray(64)
         packet[0:4] = self._CID
         packet[4] = self._seq & ~(1 << 7)
-        packet[5:] = self._data
+        packet[5:] = self._payload
         super().__init__(packet)
 
+    def get_payload(self)->bytes:
+        return self._payload
+    def get_sequence(self):
+        return self._seq
     @classmethod
     def from_bytes(cls, packet:bytes):
         channel_id = packet[:4]
