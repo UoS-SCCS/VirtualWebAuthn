@@ -4,11 +4,11 @@ KERNEL_VERSION := $(shell uname -r | grep -o "^[^-]*")
 KERNEL_MAJOR := $(shell uname -r | cut -d. -f1)
 KERNEL_MINOR := $(shell uname -r | cut -d. -f2)
 
-MANUFACTURER = "Solo"
-SERIAL = "1234567890"
-IDVENDOR = "0x0483"
-IDPRODUCT = "0xa2ca"
-PRODUCT = "Solo Software Authenticator"
+MANUFACTURER = "DICEProject"
+SERIAL = "6548556985"
+IDVENDOR = "0x16c0"
+IDPRODUCT = "0x05df"
+PRODUCT = "DICEKey Software Authenticator"
 CONFIGFS = /sys/kernel/config
 CONFIGFS_FIDO2 = $(CONFIGFS)/usb_gadget/fido2
 
