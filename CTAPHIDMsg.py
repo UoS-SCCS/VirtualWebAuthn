@@ -2,10 +2,13 @@ from HIDPacket import HIDInitializationPacket
 from HIDPacket import HIDContinuationPacket
 
 from HIDPacket import HIDPacket
-
+import json
 from abc import ABC, abstractmethod
 import CTAPHIDConstants
 import logging
+log = logging.getLogger('debug')
+ctap = logging.getLogger('debug.ctap')
+usbhid = logging.getLogger('debug.usbhid')
 class CTAPHIDCMD(ABC):
     
     def __init__(self, CID:bytes, CMD:CTAPHIDConstants.CTAP_CMD, BCNT, payload:bytes):
@@ -16,9 +19,17 @@ class CTAPHIDCMD(ABC):
             self._payload = payload
         else:
             self._payload = payload[:self._BCNT]
-        logging.debug("Created CTAPHIDCMD: %s, %s, %s, %s, %s",CID,CMD,BCNT,self._payload,len(self._payload))
+        ctap.debug("Created CTAPHID CMD: %s", self)
         self.remaining_bytes = self._BCNT - len(self._payload)
 
+    def __str__(self):
+        out = {}
+        out["CID"]=self._CID.hex()
+        out["CMD"]=self._CMD.name
+        out["BCNT"]=self._BCNT
+        out["payload"] = self._payload.hex()
+        return json.dumps(out)
+    
     def is_complete(self):
         if self.remaining_bytes==0:
             return True
@@ -40,22 +51,21 @@ class CTAPHIDCMD(ABC):
 
     def get_HID_packets(self):
         if self._BCNT>CTAPHIDConstants.MAX_PAYLOAD:
+            usbhid.debug("Payload greater than single packet size, creating packets")
             packets = []
-            print("Full:%s",self._payload)
             packet = HIDInitializationPacket(self._CID,self._CMD,self._BCNT,self._payload[:CTAPHIDConstants.MAX_PAYLOAD])
-            print("Init:%s",self._payload[:CTAPHIDConstants.MAX_PAYLOAD])
-            
             packets.append(packet)
             payload_index = CTAPHIDConstants.MAX_PAYLOAD
             for seq in range(128):
                 end = min(self._BCNT-payload_index,CTAPHIDConstants.MAX_CONTINUATION_PAYLOAD)
                 packets.append(HIDContinuationPacket(self._CID,seq,self._payload[payload_index:payload_index+end]))
-                print("CONT:%s", self._payload[payload_index:payload_index+end])
                 payload_index = payload_index+end
                 if payload_index == self._BCNT:
                     break 
+            usbhid.debug("Created %s HID Packets", len(packets))
             return packets
         else:
+            usbhid.debug("Payload fits in a single HID Packet")
             packet = HIDInitializationPacket(self._CID,self._CMD,self._BCNT,self._payload)
             return [packet]
 
@@ -63,6 +73,7 @@ class CTAPHIDCMD(ABC):
         pass
 
     def append_continuation_packet(self,packet:HIDPacket):
+        usbhid.debug("Appending continuation packet: %s", packet)
         if packet.CMDTYPE != CTAPHIDConstants.CMD_TYPE.CONTINUATION:
             raise Exception("Cannot append a non-continuation packet to a message")
         if self.remaining_bytes > CTAPHIDConstants.MAX_CONTINUATION_PAYLOAD:
@@ -117,7 +128,7 @@ class CTAPHIDMsgResponse(CTAPHIDCMD):
         payload = bytearray(len(payload_data)+1)
         payload[0] = U2F_Status
         payload[1:]=payload_data
-        logging.debug("Create initial MSG response %s",payload)
+        ctap.debug("Create initial MSG response %s",payload.hex())
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_MSG,len(payload),payload)
 
 
@@ -141,7 +152,7 @@ BCNT 	0
 class CTAPHIDCancelResponse(CTAPHIDCMD):
 
     def __init__(self,CID):     
-        logging.debug("Create initial Cancel response")
+        ctap.debug("Create initial Cancel response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL,0,bytes(0))
 
 """
@@ -157,7 +168,7 @@ STATUS_UPNEEDED 	2 	The authenticator is waiting for user presence.
 class CTAPHIDKeepAliveResponse(CTAPHIDCMD):
 
     def __init__(self,CID,status_code:CTAPHIDConstants.CTAPHID_KEEPALIVE_STATUS):     
-        logging.debug("Create Keep-alive response")
+        ctap.debug("Create Keep-alive response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_KEEPALIVE,1,status_code.value)
 
 """
@@ -169,7 +180,7 @@ DATA 	Error code
 class CTAPHIDErrorResponse(CTAPHIDCMD):
 
     def __init__(self,CID,error_code:CTAPHIDConstants.CTAPHID_ERROR):     
-        logging.debug("Create initial Error response")
+        ctap.debug("Create initial Error response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_ERROR,1,error_code.value)
 
 
@@ -195,7 +206,7 @@ DATA 	N bytes
 class CTAPHIDPingResponse(CTAPHIDCMD):
 
     def __init__(self,CID,payload_data:bytes):     
-        logging.debug("Create initial PING response %s",payload_data)
+        ctap.debug("Create initial PING response %s",payload_data)
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_PING,len(payload_data),payload_data)
 
 
@@ -230,7 +241,7 @@ class CTAPHIDCBORResponse(CTAPHIDCMD):
         payload = bytearray(len(payload_data)+1)
         payload[0] = CTAP_Status.value[0]
         payload[1:]=payload_data
-        logging.debug("Create initial CBOR response %s",payload)
+        ctap.debug("Create initial CBOR response %s",payload)
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR,len(payload),payload)
 
 
@@ -267,16 +278,13 @@ class CTAPHIDInitResponse(CTAPHIDCMD):
         payload[14] = 1
         payload[15] = 1
         payload[16] = CTAPHIDInitResponse.CAPABILITY_CBOR[0]
-        logging.debug("Create initial Init response %s",payload)
+        ctap.debug("Creating initial response: %s",payload.hex())
         super().__init__(CTAPHIDConstants.BROADCAST_ID,CTAPHIDConstants.CTAP_CMD.CTAPHID_INIT,17,payload)   
 
     def set_nonce(self, nonce:bytes):
-        logging.debug("Setting nonce %s, %s",nonce,self._payload)
         self._payload[0:8]=nonce
-        logging.debug("Setting nonce %s, %s",nonce,self._payload)
 
-    def set_channel_id(self, channel_id:bytes):
-        logging.debug("Set Channel ID: %s, %s",channel_id,len(channel_id))
+    def set_channel_id(self, channel_id:bytes):        
         self._payload[8:12] = channel_id
 
     

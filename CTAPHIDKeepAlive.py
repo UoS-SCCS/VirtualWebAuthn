@@ -4,6 +4,9 @@ from CTAPHIDMsg import CTAPHIDKeepAliveResponse
 import CTAPHIDConstants
 
 import logging
+log = logging.getLogger('debug')
+
+ctap = logging.getLogger('debug.ctap')
 class CTAPHIDKeepAlive():
     def __init__(self, ctaphid):
         self._interval = (1/1000)*1000
@@ -19,7 +22,7 @@ class CTAPHIDKeepAlive():
     def start(self, max=120000):
         if self._cid is None:
             raise Exception("Keep-alive channel not set")
-        logging.debug("Start keep-alive called")
+        log.debug("Start keep-alive called")
         self._max = max/1000
         self._keep_alive_thread = threading.Thread(target=self._keep_alive)
         self._running = True
@@ -30,7 +33,7 @@ class CTAPHIDKeepAlive():
         self._running = False
 
     def update_status(self, status:CTAPHIDConstants.CTAPHID_KEEPALIVE_STATUS):
-        logging.debug("Keep-alive status updated")
+        log.debug("Keep-alive status updated")
         self._status = status
         self._send_keep_alive()
 
@@ -44,7 +47,7 @@ class CTAPHIDKeepAlive():
             time.sleep(self._interval)
             self._elapsed = self._elapsed + self._interval
             if self._elapsed > self._max:
-                logging.debug("Max keep-alive exceeded - will stop")
+                log.debug("Max keep-alive exceeded - will stop")
                 self._running = False
-        logging.debug("Keep-alive ended")
+        log.debug("Keep-alive ended")
         self._cid = None 

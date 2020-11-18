@@ -40,9 +40,14 @@ class DICEAuthenticatorStorage:
         pass
 
     @abstractmethod
-    def get_credential_by_rp(self,rp_id:str)->{PublicKeyCredentialSource}:
+    def get_credential_by_rp(self,rp_id:str, allow_list=None)->{PublicKeyCredentialSource}:
         pass
     
+    def convert_allow_list_to_map(self, allow_list):
+        allow = {}
+        for allowed in allow_list:
+            allow[allowed["id"]]=allowed["type"]
+        return allow
 class DICEAuthenticatorStorageException(Exception):
     """Exception raised when accessing the storage medium
 

@@ -1,12 +1,17 @@
 from abc import ABC, abstractmethod
 from CTAPHID import CTAPHIDTransaction
-
+import CTAPHIDConstants
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from enum import Enum, unique
 from uuid import UUID
 from fido2 import cbor
+from PublicKeyCredentialSource import PublicKeyCredentialSource
 import logging
-
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+import json
+log = logging.getLogger('debug')
+auth = logging.getLogger('debug.auth')
 @unique
 class AUTHN_GETINFO_PARAMETER(Enum):
     pass
@@ -30,9 +35,7 @@ class AUTHN_GETINFO_VERSION(AUTHN_GETINFO_PARAMETER):
     CTAP1 = "U2F_V2"
 
 
-@unique
-class AUTHN_GETINFO_AAGUID(AUTHN_GETINFO_PARAMETER):
-    DICE_AUTHENTICATOR = UUID("695e437f-c0cd-4fe8-b545-d39084f5c805")
+  
 
 
 @unique
@@ -179,14 +182,19 @@ class CBORResponse:
     def __init__(self):
         self.content = {}
 
+    def __str__(self):
+        out = {}
+        out["type"] = type(self)
+        out["content"]=self.content
+        return json.dumps(out)
+
     def get_encoded(self):
-        print(self.content)
         return cbor.encode(self.content)
 
 class AuthenticatorGetAssertionParameters:
     def __init__(self, cbor_data:bytes):
         self.parameters = cbor.decode(cbor_data)
-        logging.debug("Decoded GetAssertionParameters %s", self.parameters)
+        auth.debug("Decoded GetAssertionParameters: %s", self.parameters)        
     
     def get_hash(self):
         return self.parameters[AUTHN_GET_ASSERTION.HASH.value]
@@ -210,7 +218,7 @@ class AuthenticatorGetAssertionParameters:
 class AuthenticatorMakeCredentialParameters:
     def __init__(self, cbor_data:bytes):
         self.parameters = cbor.decode(cbor_data)
-        logging.debug("Decoded MakeCredentialParameters %s", self.parameters)
+        auth.debug("Decoded MakeCredentialParameters: %s", self.parameters)   
     
     def get_hash(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.HASH.value]
@@ -253,7 +261,7 @@ class GetInfoResp(CBORResponse):
         super(GetInfoResp,self).__init__()
         self.set_check = {}
         # Default to internal AAGUID
-        self.content[AUTHN_GETINFO.AAGUID.value] = AUTHN_GETINFO_AAGUID.DICE_AUTHENTICATOR.value.bytes
+        self.content[AUTHN_GETINFO.AAGUID.value] = DICEAuthenticator.AUTHENTICATOR_AAGUID.bytes
         #self.set_default_options()
         pass
 
@@ -313,25 +321,25 @@ class GetInfoResp(CBORResponse):
         self._add_dict_to_list(AUTHN_GETINFO.ALGORITHMS, algorithm)
 
 class DICEAuthenticator:
-
+    AUTHENTICATOR_AAGUID = UUID("695e437f-c0cd-4fe8-b545-d39084f5c805")
     def __init__(self):
 
         #self._ctap_hid = ctap_hid
         pass
 
+    def get_AAGUID(self):
+        return DICEAuthenticator.AUTHENTICATOR_AAGUID
+
     def process_cbor(self, cbor_data:bytes, keep_alive: CTAPHIDKeepAlive):
         cmd = cbor_data[:1]
-        print("cmd: %s", cmd)
+        auth.debug("Received %s CBOR: %s", AUTHN_CMD(cmd).name, cbor_data.hex())
         if cmd == AUTHN_CMD.AUTHN_MakeCredential.value:
-            logging.debug("Received Make Credential CBOR: %s", cbor_data)
             params = AuthenticatorMakeCredentialParameters(cbor_data[1:])
             return self.authenticatorMakeCredential(params, keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetAssertion.value:
-            logging.debug("Received GetAssetion CBOR: %s", cbor_data)
             params = AuthenticatorGetAssertionParameters(cbor_data[1:])
             return self.authenticatorGetAssertion(params, keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetInfo.value:
-            print("About process GetInfo")
             return self.authenticatorGetInfo(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_ClientPIN.value:
             pass
@@ -364,3 +372,102 @@ class DICEAuthenticator:
     def authenticatorGetAssertion(self, params:AuthenticatorGetAssertionParameters,keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
         pass
 
+    def _get_credential_data(self,credential_source:PublicKeyCredentialSource):
+        """	                    Length (in bytes) 	Description
+            aaguid 	            16 	                The AAGUID of the authenticator.
+            credentialIdLength 	2 	                Byte length L of Credential ID, 16-bit unsigned big-endian integer.
+            credentialId 	    L 	                Credential ID
+            credentialPublicKey variable 	        The credential public key encoded in COSE_Key format, as defined in Section 7 of [RFC8152], using the CTAP2 canonical CBOR encoding form. The COSE_Key-encoded credential public key MUST contain the "alg" parameter and MUST NOT contain any other OPTIONAL parameters. The "alg" parameter MUST contain a COSEAlgorithmIdentifier value. The encoded credential public key MUST also contain any additional REQUIRED parameters stipulated by the relevant key type specification, i.e., REQUIRED for the key type "kty" and algorithm "alg" (see Section 8 of [RFC8152]). 
+        """
+        credential_data = self.get_AAGUID().bytes
+        credential_data += len(credential_source.get_id()).to_bytes(2,"big")
+        credential_data += credential_source.get_id()
+        credential_data += cbor.encode(credential_source.get_cose_public_key())
+        return credential_data
+    
+    def _get_authenticator_data_minus_creds(self, credential_source:PublicKeyCredentialSource, up:bool, uv:bool=False,extensions:bytes=None):
+        """
+        Name 	Length (in bytes) 	Description
+        rpIdHash 	32 	SHA-256 hash of the RP ID the credential is scoped to.
+        flags 	1 	Flags (bit 0 is the least significant bit):
+                        Bit 0: User Present (UP) result.
+                            1 means the user is present.
+                            0 means the user is not present.
+                        Bit 1: Reserved for future use (RFU1).
+                        Bit 2: User Verified (UV) result.
+                            1 means the user is verified.
+                            0 means the user is not verified.
+                        Bits 3-5: Reserved for future use (RFU2).
+                        Bit 6: Attested credential data included (AT).
+                            Indicates whether the authenticator added attested credential data.
+                        Bit 7: Extension data included (ED).
+                            Indicates if the authenticator data has extensions.
+        signCount 	4 	Signature counter, 32-bit unsigned big-endian integer.
+        extensions 	variable (if present) 	Extension-defined authenticator data. This is a CBOR [RFC7049] map with extension identifiers as keys, and authenticator extension outputs as values. See §9 WebAuthn Extensions for details. 
+        """
+        digest = hashes.Hash(hashes.SHA256(),default_backend())
+        digest.update(credential_source.get_rp_id().encode('UTF-8'))
+        data = digest.finalize()
+        flags = 0
+        
+        if up:
+            flags = flags ^ (1 << 0)
+        if uv:
+            flags = flags ^ (1 << 2)
+        
+        data += flags.to_bytes(1,"big")
+        #data[32] = data[32] ^ (0 << 7) set extension flag
+        data += credential_source.get_signature_counter_bytes()
+        return data
+
+    def _get_authenticator_data(self, credential_source:PublicKeyCredentialSource, up:bool, uv:bool=False,extensions:bytes=None):
+        """
+        Name 	Length (in bytes) 	Description
+        rpIdHash 	32 	SHA-256 hash of the RP ID the credential is scoped to.
+        flags 	1 	Flags (bit 0 is the least significant bit):
+                        Bit 0: User Present (UP) result.
+                            1 means the user is present.
+                            0 means the user is not present.
+                        Bit 1: Reserved for future use (RFU1).
+                        Bit 2: User Verified (UV) result.
+                            1 means the user is verified.
+                            0 means the user is not verified.
+                        Bits 3-5: Reserved for future use (RFU2).
+                        Bit 6: Attested credential data included (AT).
+                            Indicates whether the authenticator added attested credential data.
+                        Bit 7: Extension data included (ED).
+                            Indicates if the authenticator data has extensions.
+        signCount 	4 	Signature counter, 32-bit unsigned big-endian integer.
+        attestedCredentialData 	variable (if present) 	attested credential data (if present). See §6.4.1 Attested Credential Data for details. Its length depends on the length of the credential ID and credential public key being attested.
+        extensions 	variable (if present) 	Extension-defined authenticator data. This is a CBOR [RFC7049] map with extension identifiers as keys, and authenticator extension outputs as values. See §9 WebAuthn Extensions for details. 
+        """
+        digest = hashes.Hash(hashes.SHA256(),default_backend())
+        digest.update(credential_source.get_rp_id().encode('UTF-8'))
+        data = digest.finalize()
+        flags = 0
+        
+        if up:
+            flags = flags ^ (1 << 0)
+        if uv:
+            flags = flags ^ (1 << 2)
+        flags = flags ^ (1 << 6)
+        data += flags.to_bytes(1,"big")
+        #data[32] = data[32] ^ (0 << 7) set extension flag
+        data += credential_source.get_signature_counter_bytes()
+        data += self._get_credential_data(credential_source)
+        return data
+
+class DICEAuthenticatorException(Exception):
+    """Exception raised when accessing the storage medium
+
+    Attributes:
+        message -- explanation of the error
+    """
+
+    def __init__(self, err_code:CTAPHIDConstants.CTAP_STATUS_CODE,message="Storage Exception"):
+        self.message = message
+        self.err_code = err_code
+        super().__init__(self.message)
+    
+    def get_error_code(self):
+        return self.err_code

@@ -6,7 +6,7 @@ from DICEAuthenticatorStorage import DICEAuthenticatorStorageException
 from PublicKeyCredentialSource import PublicKeyCredentialSource
 from abc import ABC
 from enum import Enum, unique
-
+log = logging.getLogger('debug')
 class STORAGE_KEYS():
     MASTER_KEY = "master_key"
     SIGNATURE_COUNT = "signature_count"
@@ -65,27 +65,33 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     
     def add_credential_source(self,rp_id:str,user_id:bytes, credential_source:PublicKeyCredentialSource)->bool:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
-            self._data[STORAGE_KEYS.CREDENTIALS][rp_id]= {}
-        
-        user_id_str = user_id.hex()
-        self._data[STORAGE_KEYS.CREDENTIALS][rp_id][user_id_str]= credential_source.get_bytes().hex()
+            self._data[STORAGE_KEYS.CREDENTIALS][rp_id]= []
+        self._data[STORAGE_KEYS.CREDENTIALS][rp_id].append(credential_source.get_bytes().hex())
         return self._write_to_json()
 
     def get_credential_source(self,rp_id:str,user_id:bytes)->PublicKeyCredentialSource:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
             return None
-        user_id_str = user_id.hex()
-        credential_source = PublicKeyCredentialSource()
-        credential_source.from_bytes(bytes.fromhex(self._data[STORAGE_KEYS.CREDENTIALS][rp_id][user_id_str]))
+        return self.get_credential_source_by_rp(rp_id,[{"id":user_id,"type":"public-key"}])
 
-    def get_credential_source_by_rp(self,rp_id:str)->{PublicKeyCredentialSource}:
+    def get_credential_source_by_rp(self,rp_id:str,allow_list=None)->{PublicKeyCredentialSource}:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
             return None
-        results = {}
-        for key, value in self._data[STORAGE_KEYS.CREDENTIALS][rp_id].items():
+        allowed = None
+        check_allowed=False
+        if not allow_list is None:
+            allowed = self.convert_allow_list_to_map(allow_list)
+            check_allowed=True
+        results = []
+        for value in self._data[STORAGE_KEYS.CREDENTIALS][rp_id]:
             credential_source = PublicKeyCredentialSource()
             credential_source.from_bytes(bytes.fromhex(value))
-            results[key]=credential_source
+            if check_allowed:
+                if credential_source.get_id() in allowed:
+                    results.append(credential_source)
+            else:
+                #not allowed list, return everything
+                results.append(credential_source)
         return results
 
     def _write_to_json(self):
@@ -94,5 +100,5 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
                 json.dump(self._data, f, indent = 4)
             return True
         except EnvironmentError:
-            logging.error("IO Exception writing JSON", exc_info=True)
+            log.error("IO Exception writing JSON", exc_info=True)
             return False

@@ -1,6 +1,12 @@
 import CTAPHIDConstants
 from abc import ABC, abstractmethod
 import logging
+import json
+
+log = logging.getLogger('debug')
+
+usbhid = logging.getLogger('debug.usbhid')
+
 class HIDPacket:
     _BROADCAST_ID = b'\xff\xff\xff\xff'
     
@@ -53,6 +59,14 @@ class HIDInitializationPacket(HIDPacket):
             self._has_sequence = False
         super().__init__(packet)
 
+    def __str__(self):
+        out = {}
+        out["CID"]=self._CID.hex()
+        out["CMD"]=self._CMD.name
+        out["length"] = self._length
+        out["payload"] = self._payload.hex()
+        return json.dumps(out)
+
     def get_CMD(self):
         return self._CMD
     
@@ -66,12 +80,10 @@ class HIDInitializationPacket(HIDPacket):
         return self._CID
     @classmethod
     def from_bytes(cls, packet:bytes):
-        logging.debug("loading packet from bytes: %s", packet)
         channel_id = packet[:4]
         cmd = CTAPHIDConstants.CTAP_CMD((packet[4] & ~(1 << 7)).to_bytes(1,"big"))
         message_length = int.from_bytes(packet[5:7], "big")
         data = packet[7:]
-        logging.debug("Payload: %s", data)
         return HIDInitializationPacket(channel_id, cmd, message_length, data)
    
     @abstractmethod
@@ -99,6 +111,13 @@ class HIDContinuationPacket(HIDPacket):
         packet[5:] = self._payload
         super().__init__(packet)
 
+    def __str__(self):
+        out = {}
+        out["CID"]=self._CID.hex()
+        out["SEQ"]=self._seq
+        out["payload"] = self._payload.hex()
+        return json.dumps(out)
+    
     def get_payload(self)->bytes:
         return self._payload
     def get_sequence(self):

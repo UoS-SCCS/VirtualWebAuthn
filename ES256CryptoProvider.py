@@ -25,7 +25,6 @@ class ECCryptoKeyPair(AuthenticatorCryptoKeyPair):
         super().__init__(ECCryptoPublicKey(private_key.public_key()),ECCryptoPrivateKey(private_key))
     
     def get_encoded(self)->bytes:
-        print("Encoding ECC")
         return self._sk.get_private_key().private_bytes(Encoding.PEM,PrivateFormat.PKCS8,NoEncryption())
         
 class ECCryptoPrivateKey(AuthenticatorCryptoPrivateKey):

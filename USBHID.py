@@ -7,6 +7,9 @@ import sys
 import traceback
 import os
 import logging
+
+log = logging.getLogger('debug')
+usblog = logging.getLogger('debug.usbhid')
 class USBHID:
     
     def __init__(self, device):
@@ -28,35 +31,34 @@ class USBHID:
         self._write_thread = threading.Thread(target=self._write)
         self._write_thread.setDaemon(True)
         self._write_thread.start()
+        log.debug("Started listening threads")
 
     def add_transaction_to_queue(self, transaction: CTAPHIDTransaction):
+        log.debug("Transaction added to write queue: %s",transaction)
         self._write_queue.put(transaction)
 
     def set_listener(self, listener):
-        logging.debug("listener added %s", listener)
+        log.debug("listener added %s", listener)
         self._listener = listener
     
     def remove_listener(self, listener):
-        logging.debug("listener removed %s", listener)
+        log.debug("listener removed %s", listener)
         self._listener = None
 
     def shutdown(self):
         self._running = False
-        logging.debug("Shutdown called")
+        log.debug("Shutdown called")
         
 
     def _write(self):
         while True:
             transaction = self._write_queue.get()
-            logging.debug("Got transaction to write %s",transaction)
+            usblog.debug("Got transaction to write %s",transaction)
             packets = transaction.response.get_HID_packets()
             for packet in packets:
-                logging.debug("writing bytes from packet: %s", packet.get_bytes())
-
+                usblog.debug("\twriting bytes from packet: %s", packet.get_bytes().hex())
                 os.write(self._device, packet.get_bytes())
-                #self._device.write(packet.get_bytes())
-                logging.debug("Finished writing")
-                #self._device.flush()
+            usblog.debug("Finished writing transaction")
             self._listener.response_sent(transaction)
             
 
@@ -65,13 +67,11 @@ class USBHID:
             try:
                 hid_packet = HIDPacket.from_bytes(os.read(self._device,64))
                 #hid_packet = HIDPacket.from_bytes(self._device.read(64))
-                logging.debug("Received data %s", hid_packet)
+                usblog.debug("Received hid packet: %s",hid_packet)
                 self._listener.received_packet(hid_packet)
-            except Exception as e:
-                print("Exception reading from device")
-                traceback.print_exc()
-                print(e)
-        print("USBHID no longer listening")
+            except Exception:
+                log.error("Exception reading from device")   
+        log.debug("USBHID no longer listening")
 
         
 class USBHIDListener(ABC):

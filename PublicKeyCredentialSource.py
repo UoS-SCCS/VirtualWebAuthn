@@ -5,7 +5,8 @@ from cryptography.hazmat.primitives import serialization
 from AuthenticatorCryptoProvider import AuthenticatorCryptoKeyPair
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
 from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
-
+import logging
+log = logging.getLogger('debug')
 from cryptography.hazmat.backends import default_backend
 class PublicKeyCredentialSource():
     def __init__(self):
@@ -81,6 +82,7 @@ class PublicKeyCredentialSource():
         self._id = bytes
     
     def get_id(self)->bytes:
+        log.debug("Get_ID:%s",self._id)
         return self._id
     
     def set_private_key(self, private_key):

@@ -9,15 +9,49 @@ from ES256CryptoProvider import ES256CryptoProvider
 import sys
 import logging
 import os
-class CTAP2Listener(USBHIDListener):
-    def received_packet(self, packet):
-        print(packet.debug_str())
-    
-    def response_sent(self, transaction):
-        print("response sent")
-        pass
+import shutil
+import time
 
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+def setup_logger(logger_name, log_file, level=logging.DEBUG):
+    l = logging.getLogger(logger_name)
+    
+    formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
+    fileHandler = logging.FileHandler(log_file, mode='w')
+    if logger_name=="debug":
+        formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
+        fileHandler.setFormatter(formatter)
+        streamHandler = logging.StreamHandler()
+        streamHandler.setFormatter(formatter)
+        l.addHandler(streamHandler)    
+        l.propagate = False
+    else:
+        fileHandler.setFormatter(formatter)
+        l.propagate = True
+    l.setLevel(level)
+    l.addHandler(fileHandler)
+
+
+timestr = time.strftime("%Y%m%d-%H%M%S")    
+if not os.path.exists("./logs/"):
+    os.mkdir("./logs/")
+else:
+    source_dir = './logs/'
+    target_dir = './logs/archive/'
+    if not os.path.exists(target_dir):
+        os.mkdir(target_dir)
+    file_names = os.listdir(source_dir)
+    for file_name in file_names:
+        shutil.move(os.path.join(source_dir, file_name), target_dir)
+
+setup_logger('debug', r'./logs/debug_'+timestr+'.log')
+setup_logger('debug.usbhid', r'./logs/usbhid_'+timestr+'.log')
+setup_logger('debug.ctap', r'./logs/ctap_'+timestr+'.log')
+setup_logger('debug.auth', r'./logs/auth_'+timestr+'.log')
+
+
+log = logging.getLogger('debug')
+
+#logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 #usbdevice = open("/dev/hidg0","rb+") 
 usbdevice = os.open("/dev/dicekey", os.O_RDWR)
 usbhid = USBHID(usbdevice)
@@ -31,36 +65,21 @@ if not authenticator_storage.is_initialised():
     authenticator_storage.init_new()
 authenticator = MyAuthenticator(authenticator_storage,providers)
 ctaphid.set_authenticator(authenticator)
-#ctap2 = CTAP2Listener()
 usbhid.set_listener(ctaphid)
 usbhid.start()
-
-#broadcast_id = bytes([255,255,255,255])
-#def process_message(msg):
-#    hid_packet = HIDPacket(msg)
-#    print(hid_packet.debug_str())
-#    print("In process message")
-    #if msg[:4] == broadcast_id:
-     #   print("Received broadcast message")
-     #   print(msg)
-    #else:
-    #    print("Channel " + msg[:4] + " message received")
     
 while 1:
     for line in sys.stdin:
         
         if line.rstrip() == "quit":
-            print("quit called")
+            log.debug("Quit Called")
             #This doesn't actually kill the thread because python handles threads in a bizarre way
             usbhid.shutdown()
             #usbdevice.flush()
             #usbdevice.seek(0)
             #usbdevice.close()
-            print("file closed")
             sys.exit()
-            
         else:
-            print(len(line.rstrip()))
+            log.debug("Unknown command entered on CLI: %s",line.rstrip() )
+            
 
-#Received broadcast message
-#b'\xff\xff\xff\xff\x86\x00\x08\xaf\x93\xa6\xac8\xeb\xa1\xec\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
