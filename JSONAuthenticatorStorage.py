@@ -94,6 +94,12 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
                 results.append(credential_source)
         return results
 
+    def reset(self)->bool:
+        self._data={"_version":"JSONAuthenticatorStorage_0.1"}
+        self._data[STORAGE_KEYS.CREDENTIALS]={}
+        self._write_to_json()
+        return self.init_new()
+
     def _write_to_json(self):
         try:
             with open(self._path,"w") as f:

@@ -255,6 +255,12 @@ class GetAssertionResp(CBORResponse):
         super(GetAssertionResp,self).__init__()
         self.content = content
 
+class ResetResp(CBORResponse):
+
+    def __init__(self):
+        super(ResetResp,self).__init__()
+        
+
 class GetInfoResp(CBORResponse):
 
     def __init__(self):
@@ -344,7 +350,7 @@ class DICEAuthenticator:
         elif cmd == AUTHN_CMD.AUTHN_ClientPIN.value:
             pass
         elif cmd == AUTHN_CMD.AUTHN_Reset.value:
-            pass
+            return self.authenticatorReset(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetNextAssertion.value:
             pass
         elif cmd == AUTHN_CMD.AUTHN_BioEnrollment.value:
@@ -371,6 +377,10 @@ class DICEAuthenticator:
     @abstractmethod
     def authenticatorGetAssertion(self, params:AuthenticatorGetAssertionParameters,keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
         pass
+
+    @abstractmethod
+    def authenticatorReset(self, keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
+        pass 
 
     def _get_credential_data(self,credential_source:PublicKeyCredentialSource):
         """	                    Length (in bytes) 	Description

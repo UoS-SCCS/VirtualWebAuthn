@@ -11,6 +11,7 @@ class AttestationObject:
         attStmt["alg"] = credential_source.get_alg()
         #self attestation: concat (authenticatorData and clientDataHash) sign using private key
         attStmt["sig"] = credential_source.get_private_key().sign(authenticatorData + clientDataHash)
+        credential_source.increment_signature_counter()
         statement[3] = attStmt
         return statement
         

@@ -1,5 +1,6 @@
 from DICEAuthenticator import DICEAuthenticator
 from DICEAuthenticator import GetInfoResp
+from DICEAuthenticator import ResetResp
 from DICEAuthenticator import AUTHN_GETINFO_OPTION
 from DICEAuthenticator import AUTHN_GETINFO_TRANSPORT
 from DICEAuthenticator import PUBLIC_KEY_ALG
@@ -112,6 +113,7 @@ class MyAuthenticator(DICEAuthenticator):
         response[1]=credential_source.get_public_key_credential_descriptor()
         response[2]=authenticator_data
         response[3]=credential_source.get_private_key().sign(authenticator_data + params.get_hash())
+        credential_source.increment_signature_counter()
         response[4]=credential_source.get_user_handle()
         response[5]=numberOfCredentials
         """
@@ -124,5 +126,8 @@ class MyAuthenticator(DICEAuthenticator):
         
         return GetAssertionResp(response)
         
-    
-    
+    def authenticatorReset(self, keep_alive:CTAPHIDKeepAlive) -> ResetResp:
+        if self._storage.reset():
+            return ResetResp()
+        else:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_OTHER)

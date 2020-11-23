@@ -43,6 +43,10 @@ class DICEAuthenticatorStorage:
     def get_credential_by_rp(self,rp_id:str, allow_list=None)->{PublicKeyCredentialSource}:
         pass
     
+    @abstractmethod
+    def reset(self)->bool:
+        pass
+    
     def convert_allow_list_to_map(self, allow_list):
         allow = {}
         for allowed in allow_list:
