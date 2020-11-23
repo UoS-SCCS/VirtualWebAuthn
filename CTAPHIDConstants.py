@@ -14,7 +14,7 @@ class CTAPHID_ERROR(Enum):
     ERR_MSG_TIMEOUT = b'\x05' #The message has timed out
     ERR_CHANNEL_BUSY = b'\x06' #The device is busy for the requesting channel
     ERR_LOCK_REQUIRED = b'\x0A' #Command requires channel lock
-    NA = b'\x0B' #Reserved (Removed)
+    ERR_INVALID_CHANNEL = b'\x0B' #Reserved (Removed)
     ERR_OTHER = b'\x7F' #Unspecified error 
 
 @unique

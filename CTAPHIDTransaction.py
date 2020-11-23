@@ -79,8 +79,8 @@ class CTAPHIDTransaction:
         self.state = TRANSACTION_STATE.CANCEL
         self.response = response
 
-    def error(self, response: CTAPHIDCancelResponse):
-        self.reset()
+    def error(self, response: CTAPHIDErrorResponse):
+        #self.reset()
         self.state = TRANSACTION_STATE.ERROR
         self.response = response
 
