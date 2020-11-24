@@ -41,7 +41,7 @@ class MyAuthenticator(DICEAuthenticator):
     MY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
     def __init__(self, storage:DICEAuthenticatorStorage, crypto_providers:[int]):
         #allow list of crypto providers, may be a subset of all available providers
-        super()
+        super().__init__()
         self._storage = storage
         self._providers = crypto_providers
         #self._providers_idx = {}
@@ -104,7 +104,7 @@ class MyAuthenticator(DICEAuthenticator):
         #TODO Implement User verification and presence check
         if numberOfCredentials < 1:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
-            
+
         credential_source = creds[0]
         authenticator_data = self._get_authenticator_data_minus_creds(credential_source,True)
         
@@ -124,8 +124,39 @@ class MyAuthenticator(DICEAuthenticator):
         numberOfCredentials 	0x05 	unsigned integer(CBOR major type 0). 
         """
         
-        return GetAssertionResp(response)
+        return GetAssertionResp(response,numberOfCredentials)
+    
+    def authenticatorGetNextAssertion(self, params:AuthenticatorGetAssertionParameters,idx:int, keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
+        #TODO perform necessary checks
+        #TODO add non-residential key approach
+        creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
+        numberOfCredentials = len(creds)
+        if numberOfCredentials < 1:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
+        if idx >= numberOfCredentials:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NOT_ALLOWED)
         
+        credential_source = creds[idx]
+        authenticator_data = self._get_authenticator_data_minus_creds(credential_source,True)
+        
+        response = {}
+        
+        response[1]=credential_source.get_public_key_credential_descriptor()
+        response[2]=authenticator_data
+        response[3]=credential_source.get_private_key().sign(authenticator_data + params.get_hash())
+        credential_source.increment_signature_counter()
+        response[4]=credential_source.get_user_handle()
+        response[5]=numberOfCredentials
+        """
+        credential 	0x01 	definite length map (CBOR major type 5).
+        authData 	0x02 	byte string (CBOR major type 2).
+        signature 	0x03 	byte string (CBOR major type 2).
+        publicKeyCredentialUserEntity 	0x04 	definite length map (CBOR major type 5).
+        numberOfCredentials 	0x05 	unsigned integer(CBOR major type 0). 
+        """
+        
+        return GetAssertionResp(response,numberOfCredentials)
+
     def authenticatorReset(self, keep_alive:CTAPHIDKeepAlive) -> ResetResp:
         if self._storage.reset():
             return ResetResp()

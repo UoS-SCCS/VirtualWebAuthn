@@ -70,7 +70,7 @@ class USBHID:
                 usblog.debug("Received hid packet: %s",hid_packet)
                 self._listener.received_packet(hid_packet)
             except Exception:
-                log.error("Exception reading from device")   
+                log.error("Exception reading from device", exc_info=True)   
         log.debug("USBHID no longer listening")
 
         

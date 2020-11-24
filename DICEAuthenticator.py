@@ -10,6 +10,7 @@ import logging
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import json
+import time
 log = logging.getLogger('debug')
 auth = logging.getLogger('debug.auth')
 @unique
@@ -251,9 +252,22 @@ class MakeCredentialResp(CBORResponse):
 
 class GetAssertionResp(CBORResponse):
 
-    def __init__(self,content):
+    def __init__(self,content, count):
         super(GetAssertionResp,self).__init__()
         self.content = content
+        self.count=count
+
+    def get_count(self)->int:
+        return self.count
+class GetNextAssertionResp(CBORResponse):
+
+    def __init__(self,content, count:int):
+        super(GetNextAssertionResp,self).__init__()
+        self.content = content
+        self.count = count
+
+    def get_count(self)->int:
+        return self.count
 
 class ResetResp(CBORResponse):
 
@@ -329,14 +343,20 @@ class GetInfoResp(CBORResponse):
 class DICEAuthenticator:
     AUTHENTICATOR_AAGUID = UUID("695e437f-c0cd-4fe8-b545-d39084f5c805")
     def __init__(self):
-
+        self._last_get_assertion_cid = None
+        self._last_get_assertion_params =  None
+        self._last_get_assertion_time = None
+        self._last_get_assertion_idx = None
         #self._ctap_hid = ctap_hid
         pass
 
     def get_AAGUID(self):
         return DICEAuthenticator.AUTHENTICATOR_AAGUID
 
-    def process_cbor(self, cbor_data:bytes, keep_alive: CTAPHIDKeepAlive):
+    def process_cbor(self, cbor_data:bytes, keep_alive: CTAPHIDKeepAlive, CID:bytes=None):
+        if not bytes is None:
+            self.check_get_last_assertion_cid(CID)
+
         cmd = cbor_data[:1]
         auth.debug("Received %s CBOR: %s", AUTHN_CMD(cmd).name, cbor_data.hex())
         if cmd == AUTHN_CMD.AUTHN_MakeCredential.value:
@@ -344,7 +364,12 @@ class DICEAuthenticator:
             return self.authenticatorMakeCredential(params, keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetAssertion.value:
             params = AuthenticatorGetAssertionParameters(cbor_data[1:])
-            return self.authenticatorGetAssertion(params, keep_alive).get_encoded()
+            get_assertion_resp = self.authenticatorGetAssertion(params, keep_alive)
+            if get_assertion_resp.get_count() > 1:
+                self.set_get_assertion_params_start_timer(CID,params,1)
+            else:
+                self.clear_get_last_assertion()
+            return get_assertion_resp.get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetInfo.value:
             return self.authenticatorGetInfo(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_ClientPIN.value:
@@ -352,7 +377,10 @@ class DICEAuthenticator:
         elif cmd == AUTHN_CMD.AUTHN_Reset.value:
             return self.authenticatorReset(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetNextAssertion.value:
-            pass
+            last = self.get_last_assertion_params(CID)
+            get_next_resp = self.authenticatorGetNextAssertion(last["params"], last["idx"], keep_alive)
+            self.set_get_assertion_params_idx_reset_timer(last["idx"]+1)
+            return get_next_resp.get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_BioEnrollment.value:
             pass
         elif cmd == AUTHN_CMD.AUTHN_CredentialManagement.value:
@@ -365,6 +393,53 @@ class DICEAuthenticator:
             pass
         elif cmd == AUTHN_CMD.AUTHN_VendorLast.value:
             pass
+
+    def set_get_assertion_params_start_timer(self, CID:bytes,params:AuthenticatorGetAssertionParameters, idx:int):
+        auth.debug("Setting getAssertion %s for Channel: %s with Index: %s", params, CID, idx)
+        self._last_get_assertion_cid = CID
+        self._last_get_assertion_params =  params
+        self._last_get_assertion_time = int(time.time())
+        self._last_get_assertion_idx = idx
+    
+    def set_get_assertion_params_idx_reset_timer(self, idx:int):
+        auth.debug("Incrementing getAssertion Index: %s", idx)
+        self._last_get_assertion_idx = idx
+        self._last_get_assertion_time = int(time.time())
+
+    def clear_get_last_assertion(self):
+        auth.debug("Clearing get assertion")
+        self._last_get_assertion_cid = None
+        self._last_get_assertion_params =  None
+        self._last_get_assertion_time = None
+        self._last_get_assertion_idx = None
+    
+    def get_last_assertion_cid(self):
+        return self._last_get_assertion_cid
+
+    def check_get_last_assertion_cid(self, CID:bytes)->bool:
+        auth.debug("Checking last assertion Channel: %s with incoming: %s", self.get_last_assertion_cid(), CID)
+        if not self.get_last_assertion_cid() is None and self._last_get_assertion_cid != bytes:
+            auth.debug("Channels don't match, clearing last assertion")
+            self.clear_get_last_assertion()
+            return False
+        auth.debug("Channels match, last assertion not cleared")
+        return True
+    
+    def get_last_assertion_params(self, CID:bytes):
+        if self._last_get_assertion_time is None:
+            auth.debug("No last assertions found")
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NOT_ALLOWED,"No last assertions found")
+        if int(time.time())-self._last_get_assertion_time >30:
+            auth.debug("Last assertion has timed out")
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NOT_ALLOWED,"Last assertion has timed out")
+        if not self.check_get_last_assertion_cid(CID):
+            auth.debug("Last assertion mismatched channel ID")
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NOT_ALLOWED,"Mismatched channel ID")
+        ret = {}
+        ret["params"]=self._last_get_assertion_params
+        ret["idx"]=self._last_get_assertion_idx
+        auth.debug("Returning stored last assertion: %s",ret)
+        return ret
 
     @abstractmethod
     def authenticatorGetInfo(self, keep_alive:CTAPHIDKeepAlive) -> GetInfoResp:
@@ -379,7 +454,11 @@ class DICEAuthenticator:
         pass
 
     @abstractmethod
-    def authenticatorReset(self, keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
+    def authenticatorGetNextAssertion(self, params:AuthenticatorGetAssertionParameters, idx:int, keep_alive:CTAPHIDKeepAlive) -> GetNextAssertionResp:
+        pass
+
+    @abstractmethod
+    def authenticatorReset(self, keep_alive:CTAPHIDKeepAlive) -> ResetResp:
         pass 
 
     def _get_credential_data(self,credential_source:PublicKeyCredentialSource):
