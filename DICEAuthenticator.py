@@ -1,6 +1,17 @@
 from abc import ABC, abstractmethod
 from CTAPHID import CTAPHIDTransaction
 import CTAPHIDConstants
+from CTAPHIDConstants import AUTHN_GET_ASSERTION
+from CTAPHIDConstants import AUTHN_MAKE_CREDENTIAL
+from CTAPHIDConstants import AUTHN_GETINFO
+from CTAPHIDConstants import AUTHN_GETINFO_OPTION
+from CTAPHIDConstants import AUTHN_GETINFO_PARAMETER
+from CTAPHIDConstants import AUTHN_GETINFO_PIN_UV_PROTOCOL
+from CTAPHIDConstants import AUTHN_GETINFO_TRANSPORT
+from CTAPHIDConstants import AUTHN_CMD
+from CTAPHIDConstants import AUTHN_GETINFO_VERSION
+
+from AuthenticatorVersion import AuthenticatorVersion
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from enum import Enum, unique
 from uuid import UUID
@@ -13,99 +24,7 @@ import json
 import time
 log = logging.getLogger('debug')
 auth = logging.getLogger('debug.auth')
-@unique
-class AUTHN_GETINFO_PARAMETER(Enum):
-    pass
 
-@unique
-class AUTHN_GETINFO_OPTION(AUTHN_GETINFO_PARAMETER):
-    PLATFORM_DEVICE = "plat"  # default false - true if cannot be moved from device
-    RESIDENT_KEY = "rk"  # default false - true is device capable of storing keys on itself and therefore can satisfy the authenticatorGetAssertion request with the allowList parameter omitted
-    # no default, if present, true indicates PIN supported and set, false indicates PIN supported not set, absent PIN not supported
-    CLIENT_PIN = "clientPin"
-    USER_PRESENCE = "up"  # default true, indicates device is capable of testing user presence
-    USER_VERIFICATION = "uv"  # no default, if present, true indicates device is capable of user verification and has been configured, false indicates capability but not configured, absent indicates no capability - PIN only does not constitute user verification
-    # default false, indicates the device is capable of built in user verification token feature
-    USER_VERIFICATION_TOKEN = "uvToken"
-    CONFIG = "config"  # default false, indicates supports authenticatorConfig command
-
-
-@unique
-class AUTHN_GETINFO_VERSION(AUTHN_GETINFO_PARAMETER):
-    CTAP2 = "FIDO_2_0"
-    CTAP1 = "U2F_V2"
-
-
-  
-
-
-@unique
-class AUTHN_GETINFO_PIN_UV_PROTOCOL(AUTHN_GETINFO_PARAMETER):
-    VERSION_1 = 1
-
-
-@unique
-class AUTHN_GETINFO_TRANSPORT(AUTHN_GETINFO_PARAMETER):
-    USB = "usb"
-    NFC = "nfc"
-    BLE = "ble"
-    INTERNAL = "internal"
-
-
-@unique
-class AUTHN_GETINFO(Enum):
-    VERSIONS = 1
-    EXTENSIONS =2
-    AAGUID = 3
-    OPTIONS = 4
-    MAX_MSG_SIZE = 5
-    PIN_UV_AUTH_PROTOCOLS = 6
-    MAX_CREDENTIAL_COUNT_IN_LIST = 7
-    MAX_CREDENTIAL_ID_LENGTH = 8
-    TRANSPORTS = 9
-    ALGORITHMS = 10
-    MAX_AUTHENTICATOR_CONFIG_LENGTH = 11
-    DEFAULT_CRED_PROTECT = 12
-
-@unique 
-class AUTHN_MAKE_CREDENTIAL(Enum):
-    HASH= 1
-    RP= 2
-    USER = 3
-    PUBKEY_CRED_PARAMS=4
-    EXCLUDE_LIST = 5
-    EXTENSIONS = 6
-    OPTIONS = 7
-    PIN_AUTH = 8
-    PIN_PROTOCOL = 9
-    OPTIONS_RK = "rk"
-    OPTIONS_UV = "UV"
-
-@unique 
-class AUTHN_GET_ASSERTION(Enum):
-    RP_ID= 1
-    HASH= 2
-    ALLOW_LIST=3
-    EXTENSIONS = 4
-    OPTIONS=5
-    PIN_AUTH = 6
-    PIN_PROTOCOL = 7
-    OPTIONS_RK = "rk"
-    OPTIONS_UV = "UV"
-
-@unique
-class AUTHN_CMD(Enum):
-    AUTHN_MakeCredential = b'\x01'
-    AUTHN_GetAssertion = b'\x02'
-    AUTHN_GetInfo = b'\x04'
-    AUTHN_ClientPIN = b'\x06'
-    AUTHN_Reset = b'\x07'
-    AUTHN_GetNextAssertion = b'\x08'
-    AUTHN_BioEnrollment = b'\x09'
-    AUTHN_CredentialManagement = b'\x0A'
-    AUTHN_PlatformConfig = b'\x0c'
-    AUTHN_VendorFirst = b'\x40'
-    AUTHN_VendorLast = b'\xBF'
 
 
 @unique
@@ -340,6 +259,7 @@ class GetInfoResp(CBORResponse):
     def add_algorithm(self, algorithm: PublicKeyCredentialParameters):
         self._add_dict_to_list(AUTHN_GETINFO.ALGORITHMS, algorithm)
 
+        
 class DICEAuthenticator:
     AUTHENTICATOR_AAGUID = UUID("695e437f-c0cd-4fe8-b545-d39084f5c805")
     def __init__(self):
@@ -460,7 +380,10 @@ class DICEAuthenticator:
     @abstractmethod
     def authenticatorReset(self, keep_alive:CTAPHIDKeepAlive) -> ResetResp:
         pass 
-
+ 
+    @abstractmethod
+    def get_version(self)->AuthenticatorVersion:
+        pass
     def _get_credential_data(self,credential_source:PublicKeyCredentialSource):
         """	                    Length (in bytes) 	Description
             aaguid 	            16 	                The AAGUID of the authenticator.
@@ -560,3 +483,4 @@ class DICEAuthenticatorException(Exception):
     
     def get_error_code(self):
         return self.err_code
+   

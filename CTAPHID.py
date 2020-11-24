@@ -158,7 +158,7 @@ class CTAPHID(USBHIDListener):
         if init_request.get_CID() == self._BROADCAST_ID:
             channel_id = self.create_channel_id()
             #self._transaction.set_request(init_request)
-            response = CTAPHIDInitResponse()
+            response = CTAPHIDInitResponse(self._authenticator.get_version())
             response.set_nonce(init_request.get_payload())
             response.set_channel_id(channel_id)
             self._transaction.set_response(response)
@@ -166,7 +166,7 @@ class CTAPHID(USBHIDListener):
         else:
             ctap.debug("Channel exists, resync channel")
             self._transaction.reset()
-            response = CTAPHIDInitResponse()
+            response = CTAPHIDInitResponse(self._authenticator.get_version())
             response.set_nonce(init_request.get_payload())
             response.set_channel_id(init_request.get_CID())
             self._transaction.set_response(response)

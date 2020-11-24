@@ -1,6 +1,6 @@
 from HIDPacket import HIDInitializationPacket
 from HIDPacket import HIDContinuationPacket
-
+from AuthenticatorVersion import AuthenticatorVersion
 from HIDPacket import HIDPacket
 import json
 from abc import ABC, abstractmethod
@@ -271,13 +271,13 @@ class CTAPHIDInitResponse(CTAPHIDCMD):
     CAPABILITY_CBOR =b'\x04' #If set to 1, authenticator implements CTAPHID_CBOR function
     CAPABILITY_NMSG =b'\x08' #If set to 1, authenticator DOES NOT implement CTAPHID_MSG function 
 
-    def __init__(self):     
+    def __init__(self, version:AuthenticatorVersion):     
         payload = bytearray(17) #17 bytes of data
-        payload[12] = 2
-        payload[13] = 0
-        payload[14] = 1
-        payload[15] = 1
-        payload[16] = CTAPHIDInitResponse.CAPABILITY_CBOR[0]
+        payload[12] = version.ctaphid_protocol_version
+        payload[13] = version.major_version
+        payload[14] = version.minor_version
+        payload[15] = version.build_version
+        payload[16] = CTAPHIDInitResponse.CAPABILITY_CBOR[0] | CTAPHIDInitResponse.CAPABILITY_WINK[0]
         ctap.debug("Creating initial response: %s",payload.hex())
         super().__init__(CTAPHIDConstants.BROADCAST_ID,CTAPHIDConstants.CTAP_CMD.CTAPHID_INIT,17,payload)   
 
@@ -288,8 +288,8 @@ class CTAPHIDInitResponse(CTAPHIDCMD):
         self._payload[8:12] = channel_id
 
     
-    def set_protocol_version(self, version):
-        self._payload[12] = version
+    def set_protocol_version(self, version:int):
+        self._payload[12] = version.to_bytes(1,"big")
     
     """
     Flag is the XOR of the CAPABILITY_ flags defined in the class

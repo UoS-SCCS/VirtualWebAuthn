@@ -17,7 +17,7 @@ class CTAPHID_ERROR(Enum):
     ERR_INVALID_CHANNEL = b'\x0B' #Reserved (Removed)
     ERR_OTHER = b'\x7F' #Unspecified error 
 
-@unique
+
 class CTAPHID_KEEPALIVE_STATUS(Enum):
     STATUS_PROCESSING = b'\x01' #The authenticator is still processing the current request.
     STATUS_UPNEEDED = b'\x02' #The authenticator is waiting for user presence. 
@@ -84,4 +84,96 @@ class CTAP_STATUS_CODE(Enum):
     CTAP2_ERR_VENDOR_FIRST = b'\xF0'# 	Vendor specific error.
     CTAP2_ERR_VENDOR_LAST  = b'\xFF'#	Vendor specific error. 
 
+
+
+
+@unique
+class AUTHN_GETINFO_PARAMETER(Enum):
+    pass
+
+
+
+@unique
+class AUTHN_GETINFO_PIN_UV_PROTOCOL(AUTHN_GETINFO_PARAMETER):
+    VERSION_1 = 1
+
+
+@unique
+class AUTHN_GETINFO_TRANSPORT(AUTHN_GETINFO_PARAMETER):
+    USB = "usb"
+    NFC = "nfc"
+    BLE = "ble"
+    INTERNAL = "internal"
+@unique
+class AUTHN_GETINFO_VERSION(AUTHN_GETINFO_PARAMETER):
+    CTAP2 = "FIDO_2_0"
+    CTAP1 = "U2F_V2"
+
+
+@unique
+class AUTHN_GETINFO(Enum):
+    VERSIONS = 1
+    EXTENSIONS =2
+    AAGUID = 3
+    OPTIONS = 4
+    MAX_MSG_SIZE = 5
+    PIN_UV_AUTH_PROTOCOLS = 6
+    MAX_CREDENTIAL_COUNT_IN_LIST = 7
+    MAX_CREDENTIAL_ID_LENGTH = 8
+    TRANSPORTS = 9
+    ALGORITHMS = 10
+    MAX_AUTHENTICATOR_CONFIG_LENGTH = 11
+    DEFAULT_CRED_PROTECT = 12
+
+@unique 
+class AUTHN_MAKE_CREDENTIAL(Enum):
+    HASH= 1
+    RP= 2
+    USER = 3
+    PUBKEY_CRED_PARAMS=4
+    EXCLUDE_LIST = 5
+    EXTENSIONS = 6
+    OPTIONS = 7
+    PIN_AUTH = 8
+    PIN_PROTOCOL = 9
+    OPTIONS_RK = "rk"
+    OPTIONS_UV = "UV"
+
+@unique 
+class AUTHN_GET_ASSERTION(Enum):
+    RP_ID= 1
+    HASH= 2
+    ALLOW_LIST=3
+    EXTENSIONS = 4
+    OPTIONS=5
+    PIN_AUTH = 6
+    PIN_PROTOCOL = 7
+    OPTIONS_RK = "rk"
+    OPTIONS_UV = "UV"
+
+@unique
+class AUTHN_CMD(Enum):
+    AUTHN_MakeCredential = b'\x01'
+    AUTHN_GetAssertion = b'\x02'
+    AUTHN_GetInfo = b'\x04'
+    AUTHN_ClientPIN = b'\x06'
+    AUTHN_Reset = b'\x07'
+    AUTHN_GetNextAssertion = b'\x08'
+    AUTHN_BioEnrollment = b'\x09'
+    AUTHN_CredentialManagement = b'\x0A'
+    AUTHN_PlatformConfig = b'\x0c'
+    AUTHN_VendorFirst = b'\x40'
+    AUTHN_VendorLast = b'\xBF'
+
+@unique
+class AUTHN_GETINFO_OPTION(AUTHN_GETINFO_PARAMETER):
+    PLATFORM_DEVICE = "plat"  # default false - true if cannot be moved from device
+    RESIDENT_KEY = "rk"  # default false - true is device capable of storing keys on itself and therefore can satisfy the authenticatorGetAssertion request with the allowList parameter omitted
+    # no default, if present, true indicates PIN supported and set, false indicates PIN supported not set, absent PIN not supported
+    CLIENT_PIN = "clientPin"
+    USER_PRESENCE = "up"  # default true, indicates device is capable of testing user presence
+    USER_VERIFICATION = "uv"  # no default, if present, true indicates device is capable of user verification and has been configured, false indicates capability but not configured, absent indicates no capability - PIN only does not constitute user verification
+    # default false, indicates the device is capable of built in user verification token feature
+    USER_VERIFICATION_TOKEN = "uvToken"
+    CONFIG = "config"  # default false, indicates supports authenticatorConfig command
 

@@ -34,10 +34,11 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 import datetime
 from cryptography.hazmat.primitives import serialization
-
+from AuthenticatorVersion import AuthenticatorVersion
 log = logging.getLogger('debug')
 auth = logging.getLogger('auth')
 class MyAuthenticator(DICEAuthenticator):
+    VERSION = AuthenticatorVersion(2,1,0,0)
     MY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
     def __init__(self, storage:DICEAuthenticatorStorage, crypto_providers:[int]):
         #allow list of crypto providers, may be a subset of all available providers
@@ -51,15 +52,19 @@ class MyAuthenticator(DICEAuthenticator):
         self.get_info_resp.set_auguid(MyAuthenticator.MY_AUTHENTICATOR_AAGUID)
         #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,True)
         #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.RESIDENT_KEY,True)
-        #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.USER_PRESENCE,True)
+        self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.USER_PRESENCE,True)
         #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CONFIG,True)
         self.get_info_resp.add_version(AUTHN_GETINFO_VERSION.CTAP2)
-        #self.get_info_resp.add_transport(AUTHN_GETINFO_TRANSPORT.USB)
-        #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
+        self.get_info_resp.add_version(AUTHN_GETINFO_VERSION.CTAP1)
+        self.get_info_resp.add_transport(AUTHN_GETINFO_TRANSPORT.USB)
+        self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
         #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.RS256))
 
     def get_AAGUID(self):
         return MyAuthenticator.MY_AUTHENTICATOR_AAGUID
+
+    def get_version(self)->AuthenticatorVersion:
+        return MyAuthenticator.VERSION
 
     def authenticatorGetInfo(self, keep_alive:CTAPHIDKeepAlive) -> GetInfoResp:
         auth.debug("GetInfo called: %s", self.get_info_resp)
