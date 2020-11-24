@@ -14,7 +14,11 @@ class HIDPacket:
         self._data = data
 
     def get_bytes(self):
-        return self._data
+        
+        if len(self._data) < 64:
+            return self._data + bytes(64-len(self._data))
+        else:
+            return self._data
 
     @abstractmethod
     def get_payload(self)->bytes:
