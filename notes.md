@@ -43,3 +43,13 @@ This document contains notes and questions that occur during implementation.
         This seems to create a problem, since setting UP to False could in theory bypass the consent check? If that is the case it might allow a corrupt RP to iterate through credentials on the same Authenticator to determine related accounts. With a UP I believe the credential checking and interaction with the Authenticator is silent, and as such, could fail in the background, revealing the user.id of related accounts.
 - Is a user presence check even a consent check?
     - Can consent be granted without first authenticating the user? 
+
+## Firefox
+Firefox doesn't support CTAP2 on Linux/Mac, only on Windows by using built in Windows API. On other platforms it falls back to U2F.
+
+## Resident keys
+Good explanation of resident keys here, might be something we can expand on
+- For example, if an authenticator could be linked with another authenticator by storing its Public Key, it could in theory construct multiple copies of the Resident Key - to be stored on a remote server - but which could be access by multiple authenticators. This would allow an authenticator to add new linked authenticators at any time by retrieving and encrypting new copies. The signature counter might even be able to be homomorphic allowing collective incrementing
+
+## Solo keys
+- Start in USB mode ./main -b hidg
