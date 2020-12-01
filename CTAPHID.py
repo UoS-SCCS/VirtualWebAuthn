@@ -17,6 +17,8 @@ from CTAPHIDMsg import CTAPHIDPingRequest
 from CTAPHIDMsg import CTAPHIDPingResponse
 from CTAPHIDMsg import CTAPHIDCancelRequest
 from CTAPHIDMsg import CTAPHIDCancelResponse
+from CTAPHIDMsg import CTAPHIDWinkRequest
+from CTAPHIDMsg import CTAPHIDWinkResponse
 from CTAPHIDMsg import CTAPHIDErrorResponse
 from CTAPHIDMsg import CTAPHIDKeepAliveResponse
 from DICEAuthenticator import DICEAuthenticator
@@ -81,6 +83,8 @@ class CTAPHID(USBHIDListener):
                 self.process_ping_request(self._transaction.request)
             elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL:
                 self.process_cancel_request(self._transaction.request)
+            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_WINK:
+                self.process_wink_request(self._transaction.request)
         else:
             ctap.debug("Message incomplete remaining bytes: %s", self._transaction.request.remaining_bytes)
         
@@ -109,6 +113,24 @@ class CTAPHID(USBHIDListener):
                 response = CTAPHIDCancelResponse(self._transaction.get_CID())
                 self._transaction.cancel(response)
                 self.send_response(self._transaction)
+    
+    def process_wink_request(self, msg_request: CTAPHIDWinkRequest):
+        ctap.debug("Received Wink request: %s", msg_request)
+        if self.channel_exists(msg_request.get_CID()) == False:
+            self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_CHANNEL))
+        else:
+            
+            transaction  = self.get_channel(msg_request.get_CID())
+            #transaction.set_request(msg_request)
+            if not self._authenticator is None:
+                #TODO add try catch to return error status code
+                try:
+                    resp = self._authenticator.process_wink(msg_request.get_payload(), self._keepAlive)
+                    transaction.set_response(CTAPHIDWinkResponse(self._transaction.get_CID(),resp))
+                    self.send_response(transaction)
+                except DICEAuthenticatorException as e:
+                    auth.error("Exception from authenticator")
+                    self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),e.get_error_code()))
 
     def process_ping_request(self, msg_request: CTAPHIDPingRequest):
         ctap.debug("Received ping request: %s", msg_request)

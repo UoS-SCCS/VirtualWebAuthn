@@ -44,6 +44,26 @@ class DICEAuthenticatorStorage:
         pass
     
     @abstractmethod
+    def get_pin_retries(self)->int:
+        pass
+
+    @abstractmethod
+    def get_pin(self)->bytes:
+        pass
+
+    @abstractmethod
+    def set_pin_retries(self)->int:
+        pass
+    
+    @abstractmethod
+    def set_pin(self, pin:bytes):
+        pass
+
+    @abstractmethod
+    def decrement_pin_retries(self)->int:
+        pass
+
+    @abstractmethod
     def reset(self)->bool:
         pass
     

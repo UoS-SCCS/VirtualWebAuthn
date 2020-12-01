@@ -8,7 +8,8 @@ from DICEAuthenticator import PublicKeyCredentialParameters
 from DICEAuthenticator import AUTHN_GETINFO_VERSION
 from DICEAuthenticator import AuthenticatorMakeCredentialParameters
 from DICEAuthenticator import AuthenticatorGetAssertionParameters
-
+from DICEAuthenticator import AuthenticatorGetClientPINParameters
+from DICEAuthenticator import GetClientPINResp
 from DICEAuthenticator import MakeCredentialResp
 from DICEAuthenticator import GetAssertionResp
 from DICEAuthenticator import DICEAuthenticatorException
@@ -23,6 +24,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from AttestationObject import AttestationObject
 import logging
 from binascii import hexlify, a2b_hex, b2a_hex
@@ -33,13 +35,18 @@ from fido2 import cbor
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 import datetime
+import os
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes, hmac
 from AuthenticatorVersion import AuthenticatorVersion
 log = logging.getLogger('debug')
-auth = logging.getLogger('auth')
+ctap = logging.getLogger('debug.ctap')
+auth = logging.getLogger('debug.auth')
 class MyAuthenticator(DICEAuthenticator):
     VERSION = AuthenticatorVersion(2,1,0,0)
     MY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
+    PIN_TOKEN_LENGTH=64
     def __init__(self, storage:DICEAuthenticatorStorage, crypto_providers:[int]):
         #allow list of crypto providers, may be a subset of all available providers
         super().__init__()
@@ -50,15 +57,34 @@ class MyAuthenticator(DICEAuthenticator):
         #    self._providers_idx[provider.get_alg()] = provider
         self.get_info_resp = GetInfoResp()
         self.get_info_resp.set_auguid(MyAuthenticator.MY_AUTHENTICATOR_AAGUID)
-        #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,True)
-        #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.RESIDENT_KEY,True)
+        self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,False)
+        self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.RESIDENT_KEY,True)
         self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.USER_PRESENCE,True)
         #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CONFIG,True)
         self.get_info_resp.add_version(AUTHN_GETINFO_VERSION.CTAP2)
-        self.get_info_resp.add_version(AUTHN_GETINFO_VERSION.CTAP1)
+        #self.get_info_resp.add_version(AUTHN_GETINFO_VERSION.CTAP1)
         self.get_info_resp.add_transport(AUTHN_GETINFO_TRANSPORT.USB)
         self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
         #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.RS256))
+        #Generate PIN Key Agreement at Startup
+        self._generate_authenticatorKeyAgreementKey()
+        self._generate_pinToken()
+    def _generate_pinToken(self):
+        auth.debug("Generating new pinToken")
+        self._pin_token = os.urandom(MyAuthenticator.PIN_TOKEN_LENGTH)
+    def _generate_authenticatorKeyAgreementKey(self):
+        auth.debug("Generating new authenticatorKeyAgreementKey")
+        self._authenticatorKeyAgreementKey = self._get_pin_crypto_provider().create_new_key_pair()
+
+    def _get_pin_crypto_provider(self)->AuthenticatorCryptoProvider:
+        provider = None
+        if -7 in self._providers:
+            provider=CRYPTO_PROVIDERS[-7]
+        
+        if provider is None:
+            auth.error("No matching public key provider found")
+            raise Exception("No matching provider found")
+        return provider
 
     def get_AAGUID(self):
         return MyAuthenticator.MY_AUTHENTICATOR_AAGUID
@@ -167,3 +193,42 @@ class MyAuthenticator(DICEAuthenticator):
             return ResetResp()
         else:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_OTHER)
+    
+    def authenticatorGetClientPIN_getRetries(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        return GetClientPINResp(retries=self._storage.get_pin_retries())
+    
+    def authenticatorGetClientPIN_getKeyAgreement(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        return GetClientPINResp(key_agreement=self._authenticatorKeyAgreementKey.get_public_key().get_as_cose())
+    
+    def authenticatorGetClientPIN_setPIN(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        #TODO verify contents of params
+        if not self._storage.get_pin is None:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"PIN has already been set")
+        
+        #TODO generalise and remove hard coding to cose parameters
+        platformKeyAgreementKey = self._get_pin_crypto_provider().from_cose(params.get_key_agreement())
+        
+        shared_key = self._authenticatorKeyAgreementKey.get_private_key().exchange(platformKeyAgreementKey)
+
+        derived_key = HKDF(algorithm=hashes.SHA256(),length=32,salt=None,info=b'handshake data',backend=default_backend()).derive(shared_key)
+        h = hmac.HMAC(derived_key, hashes.SHA256(),default_backend())
+        h.update(params.get_new_pin_enc())
+        check = h.finalize()
+        if not check[0:16] == params.get_pin_auth()[0:16]:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"Auth PIN did not match")
+        cipher = Cipher(algorithms.AES(derived_key), modes.CBC(bytes(16)),default_backend())
+        decryptor = cipher.decryptor()
+        decrypted_pin = decryptor.update(params.get_new_pin_enc())
+        pin = None
+        for i in range(len(decrypted_pin)):
+            if decrypted_pin[i]== b'\x00':
+                pin = decrypted_pin[:i]
+        if len(pin)<4:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_POLICY_VIOLATION, "PIN too short")
+        digest = hashes.Hash(hashes.SHA256(),default_backend())
+        digest.update(pin)
+        self._storage.set_pin(digest.finalize()[:16])
+
+    def process_wink(self, payload:bytes, keep_alive: CTAPHIDKeepAlive)->bytes:
+        auth.debug("Process wink")
+        return bytes(0)

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from CTAPHID import CTAPHIDTransaction
 import CTAPHIDConstants
+from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN
 from CTAPHIDConstants import AUTHN_GET_ASSERTION
 from CTAPHIDConstants import AUTHN_MAKE_CREDENTIAL
 from CTAPHIDConstants import AUTHN_GETINFO
@@ -10,7 +11,8 @@ from CTAPHIDConstants import AUTHN_GETINFO_PIN_UV_PROTOCOL
 from CTAPHIDConstants import AUTHN_GETINFO_TRANSPORT
 from CTAPHIDConstants import AUTHN_CMD
 from CTAPHIDConstants import AUTHN_GETINFO_VERSION
-
+from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_SUBCMD
+from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_RESP
 from AuthenticatorVersion import AuthenticatorVersion
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from enum import Enum, unique
@@ -104,12 +106,50 @@ class CBORResponse:
 
     def __str__(self):
         out = {}
-        out["type"] = type(self)
-        out["content"]=self.content
+        out["type"] = str(type(self))
+        out["content"]={}
+        for key in self.content:
+            if type(self.content[key])==bytes:
+                auth.debug("Converting value to hex")
+                out["content"][key]=self.content[key].hex()
         return json.dumps(out)
 
     def get_encoded(self):
+        if len(self.content) == 0:
+            return bytes(0)
         return cbor.encode(self.content)
+
+class AuthenticatorGetClientPINParameters:
+    """
+    pinProtocol (0x01) 	Unsigned Integer 	Required 	PIN protocol version chosen by the client. For this version of the spec, this SHALL be the number 1.
+    subCommand (0x02) 	Unsigned Integer 	Required 	The authenticator Client PIN sub command currently being requested
+    keyAgreement (0x03) 	COSE_Key 	Optional 	Public key of platformKeyAgreementKey. The COSE_Key-encoded public key MUST contain the optional "alg" parameter and MUST NOT contain any other optional parameters. The "alg" parameter MUST contain a COSEAlgorithmIdentifier value.
+    pinAuth (0x04) 	Byte Array 	Optional 	First 16 bytes of HMAC-SHA-256 of encrypted contents using sharedSecret. See Setting a new PIN, Changing existing PIN and Getting pinToken from the authenticator for more details.
+    newPinEnc (0x05) 	Byte Array 	Optional 	Encrypted new PIN using sharedSecret. Encryption is done over UTF-8 representation of new PIN.
+    pinHashEnc (0x06) 	Byte Array 	Optional 	Encrypted first 16 bytes of SHA-256 of PIN using sharedSecret. """
+
+    def __init__(self, cbor_data:bytes):
+        self.parameters = cbor.decode(cbor_data)
+        auth.debug("Decoded GetClientPINParameters: %s", self.parameters)        
+    
+
+    def get_protocol(self):
+        return self.parameters[AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value]
+    
+    def get_sub_command(self):
+        return self.parameters[AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value]
+    
+    def get_key_agreement(self):
+        return self.parameters[AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value]
+    
+    def get_pin_auth(self):
+        return self.parameters[AUTHN_GET_CLIENT_PIN.PIN_AUTH.value]
+    
+    def get_new_pin_enc(self):
+        return self.parameters[AUTHN_GET_CLIENT_PIN.NEW_PIN_ENC.value]
+
+    def get_pin_hash_enc(self):
+        return self.parameters[AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value]
 
 class AuthenticatorGetAssertionParameters:
     def __init__(self, cbor_data:bytes):
@@ -162,6 +202,19 @@ class AuthenticatorMakeCredentialParameters:
     def get_extensions(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.EXTENSIONS.value]
    
+
+class GetClientPINResp(CBORResponse):
+
+    def __init__(self,key_agreement:{} = None, pin_token:bytes=None,retries:int=None):
+        super(GetClientPINResp,self).__init__()
+        self.content = {}
+        if not key_agreement is None:
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.KEY_AGREEMENT] = key_agreement
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.KEY_AGREEMENT][3]=-25
+        if not pin_token is None:
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.PIN_TOKEN] = pin_token
+        if not retries is None:
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.RETRIES] = retries
 
 class MakeCredentialResp(CBORResponse):
 
@@ -293,7 +346,8 @@ class DICEAuthenticator:
         elif cmd == AUTHN_CMD.AUTHN_GetInfo.value:
             return self.authenticatorGetInfo(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_ClientPIN.value:
-            pass
+            params = AuthenticatorGetClientPINParameters(cbor_data[1:])
+            return self.authenticatorGetClientPIN(params, keep_alive)
         elif cmd == AUTHN_CMD.AUTHN_Reset.value:
             return self.authenticatorReset(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetNextAssertion.value:
@@ -313,6 +367,10 @@ class DICEAuthenticator:
             pass
         elif cmd == AUTHN_CMD.AUTHN_VendorLast.value:
             pass
+
+    @abstractmethod
+    def process_wink(self, payload:bytes, keep_alive: CTAPHIDKeepAlive)->bytes:
+        pass
 
     def set_get_assertion_params_start_timer(self, CID:bytes,params:AuthenticatorGetAssertionParameters, idx:int):
         auth.debug("Setting getAssertion %s for Channel: %s with Index: %s", params, CID, idx)
@@ -371,6 +429,40 @@ class DICEAuthenticator:
 
     @abstractmethod
     def authenticatorGetAssertion(self, params:AuthenticatorGetAssertionParameters,keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
+        pass
+
+    def authenticatorGetClientPIN(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        subcmd = params.get_sub_command()
+        if subcmd == AUTHN_GET_CLIENT_PIN_SUBCMD.GET_RETRIES.value:
+            return self.authenticatorGetClientPIN_getRetries(params,keep_alive)
+        elif subcmd == AUTHN_GET_CLIENT_PIN_SUBCMD.GET_KEY_AGREEMENT.value:
+            return self.authenticatorGetClientPIN_getKeyAgreement(params,keep_alive)
+        elif subcmd == AUTHN_GET_CLIENT_PIN_SUBCMD.SET_PIN.value:
+            return self.authenticatorGetClientPIN_setPIN(params,keep_alive)
+        elif subcmd == AUTHN_GET_CLIENT_PIN_SUBCMD.CHANGE_PIN.value:
+            return self.authenticatorGetClientPIN_changePIN(params,keep_alive)
+        elif subcmd == AUTHN_GET_CLIENT_PIN_SUBCMD.GET_PIN_TOKEN.value:
+            return self.authenticatorGetClientPIN_getPINToken(params,keep_alive)
+        else:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"Invalid sub command")
+
+    @abstractmethod
+    def authenticatorGetClientPIN_getRetries(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        pass
+
+    @abstractmethod
+    def authenticatorGetClientPIN_getKeyAgreement(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        pass
+
+    @abstractmethod
+    def authenticatorGetClientPIN_setPIN(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        pass
+    @abstractmethod
+    def authenticatorGetClientPIN_changePIN(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
+        pass
+    
+    @abstractmethod
+    def authenticatorGetClientPIN_getPINToken(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
         pass
 
     @abstractmethod

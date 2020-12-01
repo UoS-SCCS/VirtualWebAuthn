@@ -94,8 +94,12 @@ class CTAPHIDCMD(ABC):
             return CTAPHIDMsgRequest(packet)
         elif packet.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR:
             return CTAPHIDCBORRequest(packet)
-
-
+        elif packet.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_WINK:
+            return CTAPHIDWinkRequest(packet)
+        elif packet.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL:
+            return CTAPHIDCancelRequest(packet)
+        elif packet.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_PING:
+            return CTAPHIDPingRequest(packet)
 
 
 """
@@ -182,6 +186,33 @@ class CTAPHIDErrorResponse(CTAPHIDCMD):
     def __init__(self,CID,error_code:CTAPHIDConstants.CTAPHID_ERROR):     
         ctap.debug("Create initial Error response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_ERROR,1,error_code.value)
+
+"""
+Request
+CMD 	CTAPHID_WINK
+BCNT 	0
+DATA 	N/A 
+"""
+class CTAPHIDWinkRequest(CTAPHIDCMD):
+    def __init__(self, packet: HIDInitializationPacket):
+        super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
+        self.verify()
+
+
+
+"""
+Response at success
+CMD 	CTAPHID_WINK
+BCNT 	0
+DATA 	N/A 
+"""
+class CTAPHIDWinkResponse(CTAPHIDCMD):
+
+    def __init__(self,CID,payload_data:bytes):     
+        ctap.debug("Create initial WINK response %s",payload_data)
+        super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_WINK,len(payload_data),payload_data)
+
+
 
 
 """

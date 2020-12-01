@@ -66,3 +66,7 @@ class AuthenticatorCryptoProvider:
     @abstractmethod
     def load_key_pair(self, data:bytes)->AuthenticatorCryptoKeyPair:
         pass
+    
+    @abstractmethod
+    def public_key_from_cose(self, cose_data:{})->AuthenticatorCryptoPublicKey:
+        pass

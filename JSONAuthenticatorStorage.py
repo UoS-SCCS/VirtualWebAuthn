@@ -11,6 +11,10 @@ class STORAGE_KEYS():
     MASTER_KEY = "master_key"
     SIGNATURE_COUNT = "signature_count"
     CREDENTIALS = "credentials"
+    PIN = "pin"
+    PIN_RETRIES = "retries"
+    PIN_VALUE = "pin_value"
+
 
 class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     def __init__(self, path:str):
@@ -93,6 +97,46 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
                 #not allowed list, return everything
                 results.append(credential_source)
         return results
+
+    def _get_create_pin(self):
+        if not STORAGE_KEYS.PIN in self._data:
+            self._data[STORAGE_KEYS.PIN]={}
+            self._write_to_json()
+        return self._data[STORAGE_KEYS.PIN]
+    
+    def _get_create_pin_retries(self):
+        pin = self._get_create_pin()
+        if not STORAGE_KEYS.PIN_RETRIES in pin:
+            pin[STORAGE_KEYS.PIN_RETRIES]=8
+            self._write_to_json()
+        return pin[STORAGE_KEYS.PIN_RETRIES]
+
+    def get_pin_retries(self)->int:
+        return self._get_create_pin_retries()
+        
+    def set_pin_retries(self, new_value:int)->int:
+        self._get_create_pin_retries()
+        self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]=new_value
+        self._write_to_json()
+        return self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]
+
+    def decrement_pin_retries(self)->int:
+        self._get_create_pin_retries()
+        self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]-=1
+        self._write_to_json()
+        return self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]
+
+    def get_pin(self)->bytes:
+        pin = self._get_create_pin()
+        if STORAGE_KEYS.PIN_VALUE in pin:
+            return bytes.fromhex(pin[STORAGE_KEYS.PIN_VALUE])
+        else:
+            return None
+    def set_pin(self, pin_value:bytes):
+        pin = self._get_create_pin()
+        pin[STORAGE_KEYS.PIN_VALUE]=pin.hex()
+        self.set_pin_retries(8)
+        self._write_to_json()
 
     def reset(self)->bool:
         self._data={"_version":"JSONAuthenticatorStorage_0.1"}

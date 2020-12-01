@@ -44,6 +44,14 @@ class CTAP_CMD(Enum):
 @unique
 class CTAP_STATUS_CODE(Enum):
     CTAP2_OK = b'\x00'
+    CTAP1_ERR_INVALID_COMMAND = b'\x01'#	The command is not a valid CTAP command.
+    CTAP1_ERR_INVALID_PARAMETER = b'\x02'#	The command included an invalid parameter.
+    CTAP1_ERR_INVALID_LENGTH = b'\x03'#	Invalid message or item length.
+    CTAP1_ERR_INVALID_SEQ = b'\x04'# 	Invalid message sequencing.
+    CTAP1_ERR_TIMEOUT = b'\x05'#	Message timed out.
+    CTAP1_ERR_CHANNEL_BUSY= b'\x06'# 	Channel busy.
+    CTAP1_ERR_LOCK_REQUIRED = b'\x0A'#	Command requires channel lock.
+    CTAP1_ERR_INVALID_CHANNEL = b'\x0B'#	Command not allowed on this cid. 
     CTAP2_ERR_CBOR_UNEXPECTED_TYPE = b'\x11'#Invalid/unexpected CBOR error.
     CTAP2_ERR_INVALID_CBOR = b'\x12'# 	Error when parsing CBOR.
     CTAP2_ERR_MISSING_PARAMETER  = b'\x14'#	Missing non-optional parameter.
@@ -126,6 +134,13 @@ class AUTHN_GETINFO(Enum):
     DEFAULT_CRED_PROTECT = 12
 
 @unique 
+class AUTHN_GET_CLIENT_PIN_RESP(Enum):
+    KEY_AGREEMENT = 1
+    PIN_TOKEN = 2
+    RETRIES = 3
+    
+
+@unique 
 class AUTHN_MAKE_CREDENTIAL(Enum):
     HASH= 1
     RP= 2
@@ -138,6 +153,26 @@ class AUTHN_MAKE_CREDENTIAL(Enum):
     PIN_PROTOCOL = 9
     OPTIONS_RK = "rk"
     OPTIONS_UV = "UV"
+
+
+@unique 
+class AUTHN_GET_CLIENT_PIN(Enum):
+    PIN_PROTOCOL= 1
+    SUB_COMMAND= 2
+    KEY_AGREEMENT=3
+    PIN_AUTH = 4
+    NEW_PIN_ENC=5
+    PIN_HASH_ENC = 6
+
+@unique 
+class AUTHN_GET_CLIENT_PIN_SUBCMD(Enum):
+    GET_RETRIES= 1
+    GET_KEY_AGREEMENT= 2
+    SET_PIN=3
+    CHANGE_PIN = 4
+    GET_PIN_TOKEN=5
+    
+
 
 @unique 
 class AUTHN_GET_ASSERTION(Enum):
