@@ -66,3 +66,5 @@ Good explanation of resident keys here, might be something we can expand on
 - If a PIN is set on the authenticator it must be provided to make a credential. However, it is not required to access the credential. In particular:
     > If pinAuth parameter is not present and clientPin has been set on the authenticator, set the "uv" bit to 0 in the response.
 - Why does this not require the PIN to be provided?
+    - It might be because the platform will already have got the pin token, and as such, has proved access. The relying party will get uv = false, which might be ok
+- It isn't clear to me how one triggers Chrome to set or change a PIN. Maybe it is intended to be managed entirely outside of WebAuthN, but it is part of CTAP2?
