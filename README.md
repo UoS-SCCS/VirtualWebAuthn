@@ -2,11 +2,67 @@
 This repository contains work in progress for building a Virtual WebAuthN Token.
 
 ## Current Status
-Proof of concept has been shown with the use of [Solo](https://github.com/solokeys/solo) and hints from [https://blog.hansenpartnership.com/webauthn-in-linux-with-a-tpm-via-the-hid-gadget/](https://blog.hansenpartnership.com/webauthn-in-linux-with-a-tpm-via-the-hid-gadget/)
+Proof of concept implementation, currently status:
+### Implemented
+* CTAPHID commands
+    * CTAPHID_MSG
+    * CTAPHID_CBOR
+    * CTAPHID_INIT
+    * CTAPHID_PING
+    * CTAPHID_CANCEL
+    * CTAPHID_ERROR
+    * CTAPHID_KEEPALIVE
+    * CTAPHID_WINK
+* Authenticator API
+    * authenticatorMakeCredential
+    * authenticatorGetAssertion 
+    * authenticatorGetNextAssertion
+    * authenticatorGetInfo
+    * authenticatorClientPIN
+        * Authenticator Configuration Operations Upon Power Up
+        * Getting Retries from Authenticator
+        * Getting sharedSecret from Authenticator
+        * Setting a New PIN
+        * Changing existing PIN
+        * Getting pinToken from the Authenticator
+        * Using pinToken
+            * Using pinToken in authenticatorMakeCredential
+            * Using pinToken in authenticatorGetAssertion
+            * Without pinToken in authenticatorGetAssertion (*Needs testing*)
+    * authenticatorReset (0x07) 
 
+### TODO
+* CTAPHID commands
+    * CTAPHID_MSG
+    * CTAPHID_LOCK
+* Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented
+* Extensions and options in MakeCredential and GetAssertion
+* _Resident Key Option_
+* UI to obtain presence/user verification and display relying party information
+* Additional Attestation Statement formats
+* Additional Crypto Providers
+* Additional Attestation Types
+* Documentation
+
+
+## Setup
 I would recommed performing the following in a Virtual Machine, I've tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device. 
 
-Steps to setup:
+### Virtual Machine Setup
+* Download VirtualBox [https://www.virtualbox.org/](https://www.virtualbox.org/)
+* Download an Ubuntu ISO: [https://ubuntu.com/download/desktop](https://ubuntu.com/download/desktop)
+* Follow the tutorial at [https://fossbytes.com/how-to-install-ubuntu-20-04-lts-virtualbox-windows-mac-linux/](https://fossbytes.com/how-to-install-ubuntu-20-04-lts-virtualbox-windows-mac-linux/) Follow the basic setup, there is no need to change partition structures
+* Check your VM boots
+* Perform the steps below in your VirtualBox instance
+
+### Prerequisites
+* Install the following dependencies (note: this may not be a complete list, if you get errors create an issue):
+    ```
+    sudo apt-get install build-essential git chromium-browser python3 pip3
+    ```
+
+### Steps to setup:
+
 * Clone this repository
 * Ensure that the kernel sources have been installed:
     ``` 
@@ -14,9 +70,21 @@ Steps to setup:
     sudo apt-get install linux-source
     ```
 * Navigate to `udev_rules` and run `sudo ./set_udev_rules.sh` this will set the rules that permit access to the Virtual USB device without needing root access, which Chrome will not have.
+* Move directory `cd Create_USB_Gadget`
 * Run `sudo make install`
 * This should create a virtual HID device that appears to be a CTAP key device. Note, I needed to reboot before I could get this to work correctly. If it has worked correctly you should see output similar to this:
     ```
+    tar -xvf /usr/src/linux-source-5.4.0.tar.bz2 linux-source-5.4.0/drivers/usb/gadget/udc/dummy_hcd.c
+    linux-source-5.4.0/drivers/usb/gadget/udc/dummy_hcd.c
+    cp linux-source-5.4.0/drivers/usb/gadget/udc/dummy_hcd.c dummy_hcd.c
+    make -C /lib/modules/5.4.0-53-generic/build M=/home/dev/git/VirtualWebAuthN/Create_USB_Gadget modules
+    make[1]: Entering directory '/usr/src/linux-headers-5.4.0-53-generic'
+    CC [M]  /home/dev/git/VirtualWebAuthN/Create_USB_Gadget/dummy_hcd.o
+    Building modules, stage 2.
+    MODPOST 1 modules
+    CC [M]  /home/dev/git/VirtualWebAuthN/Create_USB_Gadget/dummy_hcd.mod.o
+    LD [M]  /home/dev/git/VirtualWebAuthN/Create_USB_Gadget/dummy_hcd.ko
+    make[1]: Leaving directory '/usr/src/linux-headers-5.4.0-53-generic'
     modprobe libcomposite
     insmod dummy_hcd.ko
     mkdir -p /sys/kernel/config/usb_gadget/fido2
@@ -28,11 +96,11 @@ Steps to setup:
     echo -ne "\x06\xd0\xf1\x09\x01\xa1\x01\x09\x20\x15\x00\x26\xff\x00\x75\x08\x95\x40\x81\x02\x09\x21\x15\x00\x26\xff\x00\x75\x08\x95\x40\x91\x02\xc0" > /sys/kernel/config/usb_gadget/fido2/functions/hid.usb0/report_desc
     mkdir /sys/kernel/config/usb_gadget/fido2/strings/0x409
     mkdir /sys/kernel/config/usb_gadget/fido2/configs/c.1/strings/0x409
-    echo "0xa2ca" > /sys/kernel/config/usb_gadget/fido2/idProduct
-    echo "0x0483" > /sys/kernel/config/usb_gadget/fido2/idVendor
-    echo "1234567890" > /sys/kernel/config/usb_gadget/fido2/strings/0x409/serialnumber
-    echo "Solo" > /sys/kernel/config/usb_gadget/fido2/strings/0x409/manufacturer
-    echo "Solo Software Authenticator" > /sys/kernel/config/usb_gadget/fido2/strings/0x409/product
+    echo "0x05df" > /sys/kernel/config/usb_gadget/fido2/idProduct
+    echo "0x16c0" > /sys/kernel/config/usb_gadget/fido2/idVendor
+    echo "6548556985" > /sys/kernel/config/usb_gadget/fido2/strings/0x409/serialnumber
+    echo "DICEProject" > /sys/kernel/config/usb_gadget/fido2/strings/0x409/manufacturer
+    echo "DICEKey Software Authenticator" > /sys/kernel/config/usb_gadget/fido2/strings/0x409/product
     echo "Configuration 1" > /sys/kernel/config/usb_gadget/fido2/configs/c.1/strings/0x409/configuration
     echo 120 > /sys/kernel/config/usb_gadget/fido2/configs/c.1/MaxPower
     ln -s /sys/kernel/config/usb_gadget/fido2/functions/hid.usb0 /sys/kernel/config/usb_gadget/fido2/configs/c.1
@@ -40,31 +108,33 @@ Steps to setup:
     ```
 * If you check `dmesg` you should see the following:
     ```
-    [   48.841857] dummy_hcd dummy_hcd.0: USB Host+Gadget Emulator, driver 02 May 2005
-    [   48.841860] dummy_hcd dummy_hcd.0: Dummy host controller
-    [   48.841862] dummy_hcd dummy_hcd.0: new USB bus registered, assigned bus number 1
-    [   48.841904] usb usb1: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 5.04
-    [   48.841905] usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
-    [   48.841906] usb usb1: Product: Dummy host controller
-    [   48.841907] usb usb1: Manufacturer: Linux 5.4.0-52-generic dummy_hcd
-    [   48.841908] usb usb1: SerialNumber: dummy_hcd.0
-    [   48.842182] hub 1-0:1.0: USB hub found
-    [   48.842201] hub 1-0:1.0: 1 port detected
-    [   49.174446] usb 1-1: new high-speed USB device number 2 using dummy_hcd
-    [   49.433561] usb 1-1: New USB device found, idVendor=0483, idProduct=a2ca, bcdDevice= 5.04
-    [   49.433565] usb 1-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-    [   49.433567] usb 1-1: Product: Solo Software Authenticator
-    [   49.433568] usb 1-1: Manufacturer: Solo
-    [   49.433570] usb 1-1: SerialNumber: 1234567890
-    [   49.441803] configfs-gadget gadget: high-speed config #1: c
-    [   49.482037] hidraw: raw HID events driver (C) Jiri Kosina
-    [   49.510015] usbcore: registered new interface driver usbhid
-    [   49.510016] usbhid: USB HID core driver
-    [   49.521664] hid-generic 0003:0483:A2CA.0001: hiddev0,hidraw0: USB HID v1.01 Device [Solo Solo Software Authenticator] on usb-dummy_hcd.0-1/input0
-    ```
-* At this point you should see two new devices prefixed with `hidraw` and `hidg`. For example, `hidraw0` and `hidg0`. I have had some problems with this happening, particularly after a soft restart, i.e. out of suspend. If in doubt reboot and repeat the steps above. 
+    [26093.700158] dummy_hcd dummy_hcd.0: USB Host+Gadget Emulator, driver 02 May 2005
+    [26093.700161] dummy_hcd dummy_hcd.0: Dummy host controller
+    [26093.700164] dummy_hcd dummy_hcd.0: new USB bus registered, assigned bus number 1
+    [26093.700209] usb usb1: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 5.04
+    [26093.700210] usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+    [26093.700212] usb usb1: Product: Dummy host controller
+    [26093.700213] usb usb1: Manufacturer: Linux 5.4.0-53-generic dummy_hcd
+    [26093.700214] usb usb1: SerialNumber: dummy_hcd.0
+    [26093.700356] hub 1-0:1.0: USB hub found
+    [26093.700362] hub 1-0:1.0: 1 port detected
+    [26094.036899] usb 1-1: new high-speed USB device number 2 using dummy_hcd
+    [26094.260980] usb 1-1: New USB device found, idVendor=16c0, idProduct=05df, bcdDevice= 5.04
+    [26094.260983] usb 1-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+    [26094.260985] usb 1-1: Product: DICEKey Software Authenticator
+    [26094.260986] usb 1-1: Manufacturer: DICEProject
+    [26094.260988] usb 1-1: SerialNumber: 6548556985
+    [26094.268865] configfs-gadget gadget: high-speed config #1: c
+    [26094.309302] hid-generic 0003:16C0:05DF.0002: hiddev0,hidraw0: USB HID v1.01 Device [DICEProject DICEKey Software Authenticator] on usb-dummy_hcd.0-1/input0
 
-### Test
+    ```
+* At this point you should see three new devices, twoprefixed with `hidraw` and `hidg` (For example, `hidraw0` and `hidg0`), and one called `dicekey`. I have had some problems with this happening, particularly after a soft restart, i.e. out of suspend. If in doubt reboot and repeat the steps above. 
+
+### Key Manager
+* Inside of the `examples` folder is a KeyManager.py that currently allows setting and changing of the PIN, issuing a WINK command, and getting a PIN Token and PIN retries.
+* You will need to set a PIN using the KeyManager to force Chrome to start requesting a PIN.
+
+### Test with Solo Keys - not required any longer
 * Clone [Solo](https://github.com/solokeys/solo)
     * `git clone --recurse-submodules https://github.com/solokeys/solo`
     * `cd solo`

@@ -68,3 +68,10 @@ Good explanation of resident keys here, might be something we can expand on
 - Why does this not require the PIN to be provided?
     - It might be because the platform will already have got the pin token, and as such, has proved access. The relying party will get uv = false, which might be ok
 - It isn't clear to me how one triggers Chrome to set or change a PIN. Maybe it is intended to be managed entirely outside of WebAuthN, but it is part of CTAP2?
+
+## Token Binding
+Token binding is described throughout the WebAuthN standard, albeit as an optional parameter. However, there are some security questions with regards to whether it is important for ensuring security.
+
+More details on token binding and WebAuthN can be found at: [https://fidoalliance.org/fido-technote-the-growing-role-of-token-binding/](https://fidoalliance.org/fido-technote-the-growing-role-of-token-binding/)
+
+The reason this is of interest is that just before it was to become a standard Chrome announced it was going to remove the already present support for Token Binding from Chrome. I believe this has now taken place: [https://groups.google.com/a/chromium.org/g/blink-dev/c/OkdLUyYmY1E](https://groups.google.com/a/chromium.org/g/blink-dev/c/OkdLUyYmY1E)

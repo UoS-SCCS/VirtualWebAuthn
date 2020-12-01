@@ -131,3 +131,12 @@ dmypy.json
 
 logs/
 old_code/
+
+Create_USB_Gadget/*.c
+Create_USB_Gadget/*.cmd
+Create_USB_Gadget/*.ko
+Create_USB_Gadget/linux-source-*
+Create_USB_Gadget/*.o
+Create_USB_Gadget/*.mod
+Create_USB_Gadget/Module.*
+Create_USB_Gadget/modules.*
