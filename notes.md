@@ -53,3 +53,16 @@ Good explanation of resident keys here, might be something we can expand on
 
 ## Solo keys
 - Start in USB mode ./main -b hidg
+
+## PIN
+- The description of the PIN algorithm is quite poor for a proposed standard:
+    > "pinToken" is used so that there is minimum burden on the authenticator and platform does not have to not send actual encrypted PIN to the authenticator in normal authenticator usage scenarios. 
+- They are using AES-CBC with an all zero IV. This is not only not consistent with how AES-CBC should be used, but reduces down to AES-ECB. Not necessarily a security issue, but why specify CBC with a zero IV?
+- In changing existing PIN the same shared secret key is used twice with two different messages, but the same IV
+    > pinHashEnc: Encrypted first 16 bytes of SHA-256 hash of curPin using sharedSecret: AES256-CBC(sharedSecret, IV=0, LEFT(SHA-256(curPin),16)).
+
+    > newPinEnc: Encrypted "newPin" using sharedSecret: AES256-CBC(sharedSecret, IV=0, newPin).
+- The FIDO client library source code appears to have two PIN protocols implemented, despite there only being 1 in the standard. The version 1 in their implementation is not consistent with the version in the standard. This doesn't appear to be the case in the release library
+- If a PIN is set on the authenticator it must be provided to make a credential. However, it is not required to access the credential. In particular:
+    > If pinAuth parameter is not present and clientPin has been set on the authenticator, set the "uv" bit to 0 in the response.
+- Why does this not require the PIN to be provided?

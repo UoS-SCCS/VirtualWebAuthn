@@ -129,7 +129,7 @@ class CTAPHID(USBHIDListener):
                     transaction.set_response(CTAPHIDWinkResponse(self._transaction.get_CID(),resp))
                     self.send_response(transaction)
                 except DICEAuthenticatorException as e:
-                    auth.error("Exception from authenticator")
+                    auth.error("Exception from authenticator",exc_info=True)
                     self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),e.get_error_code()))
 
     def process_ping_request(self, msg_request: CTAPHIDPingRequest):
@@ -159,7 +159,7 @@ class CTAPHID(USBHIDListener):
                     transaction.set_response(CTAPHIDCBORResponse(self._transaction.get_CID(),CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_OK,resp))
                     self.send_response(transaction)
                 except DICEAuthenticatorException as e:
-                    auth.error("Exception from authenticator")
+                    auth.error("Exception from authenticator", exc_info=True)
                     self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),e.get_error_code()))
                     #transaction.reset()
             

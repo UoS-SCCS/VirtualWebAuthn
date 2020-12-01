@@ -15,6 +15,14 @@ from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_SUBCMD
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_RESP
 from AuthenticatorVersion import AuthenticatorVersion
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
+from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
+from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
+from ES256CryptoProvider import ES256CryptoProvider
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import hashes, hmac
+
 from enum import Enum, unique
 from uuid import UUID
 from fido2 import cbor
@@ -23,6 +31,7 @@ import logging
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import json
+import os
 import time
 log = logging.getLogger('debug')
 auth = logging.getLogger('debug.auth')
@@ -174,7 +183,12 @@ class AuthenticatorGetAssertionParameters:
     
     def get_extensions(self):
         return self.parameters[AUTHN_GET_ASSERTION.EXTENSIONS.value]
-
+    
+    def get_pin_auth(self):
+        return self.parameters[AUTHN_GET_ASSERTION.PIN_AUTH.value]
+    
+    def get_pin_protocol(self):
+        return self.parameters[AUTHN_GET_ASSERTION.PIN_PROTOCOL.value]
 class AuthenticatorMakeCredentialParameters:
     def __init__(self, cbor_data:bytes):
         self.parameters = cbor.decode(cbor_data)
@@ -202,6 +216,11 @@ class AuthenticatorMakeCredentialParameters:
     def get_extensions(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.EXTENSIONS.value]
    
+    def get_pin_auth(self):
+        return self.parameters[AUTHN_MAKE_CREDENTIAL.PIN_AUTH.value]
+    
+    def get_pin_protocol(self):
+        return self.parameters[AUTHN_MAKE_CREDENTIAL.PIN_PROTOCOL.value]
 
 class GetClientPINResp(CBORResponse):
 
@@ -209,12 +228,12 @@ class GetClientPINResp(CBORResponse):
         super(GetClientPINResp,self).__init__()
         self.content = {}
         if not key_agreement is None:
-            self.content[AUTHN_GET_CLIENT_PIN_RESP.KEY_AGREEMENT] = key_agreement
-            self.content[AUTHN_GET_CLIENT_PIN_RESP.KEY_AGREEMENT][3]=-25
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.KEY_AGREEMENT.value] = key_agreement
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.KEY_AGREEMENT.value][3]=-25
         if not pin_token is None:
-            self.content[AUTHN_GET_CLIENT_PIN_RESP.PIN_TOKEN] = pin_token
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.PIN_TOKEN.value] = pin_token
         if not retries is None:
-            self.content[AUTHN_GET_CLIENT_PIN_RESP.RETRIES] = retries
+            self.content[AUTHN_GET_CLIENT_PIN_RESP.RETRIES.value] = retries
 
 class MakeCredentialResp(CBORResponse):
 
@@ -315,13 +334,25 @@ class GetInfoResp(CBORResponse):
         
 class DICEAuthenticator:
     AUTHENTICATOR_AAGUID = UUID("695e437f-c0cd-4fe8-b545-d39084f5c805")
-    def __init__(self):
+    PIN_TOKEN_LENGTH = 64
+    def __init__(self, pin_token_length=PIN_TOKEN_LENGTH):
         self._last_get_assertion_cid = None
         self._last_get_assertion_params =  None
         self._last_get_assertion_time = None
         self._last_get_assertion_idx = None
+        self._storage = None
+        self._pin_crypto_provider= ES256CryptoProvider()
         #self._ctap_hid = ctap_hid
+        self._generate_authenticatorKeyAgreementKey()
+        self._generate_pinToken(pin_token_length)
         pass
+
+    def _generate_pinToken(self,pin_token_length:int):
+        auth.debug("Generating new pinToken")
+        self._pin_token = os.urandom(pin_token_length)
+    def _generate_authenticatorKeyAgreementKey(self):
+        auth.debug("Generating new authenticatorKeyAgreementKey")
+        self._authenticatorKeyAgreementKey = self._get_pin_crypto_provider().create_new_key_pair()
 
     def get_AAGUID(self):
         return DICEAuthenticator.AUTHENTICATOR_AAGUID
@@ -347,7 +378,7 @@ class DICEAuthenticator:
             return self.authenticatorGetInfo(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_ClientPIN.value:
             params = AuthenticatorGetClientPINParameters(cbor_data[1:])
-            return self.authenticatorGetClientPIN(params, keep_alive)
+            return self.authenticatorGetClientPIN(params, keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_Reset.value:
             return self.authenticatorReset(keep_alive).get_encoded()
         elif cmd == AUTHN_CMD.AUTHN_GetNextAssertion.value:
@@ -560,7 +591,63 @@ class DICEAuthenticator:
         data += credential_source.get_signature_counter_bytes()
         data += self._get_credential_data(credential_source)
         return data
+    
+    def _get_pin_crypto_provider(self)->AuthenticatorCryptoProvider:
+        return self._pin_crypto_provider
+    
+    def _generate_shared_secret(self,key_agreement:{})->bytes:
+        platformKeyAgreementKey = self._get_pin_crypto_provider().public_key_from_cose(key_agreement)
+        return self._authenticatorKeyAgreementKey.get_private_key().exchange(platformKeyAgreementKey.get_public_key())
+    
+    def _calculate_pin_auth(self, *args)->bytes:
+        h = hmac.HMAC(args[0], hashes.SHA256(),default_backend())
+        argitr = iter(args)
+        next(argitr)
+        for val in argitr:
+            h.update(val)
+        return h.finalize()
+    
+    def _decrypt_value(self, shared_secret, ciphertext)->bytes:
+        cipher = Cipher(algorithms.AES(shared_secret), modes.CBC(bytes(16)),default_backend())
+        decryptor = cipher.decryptor()
+        return decryptor.update(ciphertext)
+    
+    def _encrypt_value(self, shared_secret, plaintext)->bytes:
+        cipher = Cipher(algorithms.AES(shared_secret), modes.CBC(bytes(16)),default_backend())
+        encryptor = cipher.encryptor()
+        return encryptor.update(plaintext) + encryptor.finalize()
+    def _extract_pin(self, pin_bytes:bytes)->str:
+        for i in range(len(pin_bytes)):
+            if pin_bytes[i]== b'\x00'[0]:
+                return pin_bytes[:i].decode('utf-8')
+    
+    def _sha256(self, value)->bytes:   
+        digest = hashes.Hash(hashes.SHA256(),default_backend())
+        
+        if type(value) is str:
+            digest.update(value.encode())
+        else:
+            digest.update(value)
+        return digest.finalize()
 
+    def _check_pin(self, pin_auth:bytes, pin_protocol:int, client_hash:bytes, error_on_no_auth=True)->bool:
+        
+        if not pin_auth is None and pin_protocol == 1:
+            if self._storage.get_pin() is None:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID,"PIN Invalid")
+            #verify PIN
+            if pin_auth[:16] == self._calculate_pin_auth(self._pin_token,client_hash)[:16]:
+                auth.debug("PIN Verified")
+                return True
+            else:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID,"PIN Invalid")
+        elif not pin_auth is None and pin_protocol != 1:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID,"Unsupport PIN Protocol")
+        elif not self._storage.get_pin() is None and (not pin_auth is None or pin_protocol != 1):
+            if error_on_no_auth:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_REQUIRED,"PIN Required")
+            else:
+                return False
 class DICEAuthenticatorException(Exception):
     """Exception raised when accessing the storage medium
 

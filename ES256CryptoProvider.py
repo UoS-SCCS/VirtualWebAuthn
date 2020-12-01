@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicNumb
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKeyWithSerialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
-
+from binascii import b2a_hex
 from cryptography.hazmat.backends import default_backend
 
 from cryptography.hazmat.backends import default_backend
@@ -39,7 +39,9 @@ class ECCryptoPrivateKey(AuthenticatorCryptoPrivateKey):
         return self._sk.sign(msg,ec.ECDSA(hashes.SHA256()))
 
     def exchange(self,other_public_key:EllipticCurvePublicKey):
-        return self._sk.exchange(ec.ECDH(), other_public_key)
+        hash = hashes.Hash(hashes.SHA256(),default_backend())
+        hash.update(self._sk.exchange(ec.ECDH(), other_public_key))
+        return hash.finalize()
 
 class ECCryptoPublicKey(AuthenticatorCryptoPublicKey):
     def __init__(self, public_key:EllipticCurvePublicKey):
@@ -53,7 +55,7 @@ class ECCryptoPublicKey(AuthenticatorCryptoPublicKey):
     
     @staticmethod
     def from_cose(cose_data:{})->'ECCryptoPublicKey':
-        return ECCryptoPublicKey(EllipticCurvePublicNumbers(cose_data[-2],cose_data[-3],ec.SECP256R1).public_key(default_backend()))
+        return ECCryptoPublicKey(EllipticCurvePublicNumbers(int(b2a_hex(cose_data[-2]), 16),int(b2a_hex(cose_data[-3]), 16),ec.SECP256R1()).public_key(default_backend()))
 
 class ES256CryptoProvider(AuthenticatorCryptoProvider):
     def __init__(self):
