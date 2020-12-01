@@ -185,9 +185,13 @@ class AuthenticatorGetAssertionParameters:
         return self.parameters[AUTHN_GET_ASSERTION.EXTENSIONS.value]
     
     def get_pin_auth(self):
+        if not AUTHN_GET_ASSERTION.PIN_AUTH.value in self.parameters:
+            return None
         return self.parameters[AUTHN_GET_ASSERTION.PIN_AUTH.value]
     
     def get_pin_protocol(self):
+        if not AUTHN_GET_ASSERTION.PIN_PROTOCOL.value in self.parameters:
+            return -1
         return self.parameters[AUTHN_GET_ASSERTION.PIN_PROTOCOL.value]
 class AuthenticatorMakeCredentialParameters:
     def __init__(self, cbor_data:bytes):
@@ -217,9 +221,13 @@ class AuthenticatorMakeCredentialParameters:
         return self.parameters[AUTHN_MAKE_CREDENTIAL.EXTENSIONS.value]
    
     def get_pin_auth(self):
+        if not AUTHN_MAKE_CREDENTIAL.PIN_AUTH.value in self.parameters:
+            return None
         return self.parameters[AUTHN_MAKE_CREDENTIAL.PIN_AUTH.value]
     
     def get_pin_protocol(self):
+        if not AUTHN_MAKE_CREDENTIAL.PIN_PROTOCOL.value in self.parameters:
+            return -1
         return self.parameters[AUTHN_MAKE_CREDENTIAL.PIN_PROTOCOL.value]
 
 class GetClientPINResp(CBORResponse):
