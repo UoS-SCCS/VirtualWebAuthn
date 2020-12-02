@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives import serialization
 from AuthenticatorCryptoProvider import AuthenticatorCryptoKeyPair
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
 from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
+
 import logging
 log = logging.getLogger('debug')
 from cryptography.hazmat.backends import default_backend
@@ -30,10 +31,11 @@ class PublicKeyCredentialSource():
     def get_alg(self):
         return self._alg
 
-    def get_bytes(self)->bytes:
+    def get_bytes(self, without_id=False)->bytes:
         data = {}
         data["type"] = self._type
-        data["id"] = self._id.hex()
+        if not without_id:
+            data["id"] = self._id.hex()
         data["alg"] = self._alg
         data["rpId"] = self._rp_id
         data["userHandle"] = self._user_handle.hex()
@@ -50,10 +52,11 @@ class PublicKeyCredentialSource():
         #desc["transports"]=["usb"]
         return desc
 
-    def from_bytes(self,data:bytes):
+    def from_bytes(self,data:bytes, without_id=False):
         data = json.loads(data.decode('utf-8'))
         self._type=data["type"]
-        self._id= bytes.fromhex(data["id"])
+        if not without_id:
+            self._id= data
         self._alg = data["alg"]
         self._rp_id = data["rpId"]
         self._signature_counter = data["signatureCounter"]

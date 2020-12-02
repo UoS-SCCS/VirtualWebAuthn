@@ -67,6 +67,18 @@ class DICEAuthenticatorStorage:
     def reset(self)->bool:
         pass
     
+    @abstractmethod
+    def get_wrapping_key(self)->bytes:
+        pass
+
+    @abstractmethod
+    def set_wrapping_key(self, key:bytes)->bytes:
+        pass
+    
+    @abstractmethod
+    def has_wrapping_key(self)->bool:
+        pass
+    
     def convert_allow_list_to_map(self, allow_list):
         allow = {}
         for allowed in allow_list:

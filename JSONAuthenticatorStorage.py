@@ -14,6 +14,7 @@ class STORAGE_KEYS():
     PIN = "pin"
     PIN_RETRIES = "retries"
     PIN_VALUE = "pin_value"
+    WRAP_KEY = "wrap_key"
 
 
 class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
@@ -39,7 +40,19 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         with open(self._path,"r") as f:
             return json.load(f)
 
+    def get_wrapping_key(self)->bytes:
+        if STORAGE_KEYS.WRAP_KEY in self._data:
+            return bytes.fromhex(self._data[STORAGE_KEYS.WRAP_KEY])
+        else:
+            return None
     
+    def has_wrapping_key(self)->bool:
+        return STORAGE_KEYS.WRAP_KEY in self._data
+
+    def set_wrapping_key(self, wrap_key:bytes)->bytes:
+        self._data[STORAGE_KEYS.WRAP_KEY]=wrap_key.hex()
+        self._write_to_json()
+
     def get_master_secret(self)->bytes:
         if STORAGE_KEYS.MASTER_KEY in self._data:
             return bytes.fromhex(self._data[STORAGE_KEYS.MASTER_KEY])
@@ -80,7 +93,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
 
     def get_credential_source_by_rp(self,rp_id:str,allow_list=None)->{PublicKeyCredentialSource}:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
-            return None
+            return []
         allowed = None
         check_allowed=False
         if not allow_list is None:

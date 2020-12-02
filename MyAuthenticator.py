@@ -39,7 +39,7 @@ from cryptography.x509.oid import NameOID
 import datetime
 import os
 from cryptography.hazmat.primitives import serialization
-
+from CredentialWrapper import CredentialWrapper
 
 from AuthenticatorVersion import AuthenticatorVersion
 log = logging.getLogger('debug')
@@ -49,11 +49,12 @@ class MyAuthenticator(DICEAuthenticator):
     VERSION = AuthenticatorVersion(2,1,0,0)
     MY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
     
-    def __init__(self, storage:DICEAuthenticatorStorage, crypto_providers:[int]):
+    def __init__(self, storage:DICEAuthenticatorStorage, crypto_providers:[int], credential_wrapper:CredentialWrapper):
         #allow list of crypto providers, may be a subset of all available providers
         super().__init__()
         self._storage = storage
         self._providers = crypto_providers
+        self._credential_wrapper = credential_wrapper
         #self._providers_idx = {}
         #for provider in crypto_providers:
         #    self._providers_idx[provider.get_alg()] = provider
@@ -72,7 +73,8 @@ class MyAuthenticator(DICEAuthenticator):
         self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
         #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.RS256))
         #Generate PIN Key Agreement at Startup
-        
+        if not self._storage.has_wrapping_key():
+            self._storage.set_wrapping_key(self._credential_wrapper.generate_key())
 
 
     
@@ -87,18 +89,17 @@ class MyAuthenticator(DICEAuthenticator):
         auth.debug("GetInfo called: %s", self.get_info_resp)
         return self.get_info_resp
 
-    def authenticatorMakeCredential(self, params:AuthenticatorMakeCredentialParameters, keep_alive:CTAPHIDKeepAlive) -> MakeCredentialResp:
+    def authenticatorMakeCredential(self, params:AuthenticatorMakeCredentialParameters, keep_alive:CTAPHIDKeepAlive, as_rk = True) -> MakeCredentialResp:
         #TODO perform necessary checks
         #TODO add non-residential key approach
         #keep_alive.start()
-        auth.debug("Make Credential Called with params: %s", params)
+        auth.debug("Make Credential called, is resident: %s, with params: %s", as_rk, params)
         provider = None
         for cred_type in params.get_cred_types_and_pubkey_algs():
             if cred_type["alg"] in self._providers:
                 provider=CRYPTO_PROVIDERS[cred_type["alg"]]
                 #provider = self._providers_idx[cred_type["alg"]]
                 auth.debug("Found matching public key algorithm: %s", PUBLIC_KEY_ALG(provider.get_alg()).name)
-                
                 break
 
         if provider is None:
@@ -111,7 +112,14 @@ class MyAuthenticator(DICEAuthenticator):
         keypair = provider.create_new_key_pair()
         #TODO need to store entire user handle
         credential_source.init_new(provider.get_alg(),keypair,params.get_rp_entity()['id'],params.get_user_entity()['id'])
-        self._storage.add_credential_source(params.get_rp_entity()['id'],params.get_user_entity()['id'],credential_source)
+
+        if as_rk:
+            self._storage.add_credential_source(params.get_rp_entity()['id'],params.get_user_entity()['id'],credential_source)
+        else:
+            auth.debug("Non-resident key, wrapping credential source")
+            credential_source.set_id(self._credential_wrapper.wrap(self._storage.get_wrapping_key(),credential_source))
+
+
         authenticator_data = self._get_authenticator_data(credential_source,True,uv)
         
         attestObject = AttestationObject.create_packed_self_attestation_object(credential_source,authenticator_data,params.get_hash())
@@ -122,7 +130,18 @@ class MyAuthenticator(DICEAuthenticator):
     def authenticatorGetAssertion(self, params:AuthenticatorGetAssertionParameters,keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
         #TODO perform necessary checks
         #TODO add non-residential key approach
+
+        #First find all resident creds (could be zero)
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
+        
+        #Now check for any non-resident creds
+        for allow_cred in params.get_allow_list():
+            if len(allow_cred["id"])>16:
+                auth.debug("Wrapped key provided, will unwrap credential source")
+                #we have a wrapped credential
+                creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred["id"]))
+            
+                
         numberOfCredentials = len(creds)
         #TODO Implement Pin Options
         #TODO Implement User verification and presence check
@@ -135,12 +154,14 @@ class MyAuthenticator(DICEAuthenticator):
         
         response = {}
         
-        response[1]=credential_source.get_public_key_credential_descriptor()
+        
         response[2]=authenticator_data
         response[3]=credential_source.get_private_key().sign(authenticator_data + params.get_hash())
         credential_source.increment_signature_counter()
         response[4]=credential_source.get_user_handle()
         response[5]=numberOfCredentials
+        #We put this last so the returned value can be updated - not sure this actually has any impact
+        response[1]=credential_source.get_public_key_credential_descriptor()
         """
         credential 	0x01 	definite length map (CBOR major type 5).
         authData 	0x02 	byte string (CBOR major type 2).
@@ -155,6 +176,13 @@ class MyAuthenticator(DICEAuthenticator):
         #TODO perform necessary checks
         #TODO add non-residential key approach
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
+         #Now check for any non-resident creds
+        for allow_cred in params.get_allow_list():
+            if len(allow_cred["id"])>16:
+                auth.debug("Wrapped key provided, will unwrap credential source")
+                #we have a wrapped credential
+                creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred["id"]))
+            
         numberOfCredentials = len(creds)
         if numberOfCredentials < 1:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
@@ -166,12 +194,14 @@ class MyAuthenticator(DICEAuthenticator):
         
         response = {}
         
-        response[1]=credential_source.get_public_key_credential_descriptor()
+        
         response[2]=authenticator_data
         response[3]=credential_source.get_private_key().sign(authenticator_data + params.get_hash())
         credential_source.increment_signature_counter()
         response[4]=credential_source.get_user_handle()
         response[5]=numberOfCredentials
+        #We put this last so the returned value can be updated - not sure this actually has any impact
+        response[1]=credential_source.get_public_key_credential_descriptor()
         """
         credential 	0x01 	definite length map (CBOR major type 5).
         authData 	0x02 	byte string (CBOR major type 2).

@@ -75,3 +75,7 @@ Token binding is described throughout the WebAuthN standard, albeit as an option
 More details on token binding and WebAuthN can be found at: [https://fidoalliance.org/fido-technote-the-growing-role-of-token-binding/](https://fidoalliance.org/fido-technote-the-growing-role-of-token-binding/)
 
 The reason this is of interest is that just before it was to become a standard Chrome announced it was going to remove the already present support for Token Binding from Chrome. I believe this has now taken place: [https://groups.google.com/a/chromium.org/g/blink-dev/c/OkdLUyYmY1E](https://groups.google.com/a/chromium.org/g/blink-dev/c/OkdLUyYmY1E)
+
+## Resident keys
+
+* if using non-resident keys, I assume the signature counter is stored within the credential source, as in, it gets updated each time and sent back re-encrypted.

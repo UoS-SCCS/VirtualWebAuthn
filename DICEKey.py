@@ -6,6 +6,7 @@ from JSONAuthenticatorStorage import JSONAuthenticatorStorage
 from MyAuthenticator import MyAuthenticator
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
 from ES256CryptoProvider import ES256CryptoProvider
+from AESCredentialWrapper import AESCredentialWrapper
 import sys
 import logging
 import os
@@ -67,7 +68,9 @@ providers = []
 providers.append(ES256CryptoProvider().get_alg())
 if not authenticator_storage.is_initialised():
     authenticator_storage.init_new()
-authenticator = MyAuthenticator(authenticator_storage,providers)
+
+wrapper = AESCredentialWrapper()
+authenticator = MyAuthenticator(authenticator_storage,providers,wrapper)
 ctaphid.set_authenticator(authenticator)
 usbhid.set_listener(ctaphid)
 usbhid.start()
