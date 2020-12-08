@@ -93,12 +93,28 @@ class CTAP_STATUS_CODE(Enum):
     CTAP2_ERR_VENDOR_LAST  = b'\xFF'#	Vendor specific error. 
 
 
-
+@unique
+class PUBLICKEY_CREDENTIAL_USER_ENTITY(Enum):
+    ID = "id"
+    ICON="icon"
+    NAME="name"
+    DISPLAYNAME ="displayName"
 
 @unique
 class AUTHN_GETINFO_PARAMETER(Enum):
     pass
 
+@unique
+class AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE(Enum):
+    TYPE = "type"
+    ID = "id"
+    PRIVATE_KEY = "privateKey"
+    RP_ID = "rpId"
+    USER_HANDLE = "userHandle"
+    OTHER_UI="otherUI"
+    SIGNATURE_COUNTER="signatureCounter"
+    KEY_PAIR="keypair"
+    ALG="alg"
 
 
 @unique

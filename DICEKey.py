@@ -3,7 +3,7 @@ from USBHID import USBHID
 from USBHID import USBHIDListener
 from CTAPHID import CTAPHID
 from JSONAuthenticatorStorage import JSONAuthenticatorStorage
-from MyAuthenticator import MyAuthenticator
+
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
 from TPMES256CryptoProvider import TPMES256CryptoProvider
 from AESCredentialWrapper import AESCredentialWrapper
@@ -60,7 +60,7 @@ auth = logging.getLogger('debug.auth')
 
 class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     VERSION = AuthenticatorVersion(2,1,0,0)
-    MY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
+    DICEKEY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
     
     def __init__(self):
         #allow list of crypto providers, may be a subset of all available providers
@@ -74,14 +74,15 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         if not self._storage.is_initialised():
             self._storage.init_new()
         self._credential_wrapper = AESCredentialWrapper()
-        
+        #This can be user configurable
+        self.default_to_rk=True
         
         
         #self._providers_idx = {}
         #for provider in crypto_providers:
         #    self._providers_idx[provider.get_alg()] = provider
         self.get_info_resp = GetInfoResp()
-        self.get_info_resp.set_auguid(MyAuthenticator.MY_AUTHENTICATOR_AAGUID)
+        self.get_info_resp.set_auguid(DICEKey.DICEKEY_AUTHENTICATOR_AAGUID)
         if not self._storage.get_pin() is None:
             self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,True)
         else:
@@ -105,21 +106,21 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         
 
     def get_AAGUID(self):
-        return MyAuthenticator.MY_AUTHENTICATOR_AAGUID
+        return DICEKey.DICEKEY_AUTHENTICATOR_AAGUID
 
     def get_version(self)->AuthenticatorVersion:
-        return MyAuthenticator.VERSION
+        return DICEKey.VERSION
 
     def authenticatorGetInfo(self, keep_alive:CTAPHIDKeepAlive) -> GetInfoResp:
         auth.debug("GetInfo called: %s", self.get_info_resp)
         return self.get_info_resp
 
-    def authenticatorMakeCredential(self, params:AuthenticatorMakeCredentialParameters, keep_alive:CTAPHIDKeepAlive, as_rk = True) -> MakeCredentialResp:
+    def authenticatorMakeCredential(self, params:AuthenticatorMakeCredentialParameters, keep_alive:CTAPHIDKeepAlive) -> MakeCredentialResp:
         #TODO perform necessary checks
         #TODO add non-residential key approach
         #keep_alive.start()
         self._ui.check_user_presence()
-        auth.debug("Make Credential called, is resident: %s, with params: %s", as_rk, params)
+        auth.debug("Make Credential called, req resident: %s, with params: %s", params.get_require_resident_key(), params)
         provider = None
         for cred_type in params.get_cred_types_and_pubkey_algs():
             if cred_type["alg"] in self._providers:
@@ -137,10 +138,11 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         credential_source=PublicKeyCredentialSource()
         keypair = provider.create_new_key_pair()
         #TODO need to store entire user handle
-        credential_source.init_new(provider.get_alg(),keypair,params.get_rp_entity()['id'],params.get_user_entity()['id'])
+        credential_source.init_new(provider.get_alg(),keypair,params.get_rp_entity()['id'],params.get_user_entity())
 
-        if as_rk:
-            self._storage.add_credential_source(params.get_rp_entity()['id'],params.get_user_entity()['id'],credential_source)
+        #If requested to be an RK store as RK, or if default is RK set to 
+        if params.get_require_resident_key() or self.default_to_rk:
+            self._storage.add_credential_source(params.get_rp_entity()['id'],params.get_user_entity(),credential_source)
         else:
             auth.debug("Non-resident key, wrapping credential source")
             credential_source.set_id(self._credential_wrapper.wrap(self._storage.get_wrapping_key(),credential_source))

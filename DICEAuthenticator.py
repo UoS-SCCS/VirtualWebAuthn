@@ -19,6 +19,7 @@ from CTAPHIDConstants import AUTHN_GETINFO_VERSION
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_SUBCMD
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_RESP
 from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
+from CTAPHIDConstants import PUBLICKEY_CREDENTIAL_USER_ENTITY
 from AuthenticatorVersion import AuthenticatorVersion
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
@@ -109,11 +110,59 @@ class PUBLIC_KEY_ALG(Enum):
     AES_CCM_64_128_256 = 33
 
 
+
 class PublicKeyCredentialParameters(dict):
     def __init__(self, algo: PUBLIC_KEY_ALG, type="public-key"):
         super(PublicKeyCredentialParameters,self).__init__()
         self.__setitem__("type",type)
         self.__setitem__("alg",algo.value)
+
+class PublicKeyCredentialUserEntity():
+    def __init__(self, data:dict):
+        self.parameters = data
+        self.verify()
+    
+    def get_as_dict(self):
+        return self.parameters
+        
+    def verify(self):
+        if not PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"Missing ID in UserEntity")
+        if not PUBLICKEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"Missing displayName in UserEntity")
+        
+        if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value]) is bytes:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"id in UserEntity not bytes")
+        if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value]) is str:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"displayName in UserEntity not str")
+        
+        if PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
+            if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value]) is str:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"name in UserEntity not str")
+        
+        if PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value in self.parameters:
+            if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value]) is str:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"icon in UserEntity not str")
+
+    def get_id(self):
+        return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value]
+    
+    def get_display_name(self):
+        return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value]
+    
+    def get_name(self):
+        if PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
+            return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value]
+        else:
+            return None
+    
+    def get_icon(self):
+        if PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value in self.parameters:
+            return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value]
+        else:
+            return None
+    
+
 
 class CBORResponse:
     def __init__(self):
@@ -182,49 +231,49 @@ class AuthenticatorGetClientPINParameters:
         if not AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value in self.parameters:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"subCommand missing")
         
-        if not type(self.get_protocol()) == int:
+        if not type(self.parameters[AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value]) == int:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinProtocol not integer")
         
-        if not type(self.get_sub_command()) == int:
+        if not type(self.parameters[AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value]) == int:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"subCommand not integer")
 
         if AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value in self.parameters:
             #Verify Key Agreement
-            if not type(self.get_key_agreement()) is dict:
+            if not type(self.parameters[AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value]) is dict:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAgreement not dictionary")
-            print(self.get_key_agreement())
-            if not 3 in self.get_key_agreement():
+            if not 3 in self.parameters[AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value]:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"missing alg parameter")
             #TODO verify COSE key
         
         if AUTHN_GET_CLIENT_PIN.PIN_AUTH.value in self.parameters:
-            if not type(self.get_pin_auth()) is bytes:
+            if not type(self.parameters[AUTHN_GET_CLIENT_PIN.PIN_AUTH.value]) is bytes:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAuth not bytes")
         
         if AUTHN_GET_CLIENT_PIN.NEW_PIN_ENC.value in self.parameters:
-            if not type(self.get_new_pin_enc()) is bytes:
+            if not type(self.parameters[AUTHN_GET_CLIENT_PIN.NEW_PIN_ENC.value]) is bytes:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"newPinEnc not bytes")
 
         if AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value in self.parameters:
-            if not type(self.get_pin_hash_enc()) is bytes:
+            if not type(self.parameters[AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value]) is bytes:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinHashEnc not bytes")
         
-        if not (self.get_sub_command() >=1 and self.get_sub_command()<=5):
+        sub_command = self.parameters[AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value]
+        if not (sub_command >=1 and sub_command<=5):
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_COMMAND,"invalid subCommand")
 
-        if self.get_sub_command() == 1 or self.get_sub_command() == 2:
+        if sub_command == 1 or sub_command == 2:
             if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value,AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value],self.parameters):
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
 
-        if self.get_sub_command() == 3:
+        if sub_command == 3:
             if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value,AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value,AUTHN_GET_CLIENT_PIN.NEW_PIN_ENC.value,AUTHN_GET_CLIENT_PIN.PIN_AUTH.value,AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value],self.parameters):
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
         
-        if self.get_sub_command() == 4:
+        if sub_command == 4:
             if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN],self.parameters):
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
         
-        if self.get_sub_command() == 5:
+        if sub_command == 5:
             if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value,AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value,AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value,AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value],self.parameters):
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
         
@@ -297,20 +346,20 @@ class AuthenticatorGetAssertionParameters:
         if not AUTHN_GET_ASSERTION.HASH.value in self.parameters:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"clientDataHash missing")
         
-        if not type(self.get_rp_id()) == str:
+        if not type(self.parameters[AUTHN_GET_ASSERTION.RP_ID.value]) == str:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"rpId not string")
         
-        if not type(self.get_hash()) == bytes:
+        if not type(self.parameters[AUTHN_GET_ASSERTION.HASH.value]) == bytes:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"clientDataHash not bytes")
 
         if AUTHN_GET_ASSERTION.ALLOW_LIST.value in self.parameters:
-            if not type(self.get_allow_list()) == list:
+            if not type(self.parameters[AUTHN_GET_ASSERTION.ALLOW_LIST.value]) == list:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"allowList not sequence")
         if AUTHN_GET_ASSERTION.PIN_AUTH.value in self.parameters:
-            if not type(self.get_pin_auth()) == bytes:
+            if not type(self.parameters[AUTHN_GET_ASSERTION.PIN_AUTH.value]) == bytes:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAuth not bytes")
         if AUTHN_GET_ASSERTION.PIN_PROTOCOL.value in self.parameters:
-            if not type(self.get_pin_protocol()) == int:
+            if not type(self.parameters[AUTHN_GET_ASSERTION.PIN_PROTOCOL.value]) == int:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinProtocol not int")
         #TODO verify options and extensions
         
@@ -360,6 +409,7 @@ class AuthenticatorMakeCredentialParameters:
         self.parameters = cbor.decode(cbor_data)
         auth.debug("Decoded MakeCredentialParameters: %s", self.parameters)
         self.verify()
+        self.user_entity = PublicKeyCredentialUserEntity(self.parameters[AUTHN_MAKE_CREDENTIAL.USER.value])
         self.exclude_list = []
         if AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value in self.parameters:
             for exclude in self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]:
@@ -378,10 +428,10 @@ class AuthenticatorMakeCredentialParameters:
         if not AUTHN_MAKE_CREDENTIAL.PUBKEY_CRED_PARAMS.value in self.parameters:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"publicKeyCredentials missing")
         
-        if not type(self.get_cred_types_and_pubkey_algs()) == list:
+        if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.PUBKEY_CRED_PARAMS.value]) == list:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"publicKeyCredentials not list")
 
-        for cred in self.get_cred_types_and_pubkey_algs():
+        for cred in self.parameters[AUTHN_MAKE_CREDENTIAL.PUBKEY_CRED_PARAMS.value]:
             if not type(cred) == dict:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"publicKeyCredential not dictionary")
             if not "type" in cred:
@@ -390,21 +440,27 @@ class AuthenticatorMakeCredentialParameters:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"publicKeyCredential alg missing")
 
         
-        if not type(self.get_rp_entity()) == dict:
+        if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.RP.value]) == dict:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"rp not dictionary")
-        if not type(self.get_user_entity()) == dict:
+        if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.USER.value]) == dict:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"user not dictionary")
-        #TODO expand user and rp entity verification
+        #TODO rp entity verification
         
-        if not type(self.get_hash()) == bytes:
+        if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.HASH.value]) == bytes:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"clientDataHash not bytes")
 
         if AUTHN_MAKE_CREDENTIAL.PIN_AUTH.value in self.parameters:
-            if not type(self.get_pin_auth()) == bytes:
+            if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.PIN_AUTH.value]) == bytes:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAuth not bytes")
         if AUTHN_MAKE_CREDENTIAL.PIN_PROTOCOL.value in self.parameters:
-            if not type(self.get_pin_protocol()) == int:
+            if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.PIN_PROTOCOL.value]) == int:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinProtocol not int")
+        
+        if AUTHN_MAKE_CREDENTIAL.OPTIONS.value in self.parameters:
+            if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value]) == bool:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"option rk not boolean")
+            if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value]) == bool:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"option uv not boolean")
 
     def get_hash(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.HASH.value]
@@ -412,14 +468,25 @@ class AuthenticatorMakeCredentialParameters:
         return self.parameters[AUTHN_MAKE_CREDENTIAL.RP.value]
 
     def get_user_entity(self):
-        return self.parameters[AUTHN_MAKE_CREDENTIAL.USER.value]
+        return self.user_entity
     def get_require_resident_key(self):
-        return self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value]
+        if AUTHN_MAKE_CREDENTIAL.OPTIONS.value in self.parameters:
+            if AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value in self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value]:
+                return self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value]
+            else:
+                return False
+        else:
+            return False
     def get_user_presence(self):
         return True#Not present in the current version of CTAP. Authenticators are assumed to always check user presence.
     def require_user_verification(self):
-        return self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value]
-        #TODO options.uv or pinAuth/pinProtocol
+        if AUTHN_MAKE_CREDENTIAL.OPTIONS.value in self.parameters:
+            if AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value in self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value]:
+                return self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value]
+            else:
+                return False
+        else:
+            return False
     def get_cred_types_and_pubkey_algs(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.PUBKEY_CRED_PARAMS.value]
     def get_exclude_credential_descriptor_list(self):
