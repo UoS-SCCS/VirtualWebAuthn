@@ -33,17 +33,20 @@ Proof of concept implementation, currently status:
 
 ### TODO
 * CTAPHID commands
-    * CTAPHID_MSG
+    * CTAPHID_MSG - Will not implement in this version, it is for CTAP1/U2F which doesn't provide the functionality we want in any case
     * CTAPHID_LOCK
-* Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented
+* Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented - This is largely complete, some additional validation will be required once all options and extensions are supported
 * Extensions and options in MakeCredential and GetAssertion
+    * options (rk and uv) are in principle implemented by require some UI additions
 * ---_Resident Key Option_--- This is now complete, it is a parameter option
 * UI to obtain presence/user verification and display relying party information
+    * initial implementation has started - further investigation of exactly what constitutes verification and consent
 * Additional Attestation Statement formats
 * Additional Crypto Providers
 * Additional Attestation Types
 * Documentation
 
+_You should now run DICEKey.py to start the authenticator_
 
 ## Setup
 I would recommed performing the following in a Virtual Machine, I've tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device. 
