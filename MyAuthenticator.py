@@ -40,12 +40,12 @@ import datetime
 import os
 from cryptography.hazmat.primitives import serialization
 from CredentialWrapper import CredentialWrapper
-
+from DICEAuthenticatorUI import DICEAuthenticatorListener
 from AuthenticatorVersion import AuthenticatorVersion
 log = logging.getLogger('debug')
 ctap = logging.getLogger('debug.ctap')
 auth = logging.getLogger('debug.auth')
-class MyAuthenticator(DICEAuthenticator):
+class MyAuthenticator(DICEAuthenticator,DICEAuthenticatorListener):
     VERSION = AuthenticatorVersion(2,1,0,0)
     MY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
     
@@ -78,6 +78,8 @@ class MyAuthenticator(DICEAuthenticator):
 
 
     
+    def quit(self):
+        print("Quit called")
 
     def get_AAGUID(self):
         return MyAuthenticator.MY_AUTHENTICATOR_AAGUID
