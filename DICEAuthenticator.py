@@ -361,7 +361,7 @@ class AuthenticatorMakeCredentialParameters:
         auth.debug("Decoded MakeCredentialParameters: %s", self.parameters)
         self.verify()
         self.exclude_list = []
-        if not AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value in self.parameters:
+        if AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value in self.parameters:
             for exclude in self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]:
                 self.exclude_list.append(PublicKeyCredentialDescriptor(exclude))
     
@@ -427,6 +427,7 @@ class AuthenticatorMakeCredentialParameters:
         #return self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]
     
     def get_extensions(self):
+        
         return self.parameters[AUTHN_MAKE_CREDENTIAL.EXTENSIONS.value]
    
     def get_pin_auth(self):

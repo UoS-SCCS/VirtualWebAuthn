@@ -118,7 +118,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         auth.debug("GetInfo called: %s", self.get_info_resp)
         return self.get_info_resp
 
-    def authenticatorMakeCredential(self, params:AuthenticatorMakeCredentialParameters, keep_alive:CTAPHIDKeepAlive, as_rk = False) -> MakeCredentialResp:
+    def authenticatorMakeCredential(self, params:AuthenticatorMakeCredentialParameters, keep_alive:CTAPHIDKeepAlive, as_rk = True) -> MakeCredentialResp:
         #TODO perform necessary checks
         #TODO add non-residential key approach
         #keep_alive.start()
