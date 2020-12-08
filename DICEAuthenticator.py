@@ -19,7 +19,7 @@ from CTAPHIDConstants import AUTHN_GETINFO_VERSION
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_SUBCMD
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_RESP
 from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
-from CTAPHIDConstants import PUBLICKEY_CREDENTIAL_USER_ENTITY
+from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY
 from AuthenticatorVersion import AuthenticatorVersion
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
@@ -117,6 +117,45 @@ class PublicKeyCredentialParameters(dict):
         self.__setitem__("type",type)
         self.__setitem__("alg",algo.value)
 
+class PublicKeyCredentialRpEntity():
+    def __init__(self, data:dict):
+        self.parameters = data
+        self.verify()
+    
+    def get_as_dict(self):
+        return self.parameters
+        
+    def verify(self):
+        if not AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ID.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"Missing ID in rpEntity")
+        
+        if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ID.value]) is bytes:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"id in rpEntity not bytes")
+        
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.NAME.value in self.parameters:
+            if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.NAME.value]) is str:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"name in rpEntity not str")
+        
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ICON.value in self.parameters:
+            if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ICON.value]) is str:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"icon in rpEntity not str")
+
+    def get_id(self):
+        return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ID.value]
+    
+    
+    def get_name(self):
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.NAME.value in self.parameters:
+            return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.NAME.value]
+        else:
+            return None
+    
+    def get_icon(self):
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ICON.value in self.parameters:
+            return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY.ICON.value]
+        else:
+            return None
+    
 class PublicKeyCredentialUserEntity():
     def __init__(self, data:dict):
         self.parameters = data
@@ -126,39 +165,39 @@ class PublicKeyCredentialUserEntity():
         return self.parameters
         
     def verify(self):
-        if not PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value in self.parameters:
+        if not AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value in self.parameters:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"Missing ID in UserEntity")
-        if not PUBLICKEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value in self.parameters:
+        if not AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value in self.parameters:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"Missing displayName in UserEntity")
         
-        if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value]) is bytes:
+        if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value]) is bytes:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"id in UserEntity not bytes")
-        if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value]) is str:
+        if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value]) is str:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"displayName in UserEntity not str")
         
-        if PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
-            if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value]) is str:
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
+            if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.NAME.value]) is str:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"name in UserEntity not str")
         
-        if PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value in self.parameters:
-            if not type(self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value]) is str:
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ICON.value in self.parameters:
+            if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ICON.value]) is str:
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"icon in UserEntity not str")
 
     def get_id(self):
-        return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value]
+        return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value]
     
     def get_display_name(self):
-        return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value]
+        return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value]
     
     def get_name(self):
-        if PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
-            return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.NAME.value]
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
+            return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.NAME.value]
         else:
             return None
     
     def get_icon(self):
-        if PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value in self.parameters:
-            return self.parameters[PUBLICKEY_CREDENTIAL_USER_ENTITY.ICON.value]
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ICON.value in self.parameters:
+            return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ICON.value]
         else:
             return None
     
@@ -410,6 +449,7 @@ class AuthenticatorMakeCredentialParameters:
         auth.debug("Decoded MakeCredentialParameters: %s", self.parameters)
         self.verify()
         self.user_entity = PublicKeyCredentialUserEntity(self.parameters[AUTHN_MAKE_CREDENTIAL.USER.value])
+        self.rp_entity = PublicKeyCredentialRpEntity(self.parameters[AUTHN_MAKE_CREDENTIAL.RP.value])
         self.exclude_list = []
         if AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value in self.parameters:
             for exclude in self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]:
@@ -444,7 +484,6 @@ class AuthenticatorMakeCredentialParameters:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"rp not dictionary")
         if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.USER.value]) == dict:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"user not dictionary")
-        #TODO rp entity verification
         
         if not type(self.parameters[AUTHN_MAKE_CREDENTIAL.HASH.value]) == bytes:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"clientDataHash not bytes")
@@ -465,7 +504,7 @@ class AuthenticatorMakeCredentialParameters:
     def get_hash(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.HASH.value]
     def get_rp_entity(self):
-        return self.parameters[AUTHN_MAKE_CREDENTIAL.RP.value]
+        return self.rp_entity
 
     def get_user_entity(self):
         return self.user_entity
@@ -998,6 +1037,8 @@ class DICEAuthenticator(DICEAuthenticatorListener):
                 raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_REQUIRED,"PIN Required")
             else:
                 return False
+        elif pin_auth is None and pin_protocol ==-1:
+            return False
 class DICEAuthenticatorException(Exception):
     """Exception raised when accessing the storage medium
 

@@ -137,12 +137,11 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
         credential_source=PublicKeyCredentialSource()
         keypair = provider.create_new_key_pair()
-        #TODO need to store entire user handle
-        credential_source.init_new(provider.get_alg(),keypair,params.get_rp_entity()['id'],params.get_user_entity())
+        credential_source.init_new(provider.get_alg(),keypair,params.get_rp_entity().get_id(),params.get_user_entity())
 
         #If requested to be an RK store as RK, or if default is RK set to 
         if params.get_require_resident_key() or self.default_to_rk:
-            self._storage.add_credential_source(params.get_rp_entity()['id'],params.get_user_entity(),credential_source)
+            self._storage.add_credential_source(params.get_rp_entity().get_id(),params.get_user_entity(),credential_source)
         else:
             auth.debug("Non-resident key, wrapping credential source")
             credential_source.set_id(self._credential_wrapper.wrap(self._storage.get_wrapping_key(),credential_source))
@@ -156,9 +155,6 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         
     
     def authenticatorGetAssertion(self, params:AuthenticatorGetAssertionParameters,keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
-        #TODO perform necessary checks
-        
-
         #First find all resident creds (could be zero)
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
         
@@ -171,7 +167,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             
                 
         numberOfCredentials = len(creds)
-        #TODO Implement Pin Options
+        
         #TODO Implement User verification and presence check
         if numberOfCredentials < 1:
             raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)

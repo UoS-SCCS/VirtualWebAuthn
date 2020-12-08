@@ -4,7 +4,7 @@ import json
 from AuthenticatorCryptoProvider import AuthenticatorCryptoKeyPair
 from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
 from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
-from CTAPHIDConstants import PUBLICKEY_CREDENTIAL_USER_ENTITY
+from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY
 from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE
 
 import CTAPHIDConstants
@@ -33,7 +33,7 @@ class PublicKeyCredentialSource():
         self._keypair = key_pair
         self._user_handle = user_entity.get_id()
         other_ui = user_entity.get_as_dict()
-        other_ui.pop(PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value)
+        other_ui.pop(AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value)
         self._other_ui=other_ui
     def generate_id(self):
         self._id=os.urandom(CTAPHIDConstants.CREDENTIAL_ID_SIZE)
@@ -118,11 +118,11 @@ class PublicKeyCredentialSource():
         result = {}
         if include_identifiable:
             result = self._other_ui.copy()
-            result[PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value] = self._user_handle
+            result[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value] = self._user_handle
             return result
         else:
             
-            result[PUBLICKEY_CREDENTIAL_USER_ENTITY.ID.value] = self._user_handle
+            result[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value] = self._user_handle
             return result
     
     def set_other_ui(self, other_ui:dict):

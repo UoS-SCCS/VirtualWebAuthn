@@ -94,11 +94,17 @@ class CTAP_STATUS_CODE(Enum):
 
 
 @unique
-class PUBLICKEY_CREDENTIAL_USER_ENTITY(Enum):
+class AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY(Enum):
     ID = "id"
     ICON="icon"
     NAME="name"
     DISPLAYNAME ="displayName"
+
+@unique
+class AUTHN_PUBLIC_KEY_CREDENTIAL_RP_ENTITY(Enum):
+    ID = "id"
+    ICON="icon"
+    NAME="name"
 
 @unique
 class AUTHN_GETINFO_PARAMETER(Enum):
