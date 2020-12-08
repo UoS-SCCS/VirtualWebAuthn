@@ -5,7 +5,8 @@ from cryptography.hazmat.primitives import serialization
 from AuthenticatorCryptoProvider import AuthenticatorCryptoKeyPair
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
 from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
-
+from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
+import CTAPHIDConstants
 import logging
 log = logging.getLogger('debug')
 from cryptography.hazmat.backends import default_backend
@@ -27,7 +28,7 @@ class PublicKeyCredentialSource():
         self._user_handle = user_handle
         self._other_ui=other_ui
     def generate_id(self):
-        self._id=os.urandom(16)
+        self._id=os.urandom(CTAPHIDConstants.CREDENTIAL_ID_SIZE)
     
     def get_alg(self):
         return self._alg
@@ -48,8 +49,8 @@ class PublicKeyCredentialSource():
     def get_public_key_credential_descriptor(self):
         #PublicKeyCredentialDescriptor
         desc = {}
-        desc["id"]=self._id
-        desc["type"]="public-key"
+        desc[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.ID.value]=self._id
+        desc[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TYPE.value]=AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TYPE_PUBLIC_KEY.value
         #desc["transports"]=["usb"]
         return desc
 

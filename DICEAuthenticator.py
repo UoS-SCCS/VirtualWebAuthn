@@ -18,6 +18,7 @@ from CTAPHIDConstants import AUTHN_CMD
 from CTAPHIDConstants import AUTHN_GETINFO_VERSION
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_SUBCMD
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN_RESP
+from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
 from AuthenticatorVersion import AuthenticatorVersion
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
@@ -245,11 +246,75 @@ class AuthenticatorGetClientPINParameters:
     def get_pin_hash_enc(self):
         return self.parameters[AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value]
 
+class PublicKeyCredentialDescriptor:
+    def __init__(self, desc:dict):
+        self.parameters = desc
+        self.verify()
+    
+    def get_id(self)->bytes:
+        return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.ID.value]
+    
+    def get_type(self)->str:
+        return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TYPE.value]
+    
+    def get_transports(self):
+        return self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TRANSPORTS.value]
+
+    def verify(self):
+        if not AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TYPE.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"PublicKeyCredentialDesc missing type")
+        if not AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.ID.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"PublicKeyCredentialDesc missing id")
+        if not self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TYPE.value] == AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.TYPE_PUBLIC_KEY.value:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"PublicKeyCredentialDesc type not recognised")
+        if not type(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR.ID.value]) is bytes:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"PublicKeyCredentialDesc id not bytes")
+        
 class AuthenticatorGetAssertionParameters:
+    """
+    rpId 	String 	Required 	Relying party identifier. See [WebAuthN].
+    clientDataHash 	Byte Array 	Required 	Hash of the serialized client data collected by the host. See [WebAuthN].
+    allowList 	Sequence of PublicKeyCredentialDescriptors 	Optional 	A sequence of PublicKeyCredentialDescriptor structures, each denoting a credential, as specified in [WebAuthN]. If this parameter is present and has 1 or more entries, the authenticator MUST only generate an assertion using one of the denoted credentials.
+    extensions	CBOR map of extension identifier → authenticator extension input values 	Optional 	Parameters to influence authenticator operation. These parameters might be authenticator specific.
+    options	Map of authenticator options 	Optional 	Parameters to influence authenticator operation, as specified in the table below.
+    pinAuth	Byte Array 	Optional 	First 16 bytes of HMAC-SHA-256 of clientDataHash using pinToken which platform got from the authenticator: HMAC-SHA-256(pinToken, clientDataHash).
+    pinProtocol 	Unsigned Integer 	Optional 	PIN protocol version selected by client. 
+    """
     def __init__(self, cbor_data:bytes):
         self.parameters = cbor.decode(cbor_data)
+        
+        self.allow_list = []
+        for allowed in self.parameters[AUTHN_GET_ASSERTION.ALLOW_LIST.value]:
+            self.allow_list.append(PublicKeyCredentialDescriptor(allowed))
+        self.verify()
         auth.debug("Decoded GetAssertionParameters: %s", self.parameters)        
-    
+        
+
+    def verify(self):
+        if not AUTHN_GET_ASSERTION.RP_ID.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"rpId missing")
+        
+        if not AUTHN_GET_ASSERTION.HASH.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"clientDataHash missing")
+        
+        if not type(self.get_rp_id()) == str:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"rpId not string")
+        
+        if not type(self.get_hash()) == bytes:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"clientDataHash not bytes")
+
+        if AUTHN_GET_ASSERTION.ALLOW_LIST.value in self.parameters:
+            if not type(self.get_allow_list()) == list:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"allowList not sequence")
+        if AUTHN_GET_ASSERTION.PIN_AUTH.value in self.parameters:
+            if not type(self.get_pin_auth()) == bytes:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAuth not bytes")
+        if AUTHN_GET_ASSERTION.PIN_PROTOCOL.value in self.parameters:
+            if not type(self.get_pin_protocol()) == int:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinProtocol not int")
+        #TODO verify options and extensions
+        
+
     def get_hash(self):
         return self.parameters[AUTHN_GET_ASSERTION.HASH.value]
     
@@ -263,8 +328,9 @@ class AuthenticatorGetAssertionParameters:
     def require_user_verification(self):
         return self.parameters[AUTHN_GET_ASSERTION.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value]
         #TODO options.uv or pinAuth/pinProtocol
-    def get_allow_list(self):
-        return self.parameters[AUTHN_GET_ASSERTION.ALLOW_LIST.value]
+    def get_allow_list(self)->[PublicKeyCredentialDescriptor]:
+        return self.allow_list
+        #self.parameters[AUTHN_GET_ASSERTION.ALLOW_LIST.value]
     
     def get_extensions(self):
         return self.parameters[AUTHN_GET_ASSERTION.EXTENSIONS.value]
@@ -279,10 +345,67 @@ class AuthenticatorGetAssertionParameters:
             return -1
         return self.parameters[AUTHN_GET_ASSERTION.PIN_PROTOCOL.value]
 class AuthenticatorMakeCredentialParameters:
+    """
+    clientDataHash 	Byte Array 	Required 	Hash of the ClientData contextual binding specified by host. See [WebAuthN].
+    rp 	PublicKeyCredentialRpEntity 	Required 	This PublicKeyCredentialRpEntity data structure describes a Relying Party with which the new public key credential will be associated. It contains the Relying party identifier, (optionally) a human-friendly RP name, and (optionally) a URL referencing a RP icon image. The RP name is to be used by the authenticator when displaying the credential to the user for selection and usage authorization.
+    user 	PublicKeyCredentialUserEntity 	Required 	This PublicKeyCredentialUserEntity data structure describes the user account to which the new public key credential will be associated at the RP. It contains an RP-specific user account identifier, (optionally) a user name, (optionally) a user display name, and (optionally) a URL referencing a user icon image (of a user avatar, for example). The authenticator associates the created public key credential with the account identifier, and MAY also associate any or all of the user name, user display name, and image data (pointed to by the URL, if any).
+    pubKeyCredParams 	CBOR Array 	Required 	A sequence of CBOR maps consisting of pairs of PublicKeyCredentialType (a string) and cryptographic algorithm (a positive or negative integer), where algorithm identifiers are values that SHOULD be registered in the IANA COSE Algorithms registry [IANA-COSE-ALGS-REG]. This sequence is ordered from most preferred (by the RP) to least preferred.
+    excludeList 	Sequence of PublicKeyCredentialDescriptors 	Optional 	A sequence of PublicKeyCredentialDescriptor structures, as specified in [WebAuthN]. The authenticator returns an error if the authenticator already contains one of the credentials enumerated in this sequence. This allows RPs to limit the creation of multiple credentials for the same account on a single authenticator.
+    extensions 	CBOR map of extension identifier → authenticator extension input values 	Optional 	Parameters to influence authenticator operation, as specified in [WebAuthN]. These parameters might be authenticator specific.
+    options 	Map of authenticator options 	Optional 	Parameters to influence authenticator operation, as specified in in the table below.
+    pinAuth Byte Array 	Optional 	First 16 bytes of HMAC-SHA-256 of clientDataHash using pinToken which platform got from the authenticator: HMAC-SHA-256(pinToken, clientDataHash).
+    pinProtocol 	Unsigned Integer 	Optional 	PIN protocol version chosen by the client 
+    """
     def __init__(self, cbor_data:bytes):
         self.parameters = cbor.decode(cbor_data)
-        auth.debug("Decoded MakeCredentialParameters: %s", self.parameters)   
+        auth.debug("Decoded MakeCredentialParameters: %s", self.parameters)
+        self.verify()
+        self.exclude_list = []
+        if not AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value in self.parameters:
+            for exclude in self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]:
+                self.exclude_list.append(PublicKeyCredentialDescriptor(exclude))
     
+    def verify(self):
+        if not AUTHN_MAKE_CREDENTIAL.RP.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"rpId missing")
+
+        if not AUTHN_MAKE_CREDENTIAL.HASH.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"clientDataHash missing")
+        
+        if not AUTHN_MAKE_CREDENTIAL.USER.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"user missing")
+
+        if not AUTHN_MAKE_CREDENTIAL.PUBKEY_CRED_PARAMS.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"publicKeyCredentials missing")
+        
+        if not type(self.get_cred_types_and_pubkey_algs()) == list:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"publicKeyCredentials not list")
+
+        for cred in self.get_cred_types_and_pubkey_algs():
+            if not type(cred) == dict:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"publicKeyCredential not dictionary")
+            if not "type" in cred:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"publicKeyCredential type missing")
+            if not "alg" in cred:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"publicKeyCredential alg missing")
+
+        
+        if not type(self.get_rp_entity()) == dict:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"rp not dictionary")
+        if not type(self.get_user_entity()) == dict:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"user not dictionary")
+        #TODO expand user and rp entity verification
+        
+        if not type(self.get_hash()) == bytes:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"clientDataHash not bytes")
+
+        if AUTHN_MAKE_CREDENTIAL.PIN_AUTH.value in self.parameters:
+            if not type(self.get_pin_auth()) == bytes:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAuth not bytes")
+        if AUTHN_MAKE_CREDENTIAL.PIN_PROTOCOL.value in self.parameters:
+            if not type(self.get_pin_protocol()) == int:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinProtocol not int")
+
     def get_hash(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.HASH.value]
     def get_rp_entity(self):
@@ -300,7 +423,8 @@ class AuthenticatorMakeCredentialParameters:
     def get_cred_types_and_pubkey_algs(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.PUBKEY_CRED_PARAMS.value]
     def get_exclude_credential_descriptor_list(self):
-        return self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]
+        return self.exclude_list
+        #return self.parameters[AUTHN_MAKE_CREDENTIAL.EXCLUDE_LIST.value]
     
     def get_extensions(self):
         return self.parameters[AUTHN_MAKE_CREDENTIAL.EXTENSIONS.value]

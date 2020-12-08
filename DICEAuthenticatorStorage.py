@@ -82,7 +82,7 @@ class DICEAuthenticatorStorage:
     def convert_allow_list_to_map(self, allow_list):
         allow = {}
         for allowed in allow_list:
-            allow[allowed["id"]]=allowed["type"]
+            allow[allowed.get_id()]=allowed.get_type()
         return allow
 class DICEAuthenticatorStorageException(Exception):
     """Exception raised when accessing the storage medium

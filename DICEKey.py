@@ -159,17 +159,17 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     
     def authenticatorGetAssertion(self, params:AuthenticatorGetAssertionParameters,keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
         #TODO perform necessary checks
-        #TODO add non-residential key approach
+        
 
         #First find all resident creds (could be zero)
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
         
         #Now check for any non-resident creds
         for allow_cred in params.get_allow_list():
-            if len(allow_cred["id"])>16:
+            if len(allow_cred.get_id())>CTAPHIDConstants.CREDENTIAL_ID_SIZE:
                 auth.debug("Wrapped key provided, will unwrap credential source")
                 #we have a wrapped credential
-                creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred["id"]))
+                creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred.get_id()))
             
                 
         numberOfCredentials = len(creds)
@@ -208,10 +208,10 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
          #Now check for any non-resident creds
         for allow_cred in params.get_allow_list():
-            if len(allow_cred["id"])>16:
+            if len(allow_cred.get_id())>CTAPHIDConstants.CREDENTIAL_ID_SIZE:
                 auth.debug("Wrapped key provided, will unwrap credential source")
                 #we have a wrapped credential
-                creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred["id"]))
+                creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred.get_id()))
             
         numberOfCredentials = len(creds)
         if numberOfCredentials < 1:

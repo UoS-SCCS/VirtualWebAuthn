@@ -4,7 +4,7 @@ MESSAGE_SIZE = 64
 HEADER_SIZE = 7 
 MAX_PAYLOAD = MESSAGE_SIZE - HEADER_SIZE
 MAX_CONTINUATION_PAYLOAD = MESSAGE_SIZE - 5
-
+CREDENTIAL_ID_SIZE = 16
 @unique
 class CTAPHID_ERROR(Enum):
     ERR_INVALID_CMD = b'\x01' #The command in the request is invalid
@@ -117,7 +117,13 @@ class AUTHN_GETINFO_VERSION(AUTHN_GETINFO_PARAMETER):
     CTAP2 = "FIDO_2_0"
     CTAP1 = "U2F_V2"
 
-
+@unique
+class AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR(Enum):
+    TYPE = "type"
+    ID ="id"
+    TRANSPORTS = "transports"
+    TYPE_PUBLIC_KEY="public-key"
+    
 @unique
 class AUTHN_GETINFO(Enum):
     VERSIONS = 1
