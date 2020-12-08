@@ -68,6 +68,12 @@ Good explanation of resident keys here, might be something we can expand on
 - Why does this not require the PIN to be provided?
     - It might be because the platform will already have got the pin token, and as such, has proved access. The relying party will get uv = false, which might be ok
 - It isn't clear to me how one triggers Chrome to set or change a PIN. Maybe it is intended to be managed entirely outside of WebAuthN, but it is part of CTAP2?
+- requireUserVerification 	options.uv or pinAuth/pinProtocol 
+
+## User Verification
+It seems like user verification is hinged very much on registration. During a registration an RP can request user verification. The GetInfo request to the authenticator will return the authenticator capabilities, one of which is uv (user verification). If the authenticator cannot verify the user in and of itself, i.e. through its own UI it has to set this to False - even if it can handle Client PINs. In such a situation, the client will not present that authenticator to the user and the user will not be able to register with it. The issue comes from the option of "Preferred" for UV on the relying party. I believe this will not reject an authenticator that does not provide the UV flag in its GetInfo. 
+
+The problem arises in that CTAP2 uses the UV flag in MakeCredential and GetAssertion responses as PIN checks. As such, the response will come back with UV set to True if the PinAuth was valid. If this is forwarded on to the RP (which it appears to be via the authenticatorData in the assertion), the RP will not be able to distinguish between genuine User Verification and PIN user verification. 
 
 ## Token Binding
 Token binding is described throughout the WebAuthN standard, albeit as an optional parameter. However, there are some security questions with regards to whether it is important for ensuring security.
