@@ -37,7 +37,7 @@ Proof of concept implementation, currently status:
     * CTAPHID_LOCK
 * Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented
 * Extensions and options in MakeCredential and GetAssertion
-* _Resident Key Option_
+* ---_Resident Key Option_--- This is now complete, it is a parameter option
 * UI to obtain presence/user verification and display relying party information
 * Additional Attestation Statement formats
 * Additional Crypto Providers
