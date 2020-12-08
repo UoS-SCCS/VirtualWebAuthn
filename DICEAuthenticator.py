@@ -1,5 +1,10 @@
 from abc import ABC, abstractmethod
 from CTAPHID import CTAPHIDTransaction
+from HIDPacket import HIDPacket
+from USBHID import USBHID
+from USBHID import USBHIDListener
+#from CTAPHID import CTAPHID
+import shutil
 import CTAPHIDConstants
 from CTAPHIDConstants import AUTHN_GET_CLIENT_PIN
 from CTAPHIDConstants import AUTHN_GET_ASSERTION
@@ -22,7 +27,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hashes, hmac
-
+from DICEAuthenticatorUI import DICEAuthenticatorListener, DICEAuthenticatorUI, ConsoleAuthenticatorUI
 from enum import Enum, unique
 from uuid import UUID
 from fido2 import cbor
@@ -128,6 +133,33 @@ class CBORResponse:
             return bytes(0)
         return cbor.encode(self.content)
 
+def keys_exist_in_dict(keys:[],dict:{})->bool:
+    for key in keys:
+        if not key in dict:
+            return False
+    return True
+def keys_do_not_exist_in_dict(keys:[],dict:{})->bool:
+    for key in keys:
+        if key in dict:
+            return False
+    return True
+def only_keys_in_dict(keys,dict:{})->bool:
+    if type(keys) is Enum:
+        for e in keys:
+            if not e.value in dict:
+                return False
+        if len(dict) != len(keys.__members__):
+            return False
+    else:
+        for key in keys:
+            if not key in dict:
+                return False
+        if len(dict) != len(keys):
+            return False
+    return True
+
+
+
 class AuthenticatorGetClientPINParameters:
     """
     pinProtocol (0x01) 	Unsigned Integer 	Required 	PIN protocol version chosen by the client. For this version of the spec, this SHALL be the number 1.
@@ -140,8 +172,61 @@ class AuthenticatorGetClientPINParameters:
     def __init__(self, cbor_data:bytes):
         self.parameters = cbor.decode(cbor_data)
         auth.debug("Decoded GetClientPINParameters: %s", self.parameters)        
-    
+        self.verify()
 
+    def verify(self):
+        if not AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"pinProtocol missing")
+        
+        if not AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value in self.parameters:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"subCommand missing")
+        
+        if not type(self.get_protocol()) == int:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinProtocol not integer")
+        
+        if not type(self.get_sub_command()) == int:
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"subCommand not integer")
+
+        if AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value in self.parameters:
+            #Verify Key Agreement
+            if not type(self.get_key_agreement()) is dict:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAgreement not dictionary")
+            print(self.get_key_agreement())
+            if not 3 in self.get_key_agreement():
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_MISSING_PARAMETER,"missing alg parameter")
+            #TODO verify COSE key
+        
+        if AUTHN_GET_CLIENT_PIN.PIN_AUTH.value in self.parameters:
+            if not type(self.get_pin_auth()) is bytes:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinAuth not bytes")
+        
+        if AUTHN_GET_CLIENT_PIN.NEW_PIN_ENC.value in self.parameters:
+            if not type(self.get_new_pin_enc()) is bytes:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"newPinEnc not bytes")
+
+        if AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value in self.parameters:
+            if not type(self.get_pin_hash_enc()) is bytes:
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,"pinHashEnc not bytes")
+        
+        if not (self.get_sub_command() >=1 and self.get_sub_command()<=5):
+            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_COMMAND,"invalid subCommand")
+
+        if self.get_sub_command() == 1 or self.get_sub_command() == 2:
+            if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value,AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value],self.parameters):
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
+
+        if self.get_sub_command() == 3:
+            if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value,AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value,AUTHN_GET_CLIENT_PIN.NEW_PIN_ENC.value,AUTHN_GET_CLIENT_PIN.PIN_AUTH.value,AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value],self.parameters):
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
+        
+        if self.get_sub_command() == 4:
+            if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN],self.parameters):
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
+        
+        if self.get_sub_command() == 5:
+            if not only_keys_in_dict([AUTHN_GET_CLIENT_PIN.SUB_COMMAND.value,AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value,AUTHN_GET_CLIENT_PIN.KEY_AGREEMENT.value,AUTHN_GET_CLIENT_PIN.PIN_HASH_ENC.value],self.parameters):
+                raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_INVALID_PARAMETER,"invalid parameters found")
+        
     def get_protocol(self):
         return self.parameters[AUTHN_GET_CLIENT_PIN.PIN_PROTOCOL.value]
     
@@ -340,10 +425,11 @@ class GetInfoResp(CBORResponse):
         self._add_dict_to_list(AUTHN_GETINFO.ALGORITHMS, algorithm)
 
         
-class DICEAuthenticator:
+class DICEAuthenticator(DICEAuthenticatorListener):
     AUTHENTICATOR_AAGUID = UUID("695e437f-c0cd-4fe8-b545-d39084f5c805")
     PIN_TOKEN_LENGTH = 64
-    def __init__(self, pin_token_length=PIN_TOKEN_LENGTH):
+    def __init__(self, pin_token_length=PIN_TOKEN_LENGTH, ui:DICEAuthenticatorUI=ConsoleAuthenticatorUI()):
+        self._create_debug_logs()
         self._last_get_assertion_cid = None
         self._last_get_assertion_params =  None
         self._last_get_assertion_time = None
@@ -353,7 +439,71 @@ class DICEAuthenticator:
         #self._ctap_hid = ctap_hid
         self._generate_authenticatorKeyAgreementKey()
         self._generate_pinToken(pin_token_length)
-        pass
+        self._ui = ui
+        if not self._ui is None:
+            self._ui.add_listener(self)
+        
+    def shutdown(self):
+        self._usbhid.shutdown()
+
+    def _start(self,device:str="/dev/dicekey"):
+        self._usbdevice = os.open(device, os.O_RDWR)
+        self._usbhid = USBHID(self._usbdevice)
+        import CTAPHID
+        self._ctaphid = CTAPHID.CTAPHID(self._usbhid)
+        self._ctaphid.set_authenticator(self)
+        self._usbhid.set_listener(self._ctaphid)
+        self._usbhid.start()
+        if not self._ui is None:
+            self._ui.start()
+
+        """
+        while 1:
+            for line in sys.stdin:
+                if line.rstrip() == "quit":
+                    log.debug("Quit Called")
+                    #This doesn't actually kill the thread because python handles threads in a bizarre way
+                    usbhid.shutdown()
+                    sys.exit()
+        else:
+            log.debug("Unknown command entered on CLI: %s",line.rstrip() )
+        """
+
+    def _create_debug_logs(self):
+        timestr = time.strftime("%Y%m%d-%H%M%S")    
+        if not os.path.exists("./logs/"):
+            os.mkdir("./logs/")
+        else:
+            source_dir = './logs/'
+            target_dir = './logs/archive/'
+            if not os.path.exists(target_dir):
+                os.mkdir(target_dir)
+            file_names = os.listdir(source_dir)
+            for file_name in file_names:
+                shutil.move(os.path.join(source_dir, file_name), target_dir)
+
+        self._setup_logger('debug', r'./logs/debug_'+timestr+'.log')
+        self._setup_logger('debug.usbhid', r'./logs/usbhid_'+timestr+'.log')
+        self._setup_logger('debug.ctap', r'./logs/ctap_'+timestr+'.log')
+        self._setup_logger('debug.auth', r'./logs/auth_'+timestr+'.log')
+    
+    def _setup_logger(self, logger_name, log_file, level=logging.DEBUG):
+        l = logging.getLogger(logger_name)
+        
+        formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
+        fileHandler = logging.FileHandler(log_file, mode='w')
+        if logger_name=="debug":
+            formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
+            fileHandler.setFormatter(formatter)
+            streamHandler = logging.StreamHandler()
+            streamHandler.setFormatter(formatter)
+            l.addHandler(streamHandler)    
+            l.propagate = False
+        else:
+            fileHandler.setFormatter(formatter)
+            l.propagate = True
+        l.setLevel(level)
+        l.addHandler(fileHandler)
 
     def _generate_pinToken(self,pin_token_length:int):
         auth.debug("Generating new pinToken")

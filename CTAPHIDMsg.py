@@ -1,6 +1,7 @@
 from HIDPacket import HIDInitializationPacket
 from HIDPacket import HIDContinuationPacket
 from AuthenticatorVersion import AuthenticatorVersion
+from CTAPHIDExceptions import CTAPHIDException
 from HIDPacket import HIDPacket
 import json
 from abc import ABC, abstractmethod
@@ -21,6 +22,7 @@ class CTAPHIDCMD(ABC):
             self._payload = payload[:self._BCNT]
         ctap.debug("Created CTAPHID CMD: %s", self)
         self.remaining_bytes = self._BCNT - len(self._payload)
+        
 
     def __str__(self):
         out = {}
@@ -69,6 +71,7 @@ class CTAPHIDCMD(ABC):
             packet = HIDInitializationPacket(self._CID,self._CMD,self._BCNT,self._payload)
             return [packet]
 
+    @abstractmethod
     def verify(self):
         pass
 
@@ -100,7 +103,8 @@ class CTAPHIDCMD(ABC):
             return CTAPHIDCancelRequest(packet)
         elif packet.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_PING:
             return CTAPHIDPingRequest(packet)
-
+        else:
+            raise CTAPHIDException(CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_CMD,"Unknown Command")
 
 """
 Request
@@ -113,12 +117,13 @@ class CTAPHIDMsgRequest(CTAPHIDCMD):
     def __init__(self, packet: HIDInitializationPacket):
         super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
         self._U2F_CMD = self._payload[0]
-        self.verify()
+        
 
     def get_cmd_data(self):
         return self._payload[1:]    
 
-
+    def verify(self):
+        print("ERROR WE SHOULDN'T RECEIVE THIS MESSAGE")
 """
 Response at success
 CMD 	CTAPHID_MSG
@@ -135,6 +140,11 @@ class CTAPHIDMsgResponse(CTAPHIDCMD):
         ctap.debug("Create initial MSG response %s",payload.hex())
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_MSG,len(payload),payload)
 
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass
 
 """
 Request
@@ -144,8 +154,10 @@ BCNT 	0
 class CTAPHIDCancelRequest(CTAPHIDCMD):
     def __init__(self, packet: HIDInitializationPacket):
         super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
-        self.verify()
-
+        
+    def verify(self):
+        if len(self._payload)>0:
+            raise CTAPHIDException(CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_LEN)
 
 
 """
@@ -159,6 +171,11 @@ class CTAPHIDCancelResponse(CTAPHIDCMD):
         ctap.debug("Create initial Cancel response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL,0,bytes(0))
 
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass
 """
 Response at success
 CMD 	CTAPHID_KEEPALIVE
@@ -175,6 +192,12 @@ class CTAPHIDKeepAliveResponse(CTAPHIDCMD):
         ctap.debug("Create Keep-alive response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_KEEPALIVE,1,status_code.value)
 
+    
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass
 """
 Response at success
 CMD 	CTAPHID_ERROR
@@ -187,6 +210,8 @@ class CTAPHIDErrorResponse(CTAPHIDCMD):
         ctap.debug("Create initial Error response")
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_ERROR,1,error_code.value)
 
+    def verify(self):
+        pass
 """
 Request
 CMD 	CTAPHID_WINK
@@ -198,7 +223,9 @@ class CTAPHIDWinkRequest(CTAPHIDCMD):
         super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
         self.verify()
 
-
+    def verify(self):
+        if len(self._payload)>0:
+            raise CTAPHIDException(CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_LEN)
 
 """
 Response at success
@@ -212,7 +239,11 @@ class CTAPHIDWinkResponse(CTAPHIDCMD):
         ctap.debug("Create initial WINK response %s",payload_data)
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_WINK,len(payload_data),payload_data)
 
-
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass
 
 
 """
@@ -224,9 +255,11 @@ DATA 	n bytes
 class CTAPHIDPingRequest(CTAPHIDCMD):
     def __init__(self, packet: HIDInitializationPacket):
         super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
-        self.verify()
+        
 
-
+    def verify(self):
+        if not len(self._payload) == self._BCNT:
+            raise CTAPHIDException(CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_LEN)
 
 """
 Response at success
@@ -240,6 +273,11 @@ class CTAPHIDPingResponse(CTAPHIDCMD):
         ctap.debug("Create initial PING response %s",payload_data)
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_PING,len(payload_data),payload_data)
 
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass
 
 
 """
@@ -253,12 +291,20 @@ class CTAPHIDCBORRequest(CTAPHIDCMD):
     def __init__(self, packet: HIDInitializationPacket):
         super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
         self._CTAP_CMD = self._payload[0]
-        self.verify()
 
     def get_cmd_data(self):
         return self._payload[1:]    
 
-
+    def verify(self):
+        if self._BCNT != len(self._payload):
+            raise CTAPHIDException(CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_LEN)
+        try:
+            CTAPHIDConstants.AUTHN_CMD(self._payload[0].to_bytes(1,"big"))
+        except ValueError:
+            if not (self._CTAP_CMD >= int.from_bytes(CTAPHIDConstants.AUTHN_CMD.AUTHN_VendorFirst.value,"big") and self._CTAP_CMD <= int.from_bytes(CTAPHIDConstants.AUTHN_CMD.AUTHN_VendorLast.value,"big")):
+                raise CTAPHIDException(CTAPHIDConstants.CTAPHID_ERROR.ERR_INVALID_PAR)
+        
+        
 """
 Response at success
 CMD 	CTAPHID_MSG
@@ -268,14 +314,18 @@ DATA + 1 	n bytes of CBOR encoded data
 """
 class CTAPHIDCBORResponse(CTAPHIDCMD):
 
-    def __init__(self,CID, CTAP_Status:CTAPHIDConstants.CTAP_STATUS_CODE,payload_data:bytes):     
+    def __init__(self,CID, CTAP_Status:CTAPHIDConstants.CTAP_STATUS_CODE,payload_data:bytes=bytes(0)):     
         payload = bytearray(len(payload_data)+1)
         payload[0] = CTAP_Status.value[0]
         payload[1:]=payload_data
         ctap.debug("Create initial CBOR response %s",payload)
         super().__init__(CID,CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR,len(payload),payload)
 
-
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass
 class CTAPHIDInitRequest(CTAPHIDCMD):
     def __init__(self, packet: HIDInitializationPacket):
         super().__init__(packet.get_CID(), packet.get_CMD(),packet.get_length(),packet.get_payload())
@@ -329,3 +379,8 @@ class CTAPHIDInitResponse(CTAPHIDCMD):
         self._payload[18] = flag
 
     
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+        pass

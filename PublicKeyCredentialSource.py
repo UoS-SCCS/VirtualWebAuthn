@@ -9,6 +9,7 @@ from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
 import logging
 log = logging.getLogger('debug')
 from cryptography.hazmat.backends import default_backend
+#TODO Move string to constants
 class PublicKeyCredentialSource():
     def __init__(self):
         self._alg = None
@@ -56,7 +57,7 @@ class PublicKeyCredentialSource():
         data = json.loads(data.decode('utf-8'))
         self._type=data["type"]
         if not without_id:
-            self._id= data
+            self._id= bytes.fromhex(data["id"])
         self._alg = data["alg"]
         self._rp_id = data["rpId"]
         self._signature_counter = data["signatureCounter"]

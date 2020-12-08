@@ -7,6 +7,7 @@ from queue import SimpleQueue
 from CTAPHIDTransaction import CTAPHIDTransaction
 import os
 from CTAPHIDExceptions import ChannelNotFoundException
+from CTAPHIDExceptions import CTAPHIDException
 from CTAPHIDMsg import CTAPHIDInitRequest
 from CTAPHIDMsg import CTAPHIDInitResponse
 from CTAPHIDMsg import CTAPHIDMsgRequest
@@ -72,19 +73,25 @@ class CTAPHID(USBHIDListener):
         
         #If we have finished receiving packets, process the request
         if self._transaction.request.is_complete(): 
-            ctap.debug("Message is complete: %s", self._transaction)
-            if self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_INIT:
-                self.process_init_request(self._transaction.request)
-            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_MSG:
-                self.process_msg_request(self._transaction.request)
-            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR:
-                self.process_cbor_request(self._transaction.request)
-            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_PING:
-                self.process_ping_request(self._transaction.request)
-            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL:
-                self.process_cancel_request(self._transaction.request)
-            elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_WINK:
-                self.process_wink_request(self._transaction.request)
+            try:
+                self._transaction.request.verify()
+                ctap.debug("Message is complete: %s", self._transaction)
+                if self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_INIT:
+                    self.process_init_request(self._transaction.request)
+                elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_MSG:
+                    self.process_msg_request(self._transaction.request)
+                elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CBOR:
+                    self.process_cbor_request(self._transaction.request)
+                elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_PING:
+                    self.process_ping_request(self._transaction.request)
+                elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_CANCEL:
+                    self.process_cancel_request(self._transaction.request)
+                elif self._transaction.request.get_CMD() == CTAPHIDConstants.CTAP_CMD.CTAPHID_WINK:
+                    self.process_wink_request(self._transaction.request)
+            except CTAPHIDException as e:
+                ctap.error("Exception processing CTAP HID",exc_info=True)
+                self.send_error_response(CTAPHIDErrorResponse(self._transaction.request.get_CID(),e.get_error_code()))
+
         else:
             ctap.debug("Message incomplete remaining bytes: %s", self._transaction.request.remaining_bytes)
         
@@ -130,7 +137,8 @@ class CTAPHID(USBHIDListener):
                     self.send_response(transaction)
                 except DICEAuthenticatorException as e:
                     auth.error("Exception from authenticator",exc_info=True)
-                    self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),e.get_error_code()))
+                    self.send_error_response(CTAPHIDCBORResponse(msg_request.get_CID(),e.get_error_code()))
+                
 
     def process_ping_request(self, msg_request: CTAPHIDPingRequest):
         ctap.debug("Received ping request: %s", msg_request)
@@ -160,9 +168,12 @@ class CTAPHID(USBHIDListener):
                     self.send_response(transaction)
                 except DICEAuthenticatorException as e:
                     auth.error("Exception from authenticator", exc_info=True)
-                    self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),e.get_error_code()))
+                    self.send_error_response(CTAPHIDCBORResponse(msg_request.get_CID(),e.get_error_code()))
                     #transaction.reset()
-            
+                except CTAPHIDException as e:
+                    ctap.error("Exception processing CTAP HID",exc_info=True)
+                    self.send_error_response(CTAPHIDErrorResponse(msg_request.get_CID(),e.get_error_code()))
+
 
     
     def process_msg_request(self, msg_request: CTAPHIDMsgRequest):
