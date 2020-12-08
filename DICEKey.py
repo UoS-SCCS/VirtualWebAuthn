@@ -5,7 +5,7 @@ from CTAPHID import CTAPHID
 from JSONAuthenticatorStorage import JSONAuthenticatorStorage
 from MyAuthenticator import MyAuthenticator
 from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
-from ES256CryptoProvider import ES256CryptoProvider
+from TPMES256CryptoProvider import TPMES256CryptoProvider
 from AESCredentialWrapper import AESCredentialWrapper
 from DICEAuthenticatorUI import DICEAuthenticatorUI, DICEAuthenticatorListener
 import sys
@@ -30,22 +30,19 @@ from DICEAuthenticator import MakeCredentialResp
 from DICEAuthenticator import GetAssertionResp
 from DICEAuthenticator import DICEAuthenticatorException
 import CTAPHIDConstants
-from binascii import b2a_hex
+from binascii import hexlify, a2b_hex, b2a_hex
 
 from DICEAuthenticatorStorage import DICEAuthenticatorStorage
-from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
 from PublicKeyCredentialSource import PublicKeyCredentialSource
 from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
 from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import hashes
+
+from cryptography.hazmat.primitives import hashes,hmac
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import hashes, hmac
 from AttestationObject import AttestationObject
-import logging
-from binascii import hexlify, a2b_hex, b2a_hex
+
 from uuid import UUID
 from fido2.cose import CoseKey, ES256, RS256, UnsupportedKey
 from fido2 import cbor
@@ -53,10 +50,9 @@ from fido2 import cbor
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 import datetime
-import os
 from cryptography.hazmat.primitives import serialization
 from CredentialWrapper import CredentialWrapper
-from DICEAuthenticatorUI import DICEAuthenticatorListener, QTAuthenticatorUI
+from DICEAuthenticatorUI import QTAuthenticatorUI
 from AuthenticatorVersion import AuthenticatorVersion
 log = logging.getLogger('debug')
 ctap = logging.getLogger('debug.ctap')
@@ -72,9 +68,9 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         super().__init__()
         #prepare authenticator
         self._storage = JSONAuthenticatorStorage("my_authenticator.json")
-        AuthenticatorCryptoProvider.add_provider(ES256CryptoProvider())
+        AuthenticatorCryptoProvider.add_provider(TPMES256CryptoProvider())
         self._providers = []
-        self._providers.append(ES256CryptoProvider().get_alg())
+        self._providers.append(TPMES256CryptoProvider().get_alg())
         if not self._storage.is_initialised():
             self._storage.init_new()
         self._credential_wrapper = AESCredentialWrapper()
