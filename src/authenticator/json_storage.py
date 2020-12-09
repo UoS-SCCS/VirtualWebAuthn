@@ -1,13 +1,28 @@
+"""Provides an implementation of DICEAuthenticatorStorage that uses an
+underlying JSON file to store content
+
+Classes: 
+    JSONAuthenticatorStorage
+Enums:
+    STORAGE_KEYS
+
+Raises:
+    DICEAuthenticatorStorageException: Exception that occurs during storage operations
+
+"""
 import json
 import logging
 import os 
-from DICEAuthenticatorStorage import DICEAuthenticatorStorage
-from DICEAuthenticatorStorage import DICEAuthenticatorStorageException
-from PublicKeyCredentialSource import PublicKeyCredentialSource
-from abc import ABC
-from enum import Enum, unique
+from authenticator.storage import DICEAuthenticatorStorage, DICEAuthenticatorStorageException
+from ctap.credential_source import PublicKeyCredentialSource
+
 log = logging.getLogger('debug')
+
+
 class STORAGE_KEYS():
+    """Storage keys enum for referencing the names of the fields
+    used in the JSON file
+    """
     MASTER_KEY = "master_key"
     SIGNATURE_COUNT = "signature_count"
     CREDENTIALS = "credentials"
@@ -18,7 +33,11 @@ class STORAGE_KEYS():
 
 
 class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
+    """Concrete implementation of DICEAuthenticatorStorage
+    that stores contents in a JSON file
+    """
     def __init__(self, path:str):
+        super().__init__()
         self._path = path
         if not self._check_exists():
             self._data={"_version":"JSONAuthenticatorStorage_0.1"}
@@ -35,7 +54,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
 
     def _check_exists(self):
         return os.path.exists(self._path)
-    
+
     def _read_from_json(self):
         with open(self._path,"r") as f:
             return json.load(f)
@@ -43,22 +62,32 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     def get_wrapping_key(self)->bytes:
         if STORAGE_KEYS.WRAP_KEY in self._data:
             return bytes.fromhex(self._data[STORAGE_KEYS.WRAP_KEY])
-        else:
-            return None
-    
+        return None
+
     def has_wrapping_key(self)->bool:
         return STORAGE_KEYS.WRAP_KEY in self._data
 
-    def set_wrapping_key(self, wrap_key:bytes)->bytes:
+    def set_wrapping_key(self, wrap_key:bytes)->bool:
         self._data[STORAGE_KEYS.WRAP_KEY]=wrap_key.hex()
-        self._write_to_json()
+        return self._write_to_json()
 
     def get_master_secret(self)->bytes:
+        """Gets the master secret
+
+        Should only be called when a master secret exists. Check with
+        is_initialised() to determine
+
+        Raises:
+            DICEAuthenticatorStorageException: raised if no master secret found
+
+        Returns:
+            bytes: master secret as bytes
+        """
         if STORAGE_KEYS.MASTER_KEY in self._data:
             return bytes.fromhex(self._data[STORAGE_KEYS.MASTER_KEY])
         else:
             raise DICEAuthenticatorStorageException("No master secret set")
-            
+
     def init_new(self,master_secret:bytes=None)->bool:
         if master_secret is None:
             self._data[STORAGE_KEYS.MASTER_KEY]=os.urandom(64).hex()
@@ -73,14 +102,15 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     def _update_signature_counter(self, value:int)->bool:
         self._data[STORAGE_KEYS.SIGNATURE_COUNT]=value.to_bytes(4, 'big')
         return self._write_to_json()
-    
+
     def update_signature_counter(self, new_counter:int)->bool:
         return self._update_signature_counter(new_counter)
-    
+
     def increment_signature_counter(self)->bool:
         return self._update_signature_counter(self.get_signature_counter() + 1)
-    
-    def add_credential_source(self,rp_id:str,user_id:bytes, credential_source:PublicKeyCredentialSource)->bool:
+
+    def add_credential_source(self,rp_id:str,user_id:bytes, 
+            credential_source:PublicKeyCredentialSource)->bool:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
             self._data[STORAGE_KEYS.CREDENTIALS][rp_id]= []
         self._data[STORAGE_KEYS.CREDENTIALS][rp_id].append(credential_source.get_bytes().hex())
@@ -116,7 +146,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
             self._data[STORAGE_KEYS.PIN]={}
             self._write_to_json()
         return self._data[STORAGE_KEYS.PIN]
-    
+
     def _get_create_pin_retries(self):
         pin = self._get_create_pin()
         if not STORAGE_KEYS.PIN_RETRIES in pin:
@@ -126,10 +156,10 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
 
     def get_pin_retries(self)->int:
         return self._get_create_pin_retries()
-        
-    def set_pin_retries(self, new_value:int)->int:
+
+    def set_pin_retries(self, retries:int)->int:
         self._get_create_pin_retries()
-        self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]=new_value
+        self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]=retries
         self._write_to_json()
         return self._data[STORAGE_KEYS.PIN][STORAGE_KEYS.PIN_RETRIES]
 

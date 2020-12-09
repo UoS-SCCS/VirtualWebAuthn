@@ -1,17 +1,13 @@
 import os
 import logging
 import json
-from AuthenticatorCryptoProvider import AuthenticatorCryptoKeyPair
-from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
-from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
-from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY
-from CTAPHIDConstants import AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE
-
-import CTAPHIDConstants
-
+from crypto.crypto_provider import AuthenticatorCryptoKeyPair, CRYPTO_PROVIDERS
+from ctap.constants import AUTHN_PUBLIC_KEY_CREDENTIAL_DESCRIPTOR
+from ctap.constants import AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY
+from ctap.constants import AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE
+import ctap.constants
 log = logging.getLogger('debug')
 
-#TODO Move string to constants
 class PublicKeyCredentialSource():
     def __init__(self):
         self._alg = None
@@ -36,7 +32,7 @@ class PublicKeyCredentialSource():
         other_ui.pop(AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value)
         self._other_ui=other_ui
     def generate_id(self):
-        self._id=os.urandom(CTAPHIDConstants.CREDENTIAL_ID_SIZE)
+        self._id=os.urandom(ctap.constants.CREDENTIAL_ID_SIZE)
     
     def get_alg(self):
         return self._alg

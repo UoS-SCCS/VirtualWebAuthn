@@ -1,13 +1,7 @@
-import CTAPHIDConstants
-from abc import ABC, abstractmethod
-import logging
+import ctap.constants
+from abc import abstractmethod
 import json
-
-log = logging.getLogger('debug')
-
-usbhid = logging.getLogger('debug.usbhid')
-
-class HIDPacket:
+class HIDPacket():
     _BROADCAST_ID = b'\xff\xff\xff\xff'
     
     def __init__(self, data):
@@ -34,19 +28,22 @@ class HIDPacket:
     def debug_str(self):
         pass
 
-"""
-Offset 	Length 	Mnemonic 	Description
-0 	4 	CID 	Channel identifier
-4 	1 	CMD 	Command identifier (bit 7 always set)
-5 	1 	BCNTH 	High part of payload length
-6 	1 	BCNTL 	Low part of payload length
-7 	(s - 7) 	DATA 	Payload data (s is equal to the fixed packet size)
-"""
+
 class HIDInitializationPacket(HIDPacket):
+    """HID Initialization Packet consisting of:
+
+        Offset 	Length 	Mnemonic 	Description
+            0 	4 	    CID 	Channel identifier
+            4 	1 	    CMD 	Command identifier (bit 7 always set)
+            5 	1 	    BCNTH 	High part of payload length
+            6 	1 	    BCNTL 	Low part of payload length
+            7 	(s - 7) DATA 	Payload data (s is equal to the fixed packet size)
+
     
-    CMDTYPE = CTAPHIDConstants.CMD_TYPE.INITIALIZATION
+    """
+    CMDTYPE = ctap.constants.CMD_TYPE.INITIALIZATION
     
-    def __init__(self, CID:bytes, CMD:CTAPHIDConstants.CTAP_CMD, length, payload):
+    def __init__(self, CID:bytes, CMD:ctap.constants.CTAP_CMD, length, payload):
         self._CID=CID
         self._CMD=CMD
         self._length=length
@@ -85,7 +82,7 @@ class HIDInitializationPacket(HIDPacket):
     @classmethod
     def from_bytes(cls, packet:bytes):
         channel_id = packet[:4]
-        cmd = CTAPHIDConstants.CTAP_CMD((packet[4] & ~(1 << 7)).to_bytes(1,"big"))
+        cmd = ctap.constants.CTAP_CMD((packet[4] & ~(1 << 7)).to_bytes(1,"big"))
         message_length = int.from_bytes(packet[5:7], "big")
         data = packet[7:]
         return HIDInitializationPacket(channel_id, cmd, message_length, data)
@@ -95,15 +92,16 @@ class HIDInitializationPacket(HIDPacket):
         pass
 
 
-"""
-Offset 	Length 	Mnemonic 	Description
-0 	4 	CID 	Channel identifier
-4 	1 	SEQ 	Packet sequence 0x00..0x7f (bit 7 always cleared)
-5 	(s - 5) 	DATA 	Payload data (s is equal to the fixed packet size) 
-"""
 class HIDContinuationPacket(HIDPacket):
-    
-    CMDTYPE = CTAPHIDConstants.CMD_TYPE.CONTINUATION
+    """HID Continuation Packet consists of:
+
+    Offset 	Length 	Mnemonic 	Description
+        0 	4 	    CID 	Channel identifier
+        4 	1 	    SEQ 	Packet sequence 0x00..0x7f (bit 7 always cleared)
+        5 	(s - 5) DATA 	Payload data (s is equal to the fixed packet size) 
+
+    """
+    CMDTYPE = ctap.constants.CMD_TYPE.CONTINUATION
     
     def __init__(self, CID:bytes, seq, payload:bytes):
         self._CID=CID

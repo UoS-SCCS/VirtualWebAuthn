@@ -1,14 +1,12 @@
-
-from abc import ABC, abstractmethod
 from enum import Enum, unique
-from CTAPHIDExceptions import TransactionStateException, TransactionChannelIDException
-import CTAPHIDConstants
+from ctap.exceptions import TransactionStateException, TransactionChannelIDException
+import ctap.constants
 import json
-from CTAPHIDMsg import CTAPHIDCMD, CTAPHIDInitRequest, CTAPHIDInitResponse, CTAPHIDCancelResponse, CTAPHIDErrorResponse
-from HIDPacket import HIDPacket
+from ctap.messages import CTAPHIDCMD, CTAPHIDCancelResponse, CTAPHIDErrorResponse
+
 import logging
 log = logging.getLogger('debug')
-ctap = logging.getLogger('debug.ctap')
+ctaplog = logging.getLogger('debug.ctap')
 
 @unique
 class TRANSACTION_STATE(Enum):
@@ -51,23 +49,23 @@ class CTAPHIDTransaction:
 
     def set_request(self, request: CTAPHIDCMD):
         if not self.verify_state(TRANSACTION_STATE.REQUEST_RECV):
-            ctap.error("Invalid state in transaction to set request, current state: %s", self.state )
+            ctaplog.error("Invalid state in transaction to set request, current state: %s", self.state )
             raise TransactionStateException("Invalid state, cannot set request")
-        if request.get_CID() != CTAPHIDConstants.BROADCAST_ID and request.get_CID() != self.channel_id:
+        if request.get_CID() != ctap.constants.BROADCAST_ID and request.get_CID() != self.channel_id:
             raise TransactionChannelIDException("Invalid channel ID for transaction")
         self.state = TRANSACTION_STATE.REQUEST_RECV
         self.request = request
-        ctap.debug("Set request, changed state: %s", self.state )
+        ctaplog.debug("Set request, changed state: %s", self.state )
         
     def set_response(self, response: CTAPHIDCMD):
         if not self.verify_state(TRANSACTION_STATE.RESPONSE_SET):
-            ctap.error("Invalid state in transaction to set response, current state: %s", self.state )
+            ctaplog.error("Invalid state in transaction to set response, current state: %s", self.state )
             raise TransactionStateException("Invalid state, cannot set response")
-        if response.get_CID() != CTAPHIDConstants.BROADCAST_ID and response.get_CID() != self.channel_id:
+        if response.get_CID() != ctap.constants.BROADCAST_ID and response.get_CID() != self.channel_id:
             raise TransactionChannelIDException("Invalid channel ID for transaction")
         self.state = TRANSACTION_STATE.RESPONSE_SET
         self.response = response
-        ctap.debug("Set response, changed state: %s", self.state )
+        ctaplog.debug("Set response, changed state: %s", self.state )
 
     def reset(self):
         self.request = None

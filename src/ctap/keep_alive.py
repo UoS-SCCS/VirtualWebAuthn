@@ -1,29 +1,30 @@
 import threading
 import time
-from CTAPHIDMsg import CTAPHIDKeepAliveResponse
-import CTAPHIDConstants
+from ctap.messages import CTAPHIDKeepAliveResponse
+import ctap.constants
 
 import logging
 log = logging.getLogger('debug')
 
-ctap = logging.getLogger('debug.ctap')
 class CTAPHIDKeepAlive():
     def __init__(self, ctaphid):
         self._interval = (1/1000)*1000
         self._ctaphid = ctaphid
-        
-        self._status = CTAPHIDConstants.CTAPHID_KEEPALIVE_STATUS.STATUS_PROCESSING
+        self._cid = None
+        self._status = ctap.constants.CTAPHID_KEEPALIVE_STATUS.STATUS_PROCESSING
         self._running = False
+        self._keep_alive_thread = None
         self._elapsed =0
+        self._max = 0
     
     def set_CID(self, CID:bytes):
         self._cid = CID
 
-    def start(self, max=120000):
+    def start(self, max_val=120000):
         if self._cid is None:
             raise Exception("Keep-alive channel not set")
         log.debug("Start keep-alive called")
-        self._max = max/1000
+        self._max = max_val/1000
         self._keep_alive_thread = threading.Thread(target=self._keep_alive)
         self._running = True
         self._keep_alive_thread.setDaemon(True)
@@ -32,7 +33,7 @@ class CTAPHIDKeepAlive():
     def stop(self):
         self._running = False
 
-    def update_status(self, status:CTAPHIDConstants.CTAPHID_KEEPALIVE_STATUS):
+    def update_status(self, status:ctap.constants.CTAPHID_KEEPALIVE_STATUS):
         log.debug("Keep-alive status updated")
         self._status = status
         self._send_keep_alive()

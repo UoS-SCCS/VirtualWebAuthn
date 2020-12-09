@@ -1,4 +1,4 @@
-import CTAPHIDConstants
+import ctap.constants
 class TransactionStateException(Exception):
     """Exception raised for errors in transaction state.
 
@@ -39,7 +39,7 @@ class CTAPHIDException(Exception):
         message -- explanation of the error
     """
 
-    def __init__(self, err_code:CTAPHIDConstants.CTAPHID_ERROR,message="Something went wrong"):
+    def __init__(self, err_code:ctap.constants.CTAPHID_ERROR,message="Something went wrong"):
         self.message = message
         self.err_code = err_code
         super().__init__(self.message)

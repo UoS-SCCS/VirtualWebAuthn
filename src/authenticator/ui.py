@@ -1,11 +1,14 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-
 import sys
 from abc import ABC, abstractmethod
-import threading
-class DICEAuthenticatorListener:
+
+
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QWidgetAction, QWidget,QLabel,QApplication,
+    QSystemTrayIcon, QMenu, QVBoxLayout, QFrame, QHBoxLayout, QCheckBox, 
+    QAction, QDialog,QPushButton)
+from PyQt5.QtCore import QObject, Qt
+
+class DICEAuthenticatorListener(ABC):
     @abstractmethod
     def shutdown(self):
         pass
@@ -13,10 +16,10 @@ class DICEAuthenticatorListener:
     def menu_clicked(self, menu_item):
         pass
 
-class DICEAuthenticatorUI:
+class DICEAuthenticatorUI(ABC):
     def __init__(self):
         self._listeners = []
-        pass
+        
 
     @abstractmethod
     def start(self):
@@ -46,15 +49,13 @@ class ConsoleAuthenticatorUI(DICEAuthenticatorUI):
                     #This doesn't actually kill the thread because python handles threads in a bizarre way
                     self.fire_event_shutdown()
                     sys.exit()
-        else:
-            print("Unknown command entered on CLI: %s" % line.rstrip() )
+                else:
+                    print("Unknown command entered on CLI: %s" % line.rstrip() )
 
     def check_user_presence(self, msg=None):
         pass
 
 class LabelWidget(QWidgetAction):
-    def __init__(self, parent:QObject):
-        super().__init__(parent)
 
     def createWidget(self, parent:QWidget)->QWidget:
         return QLabel("Hello world")
@@ -63,8 +64,9 @@ class QTAuthenticatorUI:
     def __init__(self):
         self.app=None
         self._listeners = []
-        pass
-
+        self.tray = None
+        self.object = None
+        self.dialog = None
 
     def start(self):
         self.app = QApplication([])
@@ -91,9 +93,9 @@ class QTAuthenticatorUI:
         menu.addAction(action)
 
         # Add a Quit option to the menu.
-        quit = QAction("Quit")
-        quit.triggered.connect(self._quit)
-        menu.addAction(quit)
+        quit_app = QAction("Quit")
+        quit_app.triggered.connect(self._quit)
+        menu.addAction(quit_app)
 
         # Add the menu to the tray
         self.tray.setContextMenu(menu)

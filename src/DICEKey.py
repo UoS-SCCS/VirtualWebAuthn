@@ -1,61 +1,48 @@
-from HIDPacket import HIDPacket
-from USBHID import USBHID
-from USBHID import USBHIDListener
-from CTAPHID import CTAPHID
-from JSONAuthenticatorStorage import JSONAuthenticatorStorage
-
-from AuthenticatorCryptoProvider import AuthenticatorCryptoProvider
-from TPMES256CryptoProvider import TPMES256CryptoProvider
-from AESCredentialWrapper import AESCredentialWrapper
-from DICEAuthenticatorUI import DICEAuthenticatorUI, DICEAuthenticatorListener
 import sys
 import logging
 import os
 import shutil
 import time
-
-from DICEAuthenticator import DICEAuthenticator
-from DICEAuthenticator import GetInfoResp
-from DICEAuthenticator import ResetResp
-from DICEAuthenticator import AUTHN_GETINFO_OPTION
-from DICEAuthenticator import AUTHN_GETINFO_TRANSPORT
-from DICEAuthenticator import PUBLIC_KEY_ALG
-from DICEAuthenticator import PublicKeyCredentialParameters
-from DICEAuthenticator import AUTHN_GETINFO_VERSION
-from DICEAuthenticator import AuthenticatorMakeCredentialParameters
-from DICEAuthenticator import AuthenticatorGetAssertionParameters
-from DICEAuthenticator import AuthenticatorGetClientPINParameters
-from DICEAuthenticator import GetClientPINResp
-from DICEAuthenticator import MakeCredentialResp
-from DICEAuthenticator import GetAssertionResp
-from DICEAuthenticator import DICEAuthenticatorException
-import CTAPHIDConstants
+import datetime
 from binascii import hexlify, a2b_hex, b2a_hex
 
-from DICEAuthenticatorStorage import DICEAuthenticatorStorage
-from PublicKeyCredentialSource import PublicKeyCredentialSource
-from AuthenticatorCryptoProvider import CRYPTO_PROVIDERS
-from CTAPHIDKeepAlive import CTAPHIDKeepAlive
 from cryptography.hazmat.primitives.asymmetric import ec
-
 from cryptography.hazmat.primitives import hashes,hmac
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from AttestationObject import AttestationObject
 
-from uuid import UUID
-from fido2.cose import CoseKey, ES256, RS256, UnsupportedKey
-from fido2 import cbor
 #for x509 cert
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-import datetime
 from cryptography.hazmat.primitives import serialization
-from CredentialWrapper import CredentialWrapper
-from DICEAuthenticatorUI import QTAuthenticatorUI
-from AuthenticatorVersion import AuthenticatorVersion
+from uuid import UUID
+from fido2.cose import CoseKey, ES256, RS256, UnsupportedKey
+from fido2 import cbor
+
+from hid.ctap import HIDPacket,CTAPHID
+from hid.usb import USBHID
+from hid.listeners import USBHIDListener
+from crypto.crypto_provider import AuthenticatorCryptoProvider,CRYPTO_PROVIDERS
+from crypto.tpm_es256_crypto_provider import TPMES256CryptoProvider
+from crypto.aes_credential_wrapper import AESCredentialWrapper
+from crypto.credential_wrapper import CredentialWrapper
+from crypto.algs import PUBLIC_KEY_ALG
+from authenticator.ui import DICEAuthenticatorUI, DICEAuthenticatorListener,QTAuthenticatorUI
+from authenticator.core import DICEAuthenticator
+from authenticator.datatypes import (DICEAuthenticatorException,AuthenticatorGetClientPINParameters,
+    AuthenticatorGetAssertionParameters,AuthenticatorMakeCredentialParameters,
+    PublicKeyCredentialParameters,AuthenticatorVersion)
+from authenticator.cbor import (GetAssertionResp,MakeCredentialResp,GetClientPINResp,
+    GetInfoResp,ResetResp,AUTHN_GETINFO_OPTION,AUTHN_GETINFO_TRANSPORT,AUTHN_GETINFO_VERSION)
+from authenticator.storage import DICEAuthenticatorStorage
+from authenticator.json_storage import JSONAuthenticatorStorage
+
+import ctap.constants
+from ctap.credential_source import PublicKeyCredentialSource
+from ctap.keep_alive import CTAPHIDKeepAlive
+from ctap.attestation import AttestationObject
+
 log = logging.getLogger('debug')
-ctap = logging.getLogger('debug.ctap')
 auth = logging.getLogger('debug.auth')
 
 class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
@@ -67,7 +54,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #super().__init__(ui=QTAuthenticatorUI())
         super().__init__()
         #prepare authenticator
-        self._storage = JSONAuthenticatorStorage("my_authenticator.json")
+        self._storage = JSONAuthenticatorStorage("./data/my_authenticator.json")
         AuthenticatorCryptoProvider.add_provider(TPMES256CryptoProvider())
         self._providers = []
         self._providers.append(TPMES256CryptoProvider().get_alg())
@@ -75,13 +62,13 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             self._storage.init_new()
         self._credential_wrapper = AESCredentialWrapper()
         #This can be user configurable
-        self.default_to_rk=True
+        self.default_to_rk=False
         
         
         #self._providers_idx = {}
         #for provider in crypto_providers:
         #    self._providers_idx[provider.get_alg()] = provider
-        self.get_info_resp = GetInfoResp()
+        self.get_info_resp = GetInfoResp(DICEAuthenticator.AUTHENTICATOR_AAGUID.bytes)
         self.get_info_resp.set_auguid(DICEKey.DICEKEY_AUTHENTICATOR_AAGUID)
         if not self._storage.get_pin() is None:
             self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,True)
@@ -160,17 +147,17 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         
         #Now check for any non-resident creds
         for allow_cred in params.get_allow_list():
-            if len(allow_cred.get_id())>CTAPHIDConstants.CREDENTIAL_ID_SIZE:
+            if len(allow_cred.get_id())>ctap.constants.CREDENTIAL_ID_SIZE:
                 auth.debug("Wrapped key provided, will unwrap credential source")
                 #we have a wrapped credential
                 creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred.get_id()))
             
                 
-        numberOfCredentials = len(creds)
+        number_of_credentials = len(creds)
         
         #TODO Implement User verification and presence check
-        if numberOfCredentials < 1:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
+        if number_of_credentials < 1:
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
 
         credential_source = creds[0]
         uv = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),params.get_hash(),False)
@@ -183,35 +170,33 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         response[3]=credential_source.get_private_key().sign(authenticator_data + params.get_hash())
         credential_source.increment_signature_counter()
         response[4]=credential_source.get_user_handle()
-        response[5]=numberOfCredentials
+        response[5]=number_of_credentials
         #We put this last so the returned value can be updated - not sure this actually has any impact
         response[1]=credential_source.get_public_key_credential_descriptor()
-        """
+        '''
         credential 	0x01 	definite length map (CBOR major type 5).
         authData 	0x02 	byte string (CBOR major type 2).
         signature 	0x03 	byte string (CBOR major type 2).
         publicKeyCredentialUserEntity 	0x04 	definite length map (CBOR major type 5).
         numberOfCredentials 	0x05 	unsigned integer(CBOR major type 0). 
-        """
+        '''
         
-        return GetAssertionResp(response,numberOfCredentials)
+        return GetAssertionResp(response,number_of_credentials)
     
     def authenticatorGetNextAssertion(self, params:AuthenticatorGetAssertionParameters,idx:int, keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
-        #TODO perform necessary checks
-        #TODO add non-residential key approach
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),params.get_allow_list())
          #Now check for any non-resident creds
         for allow_cred in params.get_allow_list():
-            if len(allow_cred.get_id())>CTAPHIDConstants.CREDENTIAL_ID_SIZE:
+            if len(allow_cred.get_id())>ctap.constants.CREDENTIAL_ID_SIZE:
                 auth.debug("Wrapped key provided, will unwrap credential source")
                 #we have a wrapped credential
                 creds.append(self._credential_wrapper.unwrap(self._storage.get_wrapping_key(),allow_cred.get_id()))
             
         numberOfCredentials = len(creds)
         if numberOfCredentials < 1:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
         if idx >= numberOfCredentials:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_NOT_ALLOWED)
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_NOT_ALLOWED)
         
         credential_source = creds[idx]
         authenticator_data = self._get_authenticator_data_minus_creds(credential_source,True)
@@ -240,7 +225,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         if self._storage.reset():
             return ResetResp()
         else:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP1_ERR_OTHER)
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP1_ERR_OTHER)
     
     def authenticatorGetClientPIN_getRetries(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
         return GetClientPINResp(retries=self._storage.get_pin_retries())
@@ -251,31 +236,31 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     def authenticatorGetClientPIN_setPIN(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
         #TODO verify contents of params
         if not self._storage.get_pin() is None:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"PIN has already been set")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"PIN has already been set")
         
         #TODO generalise and remove hard coding to cose parameters
         shared_secret = self._generate_shared_secret(params.get_key_agreement())
         check = self._calculate_pin_auth(shared_secret,params.get_new_pin_enc())
         if not check[0:16] == params.get_pin_auth()[0:16]:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"Auth PIN did not match")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"Auth PIN did not match")
         
         decrypted_pin = self._decrypt_value(shared_secret,params.get_new_pin_enc())
         pin = self._extract_pin(decrypted_pin)
         
         if len(pin)<4:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_POLICY_VIOLATION, "PIN too short")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_POLICY_VIOLATION, "PIN too short")
         self._storage.set_pin(self._sha256(pin)[:16])
         return GetClientPINResp()
     
     def authenticatorGetClientPIN_changePIN(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
         if self._storage.get_pin() is None:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"No PIN Set")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"No PIN Set")
         
         #TODO generalise and remove hard coding to cose parameters
         shared_secret = self._generate_shared_secret(params.get_key_agreement())
         check = self._calculate_pin_auth(shared_secret,params.get_new_pin_enc(),params.get_pin_hash_enc())
         if not check[0:16] == params.get_pin_auth()[0:16]:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"Auth PIN did not match")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"Auth PIN did not match")
     
         self._storage.decrement_pin_retries()
         decrypted_pin_hash = self._decrypt_value(shared_secret,params.get_pin_hash_enc())
@@ -283,13 +268,13 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
         if not stored_pin[:16] == decrypted_pin_hash[:16]:
             #TODO handle run out of tries and successive lock
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID, "PIN invalid")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID, "PIN invalid")
 
         decrypted_pin = self._decrypt_value(shared_secret,params.get_new_pin_enc())
         pin = self._extract_pin(decrypted_pin)
         
         if len(pin)<4:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_POLICY_VIOLATION, "PIN too short")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_POLICY_VIOLATION, "PIN too short")
         
         self._storage.set_pin(self._sha256(pin)[:16])
         self._storage.set_pin_retries(8)
@@ -297,7 +282,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     
     def authenticatorGetClientPIN_getPINToken(self, params:AuthenticatorGetClientPINParameters,keep_alive:CTAPHIDKeepAlive) -> GetClientPINResp:
         if self._storage.get_pin() is None:
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"No PIN Set")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_AUTH_INVALID,"No PIN Set")
         
         #TODO generalise and remove hard coding to cose parameters
         shared_secret = self._generate_shared_secret(params.get_key_agreement())
@@ -308,7 +293,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
         if not stored_pin[:16] == decrypted_pin_hash[:16]:
             #TODO handle run out of tries and successive lock
-            raise DICEAuthenticatorException(CTAPHIDConstants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID, "PIN invalid")
+            raise DICEAuthenticatorException(ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_PIN_INVALID, "PIN invalid")
 
         self._storage.set_pin_retries(8)
         

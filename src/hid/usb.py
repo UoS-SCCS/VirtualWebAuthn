@@ -1,12 +1,10 @@
 import threading
-from abc import ABC, abstractmethod
-from HIDPacket import HIDPacket
-from CTAPHIDTransaction import CTAPHIDTransaction
-from queue import Queue
-import sys
-import traceback
+
 import os
 import logging
+
+from queue import Queue
+from hid.ctap import HIDPacket, CTAPHIDTransaction
 
 log = logging.getLogger('debug')
 usblog = logging.getLogger('debug.usbhid')
@@ -19,6 +17,8 @@ class USBHID:
         self._running = False
         self._packets = {}
         self._write_queue = Queue()
+        self._read_thread = None
+        self._write_thread = None
 
     def start(self):
         if self._is_listening:
@@ -74,16 +74,6 @@ class USBHID:
         log.debug("USBHID no longer listening")
 
         
-class USBHIDListener(ABC):
-
-    @abstractmethod
-    def received_packet(self, packet):
-        pass
-
-    @abstractmethod
-    def response_sent(self, transaction):
-        pass
-
 
 
 
