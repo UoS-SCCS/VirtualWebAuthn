@@ -15,6 +15,7 @@
 #include <chrono>
 #include <array>
 #include <fstream>
+#include "Tss_setup.h"
 #include "Web_authn_structures.h"
 #include "Web_authn_tpm.h"
 #include "Web_authn_access_tpm.h"
@@ -31,14 +32,38 @@ void* install_tpm()
 	return v_ptr;
 }
 
-int setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* log_filename)
+int setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename)
 {
-	return 0;
+	if (v_tpm_ptr==nullptr) {
+		return -1;
+	}
+
+	Setup_ptr sp;
+	if (use_hw_tpm) {
+		sp.reset(new Device_setup());
+	}
+	else {
+		sp.reset(new Simulator_setup());
+	}
+	sp->data_dir.value=tpm_data_dir;
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+
+	return tpm_ptr->setup(*sp,log_filename);
 }
 
-const char* get_last_error(void* tpm_ptr)
+const char* get_last_error(void* v_tpm_ptr)
 {
-	return "Not yet implemented";
+	if (v_tpm_ptr==nullptr) {
+		return "NULL pointer passed for the TPM";
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+
+	static std::string last_error=tpm_ptr->get_last_error();
+
+	return last_error.c_str();
+
 }
 
 void uninstall_tpm(void* v_tpm_ptr)

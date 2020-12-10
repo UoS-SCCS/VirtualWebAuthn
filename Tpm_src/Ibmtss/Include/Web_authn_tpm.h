@@ -30,28 +30,21 @@
 class Web_authn_tpm
 {
 public:
-    using Tpm_revision_data=std::array<uint32_t,3>;
 	/**
 	 * Default constructor.
 	 */
- 	Web_authn_tpm() : hw_tpm_(false), tss_context_(nullptr) {}
+ 	Web_authn_tpm() : setup_{false}, hw_tpm_(false), tss_context_(nullptr), last_error_("No error") {}
 	Web_authn_tpm(Web_authn_tpm const& t)=delete;
 	Web_authn_tpm& operator=(Web_authn_tpm const& t)=delete;
 	/**
-	 * Setup the Web_authn_tpm class. 
+	 * Setup the Web_authn_tpm class. Installs the persistent SRK, if it is not already in place
 	 *
 	 * @param tps - the setup data, a Tss_setup object.
+	 * @param log_file -the base filename for logging information, the log file will be tps.data_dir.value/log_file<number>
+	 *                  the number is generated from the time
 	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
-    TPM_RC setup(Tss_setup const& tps);
-	/**
-	 * Returns the TSS_CONTEXT pointer. Only used for testing, particularly with the TPM simulator..
-	 *
-	 * @return - a pointer to the current TSS_CONTEXT.
-	 */
-
-
-	TSS_CONTEXT* get_context() {return tss_context_;}
+    TPM_RC setup(Tss_setup const& tps,std::string log_filename);
 	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.
 	 *
@@ -63,17 +56,24 @@ public:
 	 *
 	 */
 	~Web_authn_tpm();
+	/**
+	 * Returns the TSS_CONTEXT pointer. Only used for testing, particularly with the TPM simulator.
+	 *
+	 * @return - a pointer to the current TSS_CONTEXT.
+	 */
+	TSS_CONTEXT* get_context() {return tss_context_;}
+
 
 private:
+	bool setup_;
     bool hw_tpm_;
-    Tpm_revision_data revision_data_;
-	
-	
+
 	TSS_CONTEXT* tss_context_;
+	Log_ptr log_ptr_;
 	std::string last_error_;
 
 	Key_data kd_;
-	Key_ecc_point kp_;
+	Key_ecc_point pt_;
 	Signing_data sd_;	
 	Ecdsa_sig sig_;
 

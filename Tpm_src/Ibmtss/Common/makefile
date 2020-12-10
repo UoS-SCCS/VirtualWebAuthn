@@ -28,6 +28,7 @@ SRCS= Web_authn_tpm.cpp \
 	Tpm_error.cpp \
 	Tss_setup.cpp \
 	Tpm_initialisation.cpp \
+	Create_primary_rsa_key.cpp \
 	Make_key_persistent.cpp 
 
 $(TARGET): $(SRCS:.cpp=.o)

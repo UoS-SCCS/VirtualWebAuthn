@@ -35,6 +35,10 @@
 
 int main(int argc, char *argv[])
 {
+	bool use_hw_tpm{false};
+	std::string data_dir{"/home/cn0016/TPM_data"};
+	std::string log_file{"log"};
+
 	void* v_tpm_ptr=install_tpm();
 	if (v_tpm_ptr==nullptr)
 
@@ -43,7 +47,12 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	std::cerr << get_last_error(v_tpm_ptr) << '\n';
+	if (setup_tpm(v_tpm_ptr,use_hw_tpm,data_dir.c_str(),log_file.c_str())!=0) {
+		std::cerr << "Error setting up the TPM\n";
+		return EXIT_FAILURE;
+	}
+
+
 
 	uninstall_tpm(v_tpm_ptr);
 	

@@ -20,6 +20,7 @@
 #include "Make_key_persistent.h"
 #include "Flush_context.h"
 #include "Tpm_error.h"
+#include "Create_primary_rsa_key.h"
 #include "Create_ecdsa_key.h"
 #include "Openssl_ec_utils.h"
 #include "Clock_utils.h"
@@ -30,11 +31,16 @@
 #include "Web_authn_tpm.h"
 
 
-TPM_RC Web_authn_tpm::setup(Tss_setup const& tps)
+TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 {
 	TPM_RC rc=0;
 	try
 	{
+		std::string filename=generate_log_filename(tps.data_dir.value, log_file);
+		log_ptr_.reset(new Timed_file_log(filename));
+		log_ptr_->set_debug_level(1);
+		log_ptr_->write_to_log("TPM setup started\n");
+
         hw_tpm_=(tps.t==Tpm_type::device);
         if (!hw_tpm_)
         {
@@ -59,14 +65,24 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps)
 			shutdown(tss_context_);
 			throw(Tpm_error("TPM startup failed (reset the TPM)"));
 		}
-        
-        if (!persistent_key_available(tss_context_,ek_persistent_handle))
-        {
-			throw(Tpm_error("Web_authn_tpm: setup: setting primary key failed - provision the TPM"));
+
+        if (!persistent_key_available(tss_context_,srk_persistent_handle)) {
+	       	uint32_t object_attributes = TPMA_OBJECT_FIXEDTPM |		// TPMA_OBJECT is a bit field
+					    TPMA_OBJECT_FIXEDPARENT |
+    		       		TPMA_OBJECT_SENSITIVEDATAORIGIN |
+				       	TPMA_OBJECT_USERWITHAUTH |
+                       	TPMA_OBJECT_RESTRICTED |
+                       	TPMA_OBJECT_NODA |
+				       	TPMA_OBJECT_DECRYPT;
+			CreatePrimary_Out out;
+			rc=create_primary_rsa_key(tss_context_,TPM_RH_OWNER,object_attributes,Byte_buffer(),&out);
+			log_ptr_->write_to_log("Primary key created\n");
+			rc=make_key_persistent(tss_context_,out.objectHandle,srk_persistent_handle);
+			log_ptr_->write_to_log("Primary key made persistent\n");
+		} else {
+			log_ptr_->write_to_log("Primary key already installed\n");
 		}
 
-//        get_tpm_revision_data();
-    
         rc=TSS_Delete(tss_context_);
         tss_context_=nullptr;
     }
@@ -80,6 +96,8 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps)
 		rc=2;
 		last_error_="Web_authn_tpm: setup: failed - uncaught exception";
 	}
+
+	log_ptr_->write_to_log("TPM setup complete\n");
 
 	return rc;
 }
@@ -128,7 +146,7 @@ std::string Web_authn_tpm::get_last_error()
 {
 	// Move the contents of last_error also clears the value
 	std::string error(std::move(last_error_));
-
+	last_error_="No error";
 	return error;
 }
 
