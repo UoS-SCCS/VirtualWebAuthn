@@ -20,6 +20,8 @@
 #include "Web_authn_tpm.h"
 
 
+extern "C" {
+
 void* install_tpm();
 
 int setup_tpm(void* V_tpm_ptr, bool use_hw_tpm, const char* log_filename);
@@ -27,3 +29,5 @@ int setup_tpm(void* V_tpm_ptr, bool use_hw_tpm, const char* log_filename);
 const char* get_last_error(void* tpm_ptr);
 
 void uninstall_tpm(void* v_tpm_ptr);
+
+} // end of extern "C"

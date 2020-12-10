@@ -19,6 +19,7 @@
 #include "Web_authn_tpm.h"
 #include "Web_authn_access_tpm.h"
 
+extern "C" {
 
 void* install_tpm()
 {
@@ -48,3 +49,5 @@ void uninstall_tpm(void* v_tpm_ptr)
 		delete tpm_ptr;
 	}
 }
+
+} // End of extern "C"
