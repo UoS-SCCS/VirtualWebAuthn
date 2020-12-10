@@ -140,3 +140,24 @@ Create_USB_Gadget/*.o
 Create_USB_Gadget/*.mod
 Create_USB_Gadget/Module.*
 Create_USB_Gadget/modules.*
+
+# Prerequisites
+**/.d
+
+# Compiled Object files
+*.o
+
+#VS Code files
+**/.vs
+**/.vscode
+
+# Debug files
+**/gmon.out
+
+# Callgrind files
+**/callgrind*
+
+# ctags files
+**/tags
+
+

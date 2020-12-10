@@ -1,0 +1,35 @@
+# =============================================================================
+#  Makefile setting paths and flags for IBM TSS test programs
+# =============================================================================
+
+PREFIX=ibmtss_
+USING_TSS=IBM_TSS
+CPP_STD?=c++14
+RPI_CXXFLAGS?=
+
+UTILS_ROOT=../../../Utilities
+TSS_UTILS_ROOT=../../../Tss_utilities
+TEST_ROOT=../..
+
+# Set paths for code files
+vpath %.cpp $(UTILS_ROOT)/Common
+vpath %.cpp $(TSS_UTILS_ROOT)/Common
+vpath %.cpp $(TEST_ROOT)/Common
+
+# Set the library & include paths
+UTILS_INCLUDE=$(UTILS_ROOT)/Include
+TSS_UTILS_INCLUDE=$(TSS_UTILS_ROOT)/Include
+COMMON_INCLUDE=$(TEST_ROOT)/Include
+IBMTSS_UTILS=/opt/ibmtss/utils
+COMMON_CPPFLAGS=-I$(UTILS_INCLUDE) -I$(TSS_UTILS_INCLUDE) -I$(COMMON_INCLUDE) -I$(IBMTSS_UTILS) 
+
+# Set generic executable flags
+LDLIBS_COMMON=-ltss
+CFLAGS_COMMON=-fpermissive
+CXXFLAGS_COMMON=-DTPM_POSIX -std=$(CPP_STD) -D$(USING_TSS) $(RPI_CXXFLAGS) -Wpedantic  -Wall -Wno-sign-compare -Wno-unused-function -Wno-comment -fexceptions
+CLANG_CXXFLAGS=-Wno-extern-c-compat
+LDFLAGS_COMMON = -DTPM_POSIX -L$(IBMTSS_UTILS) 
+
+ifeq ($(CXX),clang)
+  CXXFLAGS_COMMON += $(CLANG_CXXFLAGS)
+endif
