@@ -1,9 +1,9 @@
 # =============================================================================
-#  Makefile for test_daa_sign
+#  Makefile for the library
 # =============================================================================
 
 # Set paths and flags for TPM_experiments
-include ../../makefile-ibm
+include ../makefile-lib
 
 # Set executable names
 LD=g++
@@ -11,13 +11,25 @@ RM=rm -rf
 
 # build flags
 CXXFLAGS=$(COMMON_CPPFLAGS) $(CXXFLAGS_COMMON) -pg -O2
-LDFLAGS= -pg $(LDFLAGS_COMMON) 
+LDFLAGS= -pg $(LDFLAGS_COMMON)  -shared
 
 # libraries
-LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
+LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto 
 
-TARGET=$(PREFIX)test_wa_tpm
-SRCS=Test_wa_tpm.cpp
+TARGET=$(LIB_ROOT)/Lib/libwatpm.so
+SRCS= Web_authn_tpm.cpp \
+        Web_authn_access_tpm.cpp \
+    	Hex_string.cpp \
+	Byte_buffer.cpp \
+	Clock_utils.cpp \
+	Logging.cpp \
+	Io_utils.cpp \
+	Flush_context.cpp \
+	Tpm_error.cpp \
+	Tss_setup.cpp \
+	Tpm_initialisation.cpp \
+	Create_primary_rsa_key.cpp \
+	Make_key_persistent.cpp 
 
 $(TARGET): $(SRCS:.cpp=.o)
 	$(LD) $(TARGET_ARCH) $(LDFLAGS) $(SRCS:.cpp=.o) $(LDLIBS) -o $@
