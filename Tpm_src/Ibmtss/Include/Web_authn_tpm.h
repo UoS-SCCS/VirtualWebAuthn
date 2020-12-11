@@ -33,7 +33,7 @@ public:
 	/**
 	 * Default constructor.
 	 */
- 	Web_authn_tpm() : setup_{false}, hw_tpm_(false), tss_context_(nullptr), last_error_("No error") {}
+ 	Web_authn_tpm() : setup_{false}, hw_tpm_(false), dbg_level_(1), tss_context_(nullptr), last_error_("No error") {}
 	Web_authn_tpm(Web_authn_tpm const& t)=delete;
 	Web_authn_tpm& operator=(Web_authn_tpm const& t)=delete;
 	/**
@@ -72,21 +72,35 @@ public:
 private:
 	bool setup_;
     bool hw_tpm_;
+	int dbg_level_;
 
 	TSS_CONTEXT* tss_context_;
 	Log_ptr log_ptr_;
 	std::string last_error_;
 
-	Key_data kd_;
-	Key_ecc_point pt_;
-	Signing_data sd_;	
-	Ecdsa_sig sig_;
+	Key_data kd_{{0,nullptr},{0,nullptr}};
+	Key_ecc_point pt_{{0,nullptr},{0,nullptr}};
+	Byte_array signing_data_{0,nullptr};	
+	Ecdsa_sig sig_{{0,nullptr},{0,nullptr}};
 
 	// Temporary, just for testing
-	Byte_array ba_;
-	Two_byte_arrays tba_;
+	Byte_array ba_{0,nullptr};
+	Two_byte_arrays tba_{{0,nullptr},{0,nullptr}};
+
+	/**
+	 * Free any memeory that has been allocated, particularly Byte_array's
+	 */
+	void release_memory();
+	/*
+	 * Write the given string to the log file
+	 * 
+	 * @param dbg_level - write to the log if the given value is greater
+	 *                    than or equal to dbg_level_
+	 * @param str - the string to be written to the log+ newline
+	 * 
+	 */
+	void log(int dbg_level,std::string const& log_str);
 
 };
 
-void ba_copy(Byte_array& lhs, Byte_array const& rhs);
 void tba_copy(Two_byte_arrays&lhs, Two_byte_arrays const& rhs);

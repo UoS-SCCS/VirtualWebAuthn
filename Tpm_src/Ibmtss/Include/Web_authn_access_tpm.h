@@ -30,7 +30,19 @@ const char* get_last_error(void* v_tpm_ptr);
 
 void uninstall_tpm(void* v_tpm_ptr);
 
+Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation);
 
+Key_ecc_point load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation);
+
+Key_data create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array authorisation);
+
+Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array authorisation);
+
+Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array signing_data);
+
+void flush_keys(void* v_tpm_ptr);
+
+// Temporary functions for testing
 Byte_array get_byte_array(void* v_tpm_ptr);
 
 void put_byte_array(void* v_tpm_ptr, Byte_array ba);

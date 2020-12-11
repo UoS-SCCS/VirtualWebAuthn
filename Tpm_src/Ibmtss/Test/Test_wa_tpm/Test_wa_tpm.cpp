@@ -17,6 +17,7 @@
 #include "Tss_includes.h"
 #include "Ibmtss_helpers.h"
 #include "Byte_buffer.h"
+#include "Byte_array.h"
 #include "Logging.h"
 #include "Flush_context.h"
 #include "Tpm_error.h"
@@ -78,7 +79,7 @@ int main(int argc, char *argv[])
 
 	Byte_buffer bb1{"AAAAAAAAAAAAAAAAAAAAAAA Another longer test string ZZZZZZZZZZZZZZZZZZZZZZZZ"};
 	Two_byte_arrays tba{{0,nullptr},{0,nullptr}};
-	ba_copy(tba.one,ba);
+	copy_byte_array(tba.one,ba);
 	tba.two.size=bb1.size();
 	tba.two.data=new Byte[tba.two.size];
 	if (tba.two.data==nullptr)

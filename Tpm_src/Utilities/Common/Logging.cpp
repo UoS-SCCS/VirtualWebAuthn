@@ -96,11 +96,3 @@ std::string const& prefix
 
 	return oss.str();
 }
-
-void log(uint level,std::string log_msg)
-{
-	if (level<=log_ptr->debug_level())
-	{
-		log_ptr->write_to_log(log_msg);
-	}
-}

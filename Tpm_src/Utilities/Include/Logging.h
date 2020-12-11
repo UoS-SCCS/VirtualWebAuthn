@@ -118,5 +118,3 @@ std::string generate_log_filename(
 std::string const& base_dir,
 std::string const& prefix
 );
-
-void log(uint level,std::string log_msg);

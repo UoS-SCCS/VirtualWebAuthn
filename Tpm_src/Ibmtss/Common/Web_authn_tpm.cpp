@@ -19,6 +19,7 @@
 #include "Tss_includes.h"
 #include "Make_key_persistent.h"
 #include "Flush_context.h"
+#include "Io_utils.h"
 #include "Tpm_error.h"
 #include "Create_primary_rsa_key.h"
 #include "Create_ecdsa_key.h"
@@ -28,6 +29,7 @@
 #include "Tpm_initialisation.h"
 #include "Tpm_defs.h"
 #include "Tpm_param.h"
+#include "Byte_array.h"
 #include "Web_authn_tpm.h"
 
 
@@ -38,8 +40,8 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 	{
 		std::string filename=generate_log_filename(tps.data_dir.value, log_file);
 		log_ptr_.reset(new Timed_file_log(filename));
-		log_ptr_->set_debug_level(1);
-		log_ptr_->write_to_log("TPM setup started\n");
+		log_ptr_->set_debug_level(dbg_level_);
+		log(1,"TPM setup started");
 
         hw_tpm_=(tps.t==Tpm_type::device);
         if (!hw_tpm_)
@@ -47,6 +49,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
             rc=powerup(tps);
             if (rc!=0)
             {
+				log(1,"Web_authn_tpm: setup: Simulator powerup failed");
                 throw(Tpm_error("Simulator powerup failed\n"));
             }
         }
@@ -55,6 +58,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
         rc=nc.first;
         if (rc!=0)
         {
+			log(1,"Web_authn_tpm: setup: failed to create a TSS context");
             throw(Tpm_error("Web_authn_tpm: setup: failed to create a TSS context\n"));
         }
         tss_context_=nc.second;
@@ -63,6 +67,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 		if (rc!=0 && rc!=TPM_RC_INITIALIZE)
 		{
 			shutdown(tss_context_);
+			log(1,"Web_authn_tpm: setup: TPM startup failed (reset the TPM)");
 			throw(Tpm_error("TPM startup failed (reset the TPM)"));
 		}
 
@@ -76,11 +81,11 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 				       	TPMA_OBJECT_DECRYPT;
 			CreatePrimary_Out out;
 			rc=create_primary_rsa_key(tss_context_,TPM_RH_OWNER,object_attributes,Byte_buffer(),&out);
-			log_ptr_->write_to_log("Primary key created\n");
+			log(1,"Primary key created");
 			rc=make_key_persistent(tss_context_,out.objectHandle,srk_persistent_handle);
-			log_ptr_->write_to_log("Primary key made persistent\n");
+			log(1,"Primary key made persistent");
 		} else {
-			log_ptr_->write_to_log("Primary key already installed\n");
+			log(1,"Primary key already installed");
 		}
 
         rc=TSS_Delete(tss_context_);
@@ -89,15 +94,20 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 	catch (Tpm_error &e)
 	{
 		rc=1;
-		last_error_=std::string(e.what());
+		last_error_=vars_to_string("Web_authn_tpm: setup: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Web_authn_tpm: setup: runtime_error: ", e.what());
 	}
 	catch (...)
 	{
-		rc=2;
+		rc=3;
 		last_error_="Web_authn_tpm: setup: failed - uncaught exception";
 	}
 
-	log_ptr_->write_to_log("TPM setup complete\n");
+	log(1,"TPM setup complete");
 
 	return rc;
 }
@@ -150,6 +160,30 @@ std::string Web_authn_tpm::get_last_error()
 	return error;
 }
 
+void Web_authn_tpm::release_memory()
+{
+	release_byte_array(kd_.public_data);
+	release_byte_array(kd_.private_data);
+	release_byte_array(pt_.x_coord);
+	release_byte_array(pt_.y_coord);
+	release_byte_array(signing_data_);
+	release_byte_array(sig_.sig_r);
+	release_byte_array(sig_.sig_s);
+	
+	// Now the temporary data
+	release_byte_array(ba_);
+	release_byte_array(tba_.one);
+	release_byte_array(tba_.two);
+}
+
+void Web_authn_tpm::log(int dbg_level, std::string const& str)
+{
+	if (dbg_level<dbg_level_) {
+		return;
+	}
+	log_ptr_->os() << str << '\n';
+}
+
 Web_authn_tpm::~Web_authn_tpm()
 {
 	if (tss_context_)
@@ -158,25 +192,16 @@ Web_authn_tpm::~Web_authn_tpm()
 		shutdown(tss_context_);
 		TSS_Delete(tss_context_);
 	}
-	if (ba_.data!=nullptr) {
-		delete [] ba_.data;
-	}
-	if (tba_.one.data!=nullptr) {
-		delete [] tba_.one.data;
-	}
-	if (tba_.two.data!=nullptr) {
-		delete [] tba_.two.data;
-	}
+
+	release_memory();
 }
 
 void ba_copy(Byte_array& lhs, Byte_array const& rhs)
 {
 	if (&lhs!=&rhs)
 	{
+		release_byte_array(lhs);		
 		lhs.size=rhs.size;
-		if (lhs.data!=nullptr) {
-			delete [] lhs.data;
-		}
 		lhs.data=new Byte[lhs.size];
 		if (lhs.data==nullptr)
 		{

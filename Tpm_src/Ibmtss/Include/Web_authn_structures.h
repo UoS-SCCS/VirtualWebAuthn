@@ -13,13 +13,9 @@
 #pragma once
 
 #include "Byte_buffer.h"
+#include "Byte_array.h"
 #include "Tss_includes.h"
 
-struct Byte_array
-{
-	uint16_t size;
-	Byte* data;
-};
 
 struct Two_byte_arrays
 {
@@ -37,14 +33,8 @@ struct Two_byte_arrays
  */
 struct Key_data
 {
-TPM_HANDLE parent;
-uint16_t password_size;
-Byte password[MAX_DIGEST_SIZE];
-uint16_t public_data_size;
-Byte* public_data;
-uint16_t private_data_size;
-Byte* private_data;
-TPM_HANDLE handle;
+	Byte_array public_data;
+	Byte_array private_data;
 };
 
 /* The public ECC key, a point on the chosen ECC curve the curve will initially
@@ -52,29 +42,22 @@ TPM_HANDLE handle;
 */
 struct Key_ecc_point
 {
-uint16_t x_size;
-Byte x_coord[MAX_ECC_KEY_BYTES];
-uint16_t y_size;
-Byte y_coord[MAX_ECC_KEY_BYTES];
+	Byte_array x_coord;
+	Byte_array y_coord;
 };
 
 /* The data to be signed, this cannot be larger then the size of the hash being
  * used - SHA256 in our case. Note that MAX_DIGEST_SIZE may be larger than
  * SHA256_DIGEST_SIZE.
+ * 
+ * Just a Byte_array
  */
-struct Signing_data
-{
-uint16_t data_size;
-Byte signing_data[MAX_DIGEST_SIZE];
-};
 
 /* The ECDSA signature returned from the TPM. Note the actual size may be less
  * than MAX_ECC_KEY_BYTES.
 */
 struct Ecdsa_sig
 {
-uint16_t r_size;
-Byte sig_r[MAX_ECC_KEY_BYTES];
-uint16_t s_size;
-Byte sig_s[MAX_ECC_KEY_BYTES];
+	Byte_array sig_r;
+	Byte_array sig_s;
 };

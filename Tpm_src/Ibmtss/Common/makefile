@@ -21,6 +21,7 @@ SRCS= Web_authn_tpm.cpp \
         Web_authn_access_tpm.cpp \
     	Hex_string.cpp \
 	Byte_buffer.cpp \
+	Byte_array.cpp \
 	Clock_utils.cpp \
 	Logging.cpp \
 	Io_utils.cpp \
