@@ -1,7 +1,7 @@
 """Provides an implementation of DICEAuthenticatorStorage that uses an
 underlying JSON file to store content
 
-Classes: 
+Classes:
     JSONAuthenticatorStorage
 Enums:
     STORAGE_KEYS
@@ -12,7 +12,7 @@ Raises:
 """
 import json
 import logging
-import os 
+import os
 from authenticator.storage import DICEAuthenticatorStorage, DICEAuthenticatorStorageException
 from ctap.credential_source import PublicKeyCredentialSource
 
@@ -56,8 +56,8 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         return os.path.exists(self._path)
 
     def _read_from_json(self):
-        with open(self._path,"r") as f:
-            return json.load(f)
+        with open(self._path,"r") as file:
+            return json.load(file)
 
     def get_wrapping_key(self)->bytes:
         if STORAGE_KEYS.WRAP_KEY in self._data:
@@ -94,7 +94,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         else:
             self._data[STORAGE_KEYS.MASTER_KEY]=master_secret
         self._data[STORAGE_KEYS.SIGNATURE_COUNT]=b'\x00\x00\x00\x00'.hex()
-        return self._write_to_json()    
+        return self._write_to_json()
 
     def get_signature_counter(self)->int:
         return int.from_bytes(bytes.fromhex(self._data[STORAGE_KEYS.SIGNATURE_COUNT]),"big")
@@ -109,7 +109,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     def increment_signature_counter(self)->bool:
         return self._update_signature_counter(self.get_signature_counter() + 1)
 
-    def add_credential_source(self,rp_id:str,user_id:bytes, 
+    def add_credential_source(self,rp_id:str,user_id:bytes,
             credential_source:PublicKeyCredentialSource)->bool:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
             self._data[STORAGE_KEYS.CREDENTIALS][rp_id]= []
@@ -189,8 +189,8 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
 
     def _write_to_json(self):
         try:
-            with open(self._path,"w") as f:
-                json.dump(self._data, f, indent = 4)
+            with open(self._path,"w") as file:
+                json.dump(self._data, file, indent = 4)
             return True
         except EnvironmentError:
             log.error("IO Exception writing JSON", exc_info=True)

@@ -1,32 +1,67 @@
-import ctap.constants
-from abc import abstractmethod
+"""Contains classes to process and manage HID packets
+
+Classes:
+    HIDPacket
+    HIDInitializationPacket
+    HIDContinuationPacket
+
+"""
+from abc import ABC, abstractmethod
 import json
-class HIDPacket():
+import ctap.constants
+
+class HIDPacket(ABC):
+    """HIDPacket is the super class for initialization packets
+    and continuation packets. Contains basic functionality
+    shared by both.
+
+    """
     _BROADCAST_ID = b'\xff\xff\xff\xff'
-    
+
     def __init__(self, data):
         self._data = data
 
-    def get_bytes(self):
-        
+    def get_bytes(self)->bytes:
+        """Gets the bytes associated with this packet. This
+        automatically trims the returned bytes to the correct
+        length, removing any padding.
+
+        Returns:
+            bytes: content of packet without padding
+        """
         if len(self._data) < 64:
             return self._data + bytes(64-len(self._data))
-        else:
-            return self._data
+        return self._data
 
     @abstractmethod
     def get_payload(self)->bytes:
-        pass
+        """Gets the complete payload including padding
+
+        Returns:
+            bytes: complete payload
+        """
 
     @classmethod
-    def from_bytes(cls, packet:bytes):
-        if (packet[4] & (1 << 7)):
+    def from_bytes(cls, packet:bytes)->'HIDPacket':
+        """Statis method to instantiate a packet from its
+        byte representation.
+
+        Args:
+            packet (bytes): packet as bytes
+
+        Returns:
+            [HIDPacket]: an instance of either HIDInitializationPacket
+                or HIDContinuationPacket depending on size
+        """
+        if packet[4] & (1 << 7):
             return HIDInitializationPacket.from_bytes(packet)
-        else:
-            return HIDContinuationPacket.from_bytes(packet)
+        return HIDContinuationPacket.from_bytes(packet)
+
     @abstractmethod
     def debug_str(self):
-        pass
+        """Encodes the underlying packet as a string to allow it to
+        be easily logged
+        """
 
 
 class HIDInitializationPacket(HIDPacket):
@@ -39,19 +74,19 @@ class HIDInitializationPacket(HIDPacket):
             6 	1 	    BCNTL 	Low part of payload length
             7 	(s - 7) DATA 	Payload data (s is equal to the fixed packet size)
 
-    
+
     """
     CMDTYPE = ctap.constants.CMD_TYPE.INITIALIZATION
-    
-    def __init__(self, CID:bytes, CMD:ctap.constants.CTAP_CMD, length, payload):
-        self._CID=CID
-        self._CMD=CMD
+
+    def __init__(self, cid:bytes, cmd:ctap.constants.CTAP_CMD, length:int, payload:bytes):
+        self._cid=cid
+        self._cmd=cmd
         self._length=length
         self._payload=payload
         packet = bytearray(64)
-        packet[0:4] = self._CID
-        
-        packet[4] = self._CMD.value[0] ^ (1 << 7)
+        packet[0:4] = self._cid
+
+        packet[4] = self._cmd.value[0] ^ (1 << 7)
         packet[5:7]=self._length.to_bytes(2,'big')
         packet[7:] = self._payload
         if self._length > (64 - 7):
@@ -62,23 +97,44 @@ class HIDInitializationPacket(HIDPacket):
 
     def __str__(self):
         out = {}
-        out["CID"]=self._CID.hex()
-        out["CMD"]=self._CMD.name
+        out["CID"]=self._cid.hex()
+        out["CMD"]=self._cmd.name
         out["length"] = self._length
         out["payload"] = self._payload.hex()
         return json.dumps(out)
 
-    def get_CMD(self):
-        return self._CMD
-    
-    def get_length(self):
+    def get_cmd(self)->bytes:
+        """Gets CMD bytes
+
+        Returns:
+            bytes: CMD bytes
+        """
+        return self._cmd
+
+    def get_length(self)->int:
+        """Gets length of the packet
+
+        Returns:
+            int: length of packet
+        """
         return self._length
-    
+
     def get_payload(self)->bytes:
+        """Gets the payload bytes
+
+        Returns:
+            bytes: payload
+        """
         return self._payload
 
-    def get_CID(self):
-        return self._CID
+    def get_cid(self)->bytes:
+        """Gets the channel ID
+
+        Returns:
+            bytes: channel ID bytes
+        """
+        return self._cid
+
     @classmethod
     def from_bytes(cls, packet:bytes):
         channel_id = packet[:4]
@@ -86,10 +142,9 @@ class HIDInitializationPacket(HIDPacket):
         message_length = int.from_bytes(packet[5:7], "big")
         data = packet[7:]
         return HIDInitializationPacket(channel_id, cmd, message_length, data)
-   
-    @abstractmethod
+
     def debug_str(self):
-        pass
+        return self.__str__()
 
 
 class HIDContinuationPacket(HIDPacket):
@@ -98,31 +153,36 @@ class HIDContinuationPacket(HIDPacket):
     Offset 	Length 	Mnemonic 	Description
         0 	4 	    CID 	Channel identifier
         4 	1 	    SEQ 	Packet sequence 0x00..0x7f (bit 7 always cleared)
-        5 	(s - 5) DATA 	Payload data (s is equal to the fixed packet size) 
+        5 	(s - 5) DATA 	Payload data (s is equal to the fixed packet size)
 
     """
     CMDTYPE = ctap.constants.CMD_TYPE.CONTINUATION
-    
-    def __init__(self, CID:bytes, seq, payload:bytes):
-        self._CID=CID
+
+    def __init__(self, cid:bytes, seq:int, payload:bytes):
+        self._cid=cid
         self._seq=seq
         self._payload=payload
         packet = bytearray(64)
-        packet[0:4] = self._CID
+        packet[0:4] = self._cid
         packet[4] = self._seq & ~(1 << 7)
         packet[5:] = self._payload
         super().__init__(packet)
 
     def __str__(self):
         out = {}
-        out["CID"]=self._CID.hex()
+        out["CID"]=self._cid.hex()
         out["SEQ"]=self._seq
         out["payload"] = self._payload.hex()
         return json.dumps(out)
-    
+
     def get_payload(self)->bytes:
         return self._payload
-    def get_sequence(self):
+    def get_sequence(self)->int:
+        """Gets the sequence number for this packet
+
+        Returns:
+            int: sequence number
+        """
         return self._seq
     @classmethod
     def from_bytes(cls, packet:bytes):
@@ -130,7 +190,7 @@ class HIDContinuationPacket(HIDPacket):
         seq = packet[4]
         data = packet[5:]
         return HIDContinuationPacket(channel_id, seq, data)
-   
-    @abstractmethod
+
+
     def debug_str(self):
-        pass
+        return self.__str__()

@@ -1,3 +1,5 @@
+"""Exceptions for transactions and low level HID errors
+"""
 import ctap.constants
 class TransactionStateException(Exception):
     """Exception raised for errors in transaction state.
@@ -43,6 +45,11 @@ class CTAPHIDException(Exception):
         self.message = message
         self.err_code = err_code
         super().__init__(self.message)
-    
-    def get_error_code(self):
+
+    def get_error_code(self)->ctap.constants.CTAPHID_ERROR:
+        """Gets the error code in this exception
+
+        Returns:
+            ctap.constants.CTAPHID_ERROR: error that is set in the exception
+        """
         return self.err_code

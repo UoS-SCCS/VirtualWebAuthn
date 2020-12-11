@@ -71,13 +71,13 @@ class DICEAuthenticatorStorage(ABC):
         """
 
     @abstractmethod
-    def add_credential_source(self,rp_id:str,user_id:bytes, 
+    def add_credential_source(self,rp_id:str,user_id:bytes,
         credential_source:PublicKeyCredentialSource)->bool:
         """Adds the specified credential source indexed by the RpID and the UserId
 
         Args:
             rp_id (str): Relying party ID
-            user_id (bytes): User ID 
+            user_id (bytes): User ID
             credential_source (PublicKeyCredentialSource): credential source to store
 
         Returns:
@@ -108,7 +108,7 @@ class DICEAuthenticatorStorage(ABC):
         Returns:
             PublicKeyCredentialSource: map of credential sources matching the criteria
         """
-    
+
     @abstractmethod
     def get_pin_retries(self)->int:
         """Gets the number of PIN retries remaining
@@ -190,11 +190,11 @@ class DICEAuthenticatorStorage(ABC):
         Returns:
             bool: True if a wrapping key has been set, False if not
         """
-    
+
     def convert_allow_list_to_map(self, allow_list:[PublicKeyCredentialDescriptor]):
-        """Converts an allow list received from the client into a 
+        """Converts an allow list received from the client into a
         map for use with filtering credentials. In effect iterates
-        through credentials in allow list and indexes them by 
+        through credentials in allow list and indexes them by
         user id in a map
 
         Args:
@@ -218,4 +218,3 @@ class DICEAuthenticatorStorageException(Exception):
     def __init__(self, message="Storage Exception"):
         self.message = message
         super().__init__(self.message)
-    

@@ -1,13 +1,32 @@
+"""Keep alive object that is created with each request to
+faciliate the sending of keep alive messages
+
+Classes:
+    CTAPHIDKeepAlive
+"""
 import threading
+import logging
 import time
 from ctap.messages import CTAPHIDKeepAliveResponse
 import ctap.constants
 
-import logging
+
+
 log = logging.getLogger('debug')
 
 class CTAPHIDKeepAlive():
-    def __init__(self, ctaphid):
+    """Class to automatically send keep-alive messages during the processing of a
+    request
+    """
+    def __init__(self, ctaphid:'CTAPHID'):
+        """Creates a new keep alive instance. This won't do anying unless
+        start is called, leaving it up to the authenticator to decide
+        whether to send keep-alive messages or not
+
+        Args:
+            ctaphid (CTAPHID): underlying CTAP HID device to send keep alive
+                messages with
+        """
         self._interval = (1/1000)*1000
         self._ctaphid = ctaphid
         self._cid = None
@@ -16,11 +35,28 @@ class CTAPHIDKeepAlive():
         self._keep_alive_thread = None
         self._elapsed =0
         self._max = 0
-    
-    def set_CID(self, CID:bytes):
-        self._cid = CID
+
+    def set_cid(self, cid:bytes):
+        """Sets the channel ID
+
+        Args:
+            cid (bytes): channel id bytes
+        """
+        self._cid = cid
 
     def start(self, max_val=120000):
+        """starts the keep alive sender. This will send keep-alive messages
+        at interval set in _interval which is every second. It will keep
+        sending them until the max_val is reached and will then stop
+
+        Args:
+            max_val (int, optional): maximum period for which keep alive
+                messages should be sent. Defaults to 120000 milliseconds/
+                120 seconds/2 minutes.
+
+        Raises:
+            Exception: thrown if no channel has been set
+        """
         if self._cid is None:
             raise Exception("Keep-alive channel not set")
         log.debug("Start keep-alive called")
@@ -29,20 +65,31 @@ class CTAPHIDKeepAlive():
         self._running = True
         self._keep_alive_thread.setDaemon(True)
         self._keep_alive_thread.start()
-    
+
     def stop(self):
+        """Stop the keep alive sender. This will stop after the next interval
+        has expired
+        """
         self._running = False
 
     def update_status(self, status:ctap.constants.CTAPHID_KEEPALIVE_STATUS):
+        """Change the status being sent in the keep-alive message
+
+        Args:
+            status (ctap.constants.CTAPHID_KEEPALIVE_STATUS): new status to send
+        """
         log.debug("Keep-alive status updated")
         self._status = status
         self._send_keep_alive()
 
     def _send_keep_alive(self):
+        """Sends the keep alive message
+        """
         self._ctaphid.send_keep_alive_response(CTAPHIDKeepAliveResponse(self._cid,self._status))
 
     def _keep_alive(self):
-
+        """Function that runs in the thread to trigger the keep-alive messages
+        """
         while self._running:
             self._send_keep_alive()
             time.sleep(self._interval)
@@ -51,4 +98,4 @@ class CTAPHIDKeepAlive():
                 log.debug("Max keep-alive exceeded - will stop")
                 self._running = False
         log.debug("Keep-alive ended")
-        self._cid = None 
+        self._cid = None

@@ -1,6 +1,13 @@
+"""Enum containing acceptable COSE encoded algorithms
+
+    Enums:
+        PUBLIC_KEY_ALG
+"""
 from enum import Enum, unique
 @unique
 class PUBLIC_KEY_ALG(Enum):
+    """COSE Public Key algorithm values
+    """
     RS512 =	-259 #	RSASSA-PKCS1-v1_5 using SHA-512 	IESG 	[RFC8812] 	No
     RS384 =	-258 #	RSASSA-PKCS1-v1_5 using SHA-384 	IESG 	[RFC8812] 	No
     RS256 =	-257 #	RSASSA-PKCS1-v1_5 using SHA-256 	IESG 	[RFC8812] 	No
