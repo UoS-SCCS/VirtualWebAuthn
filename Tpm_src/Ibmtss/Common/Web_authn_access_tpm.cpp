@@ -68,11 +68,52 @@ const char* get_last_error(void* v_tpm_ptr)
 
 void uninstall_tpm(void* v_tpm_ptr)
 {
-	if (v_tpm_ptr)
-	{
+	if (v_tpm_ptr) {
 		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 		delete tpm_ptr;
 	}
 }
+
+Byte_array get_byte_array(void* v_tpm_ptr)
+{
+	if (v_tpm_ptr==nullptr) {
+		return Byte_array{0,nullptr};
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+
+	return tpm_ptr->get_byte_array();
+}
+
+void put_byte_array(void* v_tpm_ptr, Byte_array ba)
+{
+	if (v_tpm_ptr!=nullptr) {
+		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+		tpm_ptr->put_byte_array(ba);
+	}
+}
+
+Two_byte_arrays get_two_byte_arrays(void* v_tpm_ptr)
+{
+	if (v_tpm_ptr==nullptr) {
+		return Two_byte_arrays{{0,nullptr},{0,nullptr}};
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+
+	return tpm_ptr->get_two_byte_arrays();
+
+}
+
+void put_two_byte_arrays(void* v_tpm_ptr, Two_byte_arrays tba)
+{
+	if (v_tpm_ptr!=nullptr) {
+		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+		tpm_ptr->put_two_byte_arrays(tba);
+	}
+}
+
+
+
 
 } // End of extern "C"

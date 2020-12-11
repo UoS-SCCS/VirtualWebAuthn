@@ -63,6 +63,11 @@ public:
 	 */
 	TSS_CONTEXT* get_context() {return tss_context_;}
 
+	// Temporary member functions for testing
+	Byte_array get_byte_array();
+	void put_byte_array(Byte_array ba);
+	Two_byte_arrays get_two_byte_arrays();
+	void put_two_byte_arrays(Two_byte_arrays tba);
 
 private:
 	bool setup_;
@@ -77,5 +82,11 @@ private:
 	Signing_data sd_;	
 	Ecdsa_sig sig_;
 
-	void get_tpm_revision_data();
+	// Temporary, just for testing
+	Byte_array ba_;
+	Two_byte_arrays tba_;
+
 };
+
+void ba_copy(Byte_array& lhs, Byte_array const& rhs);
+void tba_copy(Two_byte_arrays&lhs, Two_byte_arrays const& rhs);

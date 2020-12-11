@@ -20,7 +20,7 @@
 #include "Tpm_timer.h"
 #include "Tpm_param.h"
 #include "Tpm_error.h"
-#include "Create_primary_rsa_ek.h"
+#include "Create_primary_rsa_key.h"
 
 // Create a primary key in the given hierarchy
 TPM_RC create_primary_rsa_key(

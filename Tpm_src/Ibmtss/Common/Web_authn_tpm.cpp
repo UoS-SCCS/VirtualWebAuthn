@@ -158,5 +158,59 @@ Web_authn_tpm::~Web_authn_tpm()
 		shutdown(tss_context_);
 		TSS_Delete(tss_context_);
 	}
+	if (ba_.data!=nullptr) {
+		delete [] ba_.data;
+	}
+	if (tba_.one.data!=nullptr) {
+		delete [] tba_.one.data;
+	}
+	if (tba_.two.data!=nullptr) {
+		delete [] tba_.two.data;
+	}
+}
+
+void ba_copy(Byte_array& lhs, Byte_array const& rhs)
+{
+	if (&lhs!=&rhs)
+	{
+		lhs.size=rhs.size;
+		if (lhs.data!=nullptr) {
+			delete [] lhs.data;
+		}
+		lhs.data=new Byte[lhs.size];
+		if (lhs.data==nullptr)
+		{
+			std::cerr << "Unable to aloocate memory the a Byte_array\n";
+			exit(1);
+		}
+		memcpy(lhs.data,rhs.data,rhs.size);
+	}
+}
+
+void tba_copy(Two_byte_arrays&lhs, Two_byte_arrays const& rhs)
+{
+	ba_copy(lhs.one,rhs.one);
+	ba_copy(lhs.two,rhs.two);
+}
+
+// Temporary member functions for testing
+Byte_array Web_authn_tpm::get_byte_array()
+{
+	return ba_;	
+}
+
+void Web_authn_tpm::put_byte_array(Byte_array ba)
+{
+	ba_copy(ba_,ba);
+}
+
+Two_byte_arrays Web_authn_tpm::get_two_byte_arrays()
+{
+	return tba_;
+}
+
+void Web_authn_tpm::put_two_byte_arrays(Two_byte_arrays tba)
+{
+	tba_copy(tba_,tba);
 }
 

@@ -15,6 +15,19 @@
 #include "Byte_buffer.h"
 #include "Tss_includes.h"
 
+struct Byte_array
+{
+	uint16_t size;
+	Byte* data;
+};
+
+struct Two_byte_arrays
+{
+	Byte_array one;
+	Byte_array two;
+};
+
+
 /* The key data, the handles for the parent and (when loaded) the key itself.
  * Data passed to the TPM as authorisation data cannot be larger than the size
  * of the hash being used - we will start by using SHA256. Note that

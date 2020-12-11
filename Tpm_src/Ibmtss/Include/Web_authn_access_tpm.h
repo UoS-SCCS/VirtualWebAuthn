@@ -30,4 +30,14 @@ const char* get_last_error(void* v_tpm_ptr);
 
 void uninstall_tpm(void* v_tpm_ptr);
 
+
+Byte_array get_byte_array(void* v_tpm_ptr);
+
+void put_byte_array(void* v_tpm_ptr, Byte_array ba);
+
+Two_byte_arrays get_two_byte_arrays(void* v_tpm_ptr);
+
+void put_two_byte_arrays(void* v_tpm_ptr, Two_byte_arrays tba);
+
+
 } // end of extern "C"
