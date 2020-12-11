@@ -6,12 +6,13 @@ Classes:
 """
 import os
 import logging
-
+from datetime import datetime, timedelta
 import ctap.constants
 from ctap.messages import (CTAPHIDCMD,CTAPHIDInitRequest,CTAPHIDInitResponse,
     CTAPHIDMsgRequest,CTAPHIDCBORRequest,CTAPHIDCBORResponse,
     CTAPHIDPingRequest,CTAPHIDPingResponse,CTAPHIDCancelRequest,CTAPHIDCancelResponse,
-    CTAPHIDWinkRequest,CTAPHIDWinkResponse,CTAPHIDErrorResponse,CTAPHIDKeepAliveResponse)
+    CTAPHIDWinkRequest,CTAPHIDWinkResponse,CTAPHIDErrorResponse,CTAPHIDKeepAliveResponse,
+    CTAPHIDLockRequest,CTAPHIDLockResponse)
 from ctap.transaction import CTAPHIDTransaction
 from ctap.exceptions import CTAPHIDException
 from ctap.keep_alive import CTAPHIDKeepAlive
@@ -43,6 +44,8 @@ class CTAPHID(USBHIDListener):
         self._transaction = None
         self._authenticator:'DICEAuthenticator' = None
         self._keep_alive = CTAPHIDKeepAlive(self)
+        self._channel_lock_id = None
+        self._channel_lock_expires = None
 
     def set_authenticator(self, authenticator:'DICEAuthenticator'):
         """Sets the authenticator assocaited with this CTAP instance
@@ -89,6 +92,16 @@ class CTAPHID(USBHIDListener):
         Args:
             packet (HIDPacket): received packet
         """
+        if not self._channel_lock_id is None and packet.get_cid() != self._channel_lock_id:
+            if datetime.now() < self._channel_lock_expires:
+                ctaplog.debug("Error channel is locked")
+                self.send_error_response(CTAPHIDErrorResponse(self._transaction.request.get_cid(),
+                    ctap.constants.CTAPHID_ERROR.ERR_CHANNEL_BUSY))
+                return
+            ctaplog.debug("Lock has expired, clearing")
+            self._channel_lock_expires = None
+            self._channel_lock_id = None
+
         if packet.CMDTYPE == ctap.constants.CMD_TYPE.INITIALIZATION:
             log.debug("Received initialization packet")
 
@@ -124,6 +137,8 @@ class CTAPHID(USBHIDListener):
                     self.process_cancel_request(self._transaction.request)
                 elif self._transaction.request.get_cmd() == ctap.constants.CTAP_CMD.CTAPHID_WINK:
                     self.process_wink_request(self._transaction.request)
+                elif self._transaction.request.get_cmd() == ctap.constants.CTAP_CMD.CTAPHID_LOCK:
+                    self.process_lock_request(self._transaction.request)
             except CTAPHIDException as exception:
                 ctaplog.error("Exception processing CTAP HID",exc_info=True)
                 self.send_error_response(CTAPHIDErrorResponse(self._transaction.request.get_cid(),
@@ -208,6 +223,31 @@ class CTAPHID(USBHIDListener):
                     self.send_error_response(CTAPHIDCBORResponse(msg_request.get_cid(),
                         exc.get_error_code()))
 
+
+    def process_lock_request(self, msg_request: CTAPHIDLockRequest):
+        """Processes a lock request.
+
+        Args:
+            msg_request (CTAPHIDLockRequest): lock request to process
+        """
+        ctaplog.debug("Received Lock request: %s", msg_request)
+        if not self.channel_exists(msg_request.get_cid()):
+            self.send_error_response(CTAPHIDErrorResponse(msg_request.get_cid(),
+                ctap.constants.CTAPHID_ERROR.ERR_INVALID_CHANNEL))
+        else:
+            transaction  = self.get_channel(msg_request.get_cid())
+            if msg_request.is_complete():
+                if self._channel_lock_id is None or self._channel_lock_id == msg_request.get_cid():
+                    if msg_request.get_lock_time() == 0:
+                        self._channel_lock_expires = None
+                        self._channel_lock_id = None
+                    else:
+                        self._channel_lock_expires = \
+                            datetime.now() + timedelta(seconds=msg_request.get_lock_time())
+                        ctaplog.debug("Set channel lock expires at: %s", self._channel_lock_expires)
+                response = CTAPHIDLockResponse(self._transaction.get_cid())
+                transaction.set_response(response)
+                self.send_response(transaction)
 
     def process_ping_request(self, msg_request: CTAPHIDPingRequest):
         """Process ping request

@@ -386,6 +386,58 @@ class CTAPHIDPingResponse(CTAPHIDCMD):
         We don't verify the construction of responses
         """
 
+class CTAPHIDLockRequest(CTAPHIDCMD):
+    """CTAP Lock Reqeust consists of:
+
+        Request
+            CMD 	CTAPHID_PING
+            BCNT 	1
+            DATA 	Lock time in seconds 0..10. A value of 0 immediately releases the lock
+    """
+    def __init__(self, packet: HIDInitializationPacket):
+        super().__init__(packet.get_cid(),
+            packet.get_cmd(),packet.get_length(),packet.get_payload())
+        self.verify()
+        self._lock_time = lock_time = int.from_bytes( self.get_payload(),"big")
+
+    def verify(self):
+        if not len(self._payload) == self._bcnt:
+            raise CTAPHIDException(ctap.constants.CTAPHID_ERROR.ERR_INVALID_LEN)
+        if self.get_length() > 1:
+            raise CTAPHIDException(ctap.constants.CTAPHID_ERROR.ERR_INVALID_LEN)
+        lock_time = int.from_bytes( self.get_payload(),"big")
+        if lock_time < 0 or lock_time > 10:
+            raise CTAPHIDException(ctap.constants.CTAPHID_ERROR.ERR_INVALID_PAR)
+
+    def get_lock_time(self)->int:
+        """Get the lock time requested
+
+        Raises:
+            CTAPHIDException: Raised if the parameters are incorrect
+
+
+        Returns:
+            int: requested lock time between 0 and 10 seconds
+        """
+        return self._lock_time
+
+class CTAPHIDLockResponse(CTAPHIDCMD):
+    """CTAP Lock Response consists of:
+
+        Response at success
+            CMD 	CTAPHID_PING
+            BCNT 	0
+            DATA 	N/A
+    """
+    def __init__(self,cid):
+        ctaplog.debug("Create initial Lock response ")
+        super().__init__(cid,ctap.constants.CTAP_CMD.CTAPHID_LOCK,0,bytes(0))
+
+    def verify(self):
+        """
+        We don't verify the construction of responses
+        """
+
 
 
 class CTAPHIDCBORRequest(CTAPHIDCMD):
