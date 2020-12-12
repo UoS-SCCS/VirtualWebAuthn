@@ -93,5 +93,11 @@ int main(int argc, char *argv[])
 	release_byte_array(tba.one);
 	release_byte_array(tba.two);
 
+	std::cout << "TPM2B_SENSITIVE: " << sizeof(TPM2B_SENSITIVE) << '\n';
+	std::cout << "TPM2B_PUBLIC: " << sizeof(TPM2B_PUBLIC) << '\n';
+	
+
+
+
     return EXIT_SUCCESS;
 }
