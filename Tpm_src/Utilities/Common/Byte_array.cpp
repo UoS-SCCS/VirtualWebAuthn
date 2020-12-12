@@ -51,7 +51,7 @@ void bb_to_byte_array(Byte_array& ba, Byte_buffer const& bb)
     ba.data=new Byte[ba.size];
     if (ba.data==nullptr)
     {
-	throw std::runtime_error("Unable to aloocate memory the a Byte_array");
+		throw std::runtime_error("Unable to aloocate memory for a Byte_array");
     }
     memcpy(ba.data,bb.cdata(),ba.size);
 }

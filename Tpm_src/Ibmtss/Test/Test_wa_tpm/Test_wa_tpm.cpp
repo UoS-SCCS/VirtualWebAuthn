@@ -56,18 +56,11 @@ int main(int argc, char *argv[])
 
 	Byte_buffer bb{"test data for transfer"};
 	Byte_array ba{0,nullptr};
-	ba.size=bb.size();
-	ba.data=new Byte[ba.size];
-	if (ba.data==nullptr)
-	{
-		std::cerr << "Unable to aloocate memory the Byte_array\n";
-		return EXIT_FAILURE;
-	}
-	std::memcpy(ba.data,bb.data(),ba.size);
+	bb_to_byte_array(ba,bb);
 
 	put_byte_array(v_tpm_ptr,ba);
 
-	Byte_array ba2=get_byte_array(v_tpm_ptr);
+	Byte_array ba2=get_byte_array(v_tpm_ptr); // Freed inside the TPM
 	// Copy the data
 	Byte_buffer bb2{ba2.data,ba2.size};
 
@@ -80,18 +73,11 @@ int main(int argc, char *argv[])
 	Byte_buffer bb1{"AAAAAAAAAAAAAAAAAAAAAAA Another longer test string ZZZZZZZZZZZZZZZZZZZZZZZZ"};
 	Two_byte_arrays tba{{0,nullptr},{0,nullptr}};
 	copy_byte_array(tba.one,ba);
-	tba.two.size=bb1.size();
-	tba.two.data=new Byte[tba.two.size];
-	if (tba.two.data==nullptr)
-	{
-		std::cerr << "Unable to aloocate memory the second Byte_array\n";
-		return EXIT_FAILURE;
-	}
-	std::memcpy(tba.two.data,bb1.data(),tba.two.size);
+	bb_to_byte_array(tba.two,bb1);
 
 	put_two_byte_arrays(v_tpm_ptr,tba);
 
-	Two_byte_arrays tba2=get_two_byte_arrays(v_tpm_ptr);
+	Two_byte_arrays tba2=get_two_byte_arrays(v_tpm_ptr);	// Freed inside the TPM
 	// Copy the data
 	Byte_buffer bb3{tba2.one.data,tba2.one.size};
 	Byte_buffer bb4{tba2.two.data,tba2.two.size};
@@ -103,16 +89,9 @@ int main(int argc, char *argv[])
 
 	uninstall_tpm(v_tpm_ptr);
 
-	if (ba.data!=nullptr) {
-		delete [] ba.data;
-	}
-
-	if (tba.one.data!=nullptr) {
-		delete [] tba.one.data;
-	}
-	if (tba.two.data!=nullptr) {
-		delete [] tba.two.data;
-	}
+	release_byte_array(ba);
+	release_byte_array(tba.one);
+	release_byte_array(tba.two);
 
     return EXIT_SUCCESS;
 }

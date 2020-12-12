@@ -16,8 +16,8 @@
 
 struct Byte_array
 {
-	uint16_t size;
-	Byte* data;
+	uint16_t size{0};
+	Byte* data{nullptr};
 };
 
 void copy_byte_array(Byte_array& lhs, Byte_array const& rhs);
