@@ -1,5 +1,5 @@
 /******************************************************************************
-* File:        Marshal_public_data.cpp
+* File:        Marshal_data.cpp
 * Description: Marshal a key's public data (TPMT_PUBLIC)
 *
 * Author:      Chris Newton
@@ -11,7 +11,7 @@
 ******************************************************************************/
 
 #include <iostream>
-#include "Marshal_public_data.h"
+#include "Marshal_data.h"
 
 Byte_buffer marshal_public_data_T(
 TPMT_PUBLIC* public_data

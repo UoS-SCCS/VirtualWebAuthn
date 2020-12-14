@@ -1,12 +1,12 @@
 /******************************************************************************
-* File:        Create_ecdsa_key.h
-* Description: Create an ECDSA signing key
+* File:        Create_storage_key.h
+* Description: Create an an ECC storage key
 *
 * Author:      Chris Newton
 *
-* Created:     Thursday 7 June 2018
+* Created:     Sunday 13 December 2020
 *
-* (C) Copyright 2018, University of Surrey, all rights reserved.
+* (C) Copyright 2020, University of Surrey, all rights reserved.
 *
 ******************************************************************************/
 
@@ -17,11 +17,9 @@
 #include "Byte_buffer.h"
 #include "Tss_includes.h"
 
-TPM_RC create_ecdsa_key(
+TPM_RC create_storage_key(
 TSS_CONTEXT* tssContext,
 TPM_HANDLE parent_key_handle,
-std::string const& parent_auth,
-TPMI_ECC_CURVE curve_ID,
 std::string const& auth,
 Create_Out* out	
 );

@@ -12,7 +12,6 @@
 #pragma once
 
 #include <openssl/bn.h>
-#include <gmp.h>
 #include <cstring>
 #include <cstdint>
 #include "Byte_buffer.h"
@@ -36,9 +35,7 @@ const int no_skip=0;
 // BN_bin2bn(const unsigned char* s,int len, BIGNUM* ret) already defined, but
 // included a wrapper here
 
-void bin2bn(u8_const_ptr b, size_t b_size, BIGNUM* bn);
-
-BIGNUM* bb2bn(Byte_buffer const& n_bb, BIGNUM *bn);
+BIGNUM* bin2bn(u8_const_ptr b, size_t b_size, BIGNUM* bn);
 
 size_t bn2bin(BIGNUM const* bn, u8_ptr& bp);
 

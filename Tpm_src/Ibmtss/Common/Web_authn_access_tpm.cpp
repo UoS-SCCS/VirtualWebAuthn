@@ -66,6 +66,22 @@ const char* get_last_error(void* v_tpm_ptr)
 
 }
 
+Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation)
+{
+
+	if (v_tpm_ptr==nullptr) {
+		return Key_data{{0,nullptr},{0,nullptr}};
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+
+	std::string user_str=byte_array_to_string(user);
+	std::string auth_str=byte_array_to_string(authorisation);
+
+	return tpm_ptr->create_and_load_user_key(user_str,auth_str);
+}
+
+
 void uninstall_tpm(void* v_tpm_ptr)
 {
 	if (v_tpm_ptr) {

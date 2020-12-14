@@ -46,6 +46,27 @@ public:
 	 */
     TPM_RC setup(Tss_setup const& tps,std::string log_filename);
 	/**
+	 * Creates a new user (storage) key and loads it ready for use. If a user key is already in place, it and its relying
+	 * party key (if one is loaded) are flushed and their data removed.
+	 * 
+	 * @param user - an identifier for the key user (at the moment this is not used).
+	 * @param authorisation - authorisation string for the key (password). This could be empty.
+	 *                  
+	 * @return Key_data - the public and private parts of the key, null Byte_arrays if the call fails.
+	 */
+	Key_data create_and_load_user_key(std::string const& user, std::string const& authorisation);
+	/**
+	 * Loads a user (storage) key and loads it ready for use. If a user key is already in place, it and its relying
+	 * party key (if one is loaded) are flushed and their data removed.
+	 * 
+	 * @param key - the public and private parts of the key
+	 * @param user - an identifier for the key user (at the moment this is not used).
+	 * @param authorisation - authorisation string for the key (password). This could be empty.
+	 *                   
+	 * @return TPM_RC- this will be zero for a successful call. If non-zero use get_last_error() to return the error.
+	 */
+	TPM_RC load_user_key(Key_data key, std::string const& user, std::string const& authorisation);
+	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.
 	 *
 	 * @return - a string containing the last error that was reported.
@@ -78,15 +99,31 @@ private:
 	Log_ptr log_ptr_;
 	std::string last_error_;
 
-	Key_data kd_{{0,nullptr},{0,nullptr}};
+	TPM_HANDLE user_handle_{0};
+	TPM_HANDLE rp_handle_{0};
+
+
+	// Data for transfer to the caller
+	Key_data user_kd_{{0,nullptr},{0,nullptr}};
+	Key_data rp_kd_{{0,nullptr},{0,nullptr}};
 	Key_ecc_point pt_{{0,nullptr},{0,nullptr}};
-	Byte_array signing_data_{0,nullptr};	
 	Ecdsa_sig sig_{{0,nullptr},{0,nullptr}};
 
 	// Temporary, just for testing
 	Byte_array ba_{0,nullptr};
 	Two_byte_arrays tba_{{0,nullptr},{0,nullptr}};
 
+
+	/**
+	 * Flush the user key and, if necessary any associated relying party key
+	 * also  frees any associated data (in Byte_arrays).
+	 */
+	void flush_user_key();
+	/**
+	 * Flush the relying party key, only one loaded at a time, also  frees 
+	 * any associated data (in Byte_arrays).
+	 */
+	void flush_rp_key();
 	/**
 	 * Free any memeory that has been allocated, particularly Byte_array's
 	 */
@@ -94,7 +131,7 @@ private:
 	/*
 	 * Write the given string to the log file
 	 * 
-	 * @param dbg_level - write to the log if the given value is greater
+	 * @param dbg_level - write to the log if the given value is less
 	 *                    than or equal to dbg_level_
 	 * @param str - the string to be written to the log+ newline
 	 * 

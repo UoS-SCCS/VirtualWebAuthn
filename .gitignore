@@ -144,6 +144,9 @@ Create_USB_Gadget/modules.*
 # Prerequisites
 **/.d
 
+#vi swap files
+*.swp 
+
 # Compiled Object files
 *.o
 
@@ -160,4 +163,5 @@ Create_USB_Gadget/modules.*
 # ctags files
 **/tags
 
-
+Tpm_src/Ibmtss/Test/Test_wa_tpm/ibmtss_test_wa_tpm
+Tpm_src/Ibmtss/Test/Test_wa_tpm_2/ibmtss_test_wa_tpm_2

@@ -53,44 +53,25 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	Byte_buffer bb{"test data for transfer"};
-	Byte_array ba{0,nullptr};
-	bb_to_byte_array(ba,bb);
+	Byte_buffer usr_bb{"alfred"};
+	Byte_array usr_ba{0,nullptr};
+	bb_to_byte_array(usr_ba,usr_bb);
 
-	put_byte_array(v_tpm_ptr,ba);
+	Byte_buffer auth_bb{"passwd"};
+	Byte_array auth_ba{0,nullptr};
+	bb_to_byte_array(auth_ba,auth_bb);
+	Key_data kd=create_and_load_user_key(v_tpm_ptr,usr_ba,auth_ba);
 
-	Byte_array ba2=get_byte_array(v_tpm_ptr); // Freed inside the TPM
-	// Copy the data
-	Byte_buffer bb2{ba2.data,ba2.size};
+	Byte_buffer user_private_data=byte_array_to_bb(kd.private_data);
+	Byte_buffer user_public_data=byte_array_to_bb(kd.public_data);
+	std::cout << "Public: " << user_public_data << '\n';
+	std::cout << "Private: " << user_private_data << '\n';
 
-	if (bb==bb2) {
-		std::cout << "Success with Byte_array transfer\n";
-	} else {
-		std::cout << "Byte_array transfers failed\n";
-	}
-
-	Byte_buffer bb1{"AAAAAAAAAAAAAAAAAAAAAAA Another longer test string ZZZZZZZZZZZZZZZZZZZZZZZZ"};
-	Two_byte_arrays tba{{0,nullptr},{0,nullptr}};
-	copy_byte_array(tba.one,ba);
-	bb_to_byte_array(tba.two,bb1);
-
-	put_two_byte_arrays(v_tpm_ptr,tba);
-
-	Two_byte_arrays tba2=get_two_byte_arrays(v_tpm_ptr);	// Freed inside the TPM
-	// Copy the data
-	Byte_buffer bb3{tba2.one.data,tba2.one.size};
-	Byte_buffer bb4{tba2.two.data,tba2.two.size};
-	if (bb==bb3 && bb1==bb4) {
-		std::cout << "Success with the Two_byte_array transfers\n";
-	} else {
-		std::cout << "Two_byte_arrays transfers failed\n";
-	}
-
+	release_byte_array(usr_ba);
+	release_byte_array(auth_ba);
 	uninstall_tpm(v_tpm_ptr);
 
-	release_byte_array(ba);
-	release_byte_array(tba.one);
-	release_byte_array(tba.two);
+
 
     return EXIT_SUCCESS;
 }

@@ -22,7 +22,10 @@
 #include "Io_utils.h"
 #include "Tpm_error.h"
 #include "Create_primary_rsa_key.h"
+#include "Create_storage_key.h"
 #include "Create_ecdsa_key.h"
+#include "Load_key.h"
+#include "Marshal_data.h"
 #include "Openssl_ec_utils.h"
 #include "Clock_utils.h"
 #include "Tss_setup.h"
@@ -30,6 +33,7 @@
 #include "Tpm_defs.h"
 #include "Tpm_param.h"
 #include "Byte_array.h"
+#include "Web_authn_structures.h"
 #include "Web_authn_tpm.h"
 
 
@@ -87,9 +91,6 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 		} else {
 			log(1,"Primary key already installed");
 		}
-
-        rc=TSS_Delete(tss_context_);
-        tss_context_=nullptr;
     }
 	catch (Tpm_error &e)
 	{
@@ -112,44 +113,65 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 	return rc;
 }
 
-/*
-TPM_RC Web_authn_tpm::get_endorsement_key_data(Byte_buffer& ek_pd)
+Key_data Web_authn_tpm::create_and_load_user_key(std::string const& user, std::string const& authorisation)
 {
-	TPM_RC rc=0;
+	log(1,"create_and_load_user_key");
+	log(1,vars_to_string("User: ",user,"\tAuthorisation: ",authorisation));
 
+	flush_user_key();
+	TPM_RC rc=0;
 	try
 	{
-		if (log_ptr->debug_level()>0)
-		{
-			log_ptr->write_to_log("Web_authn_tpm: get_endorsement_key_data\n");
+		Create_Out out;
+		rc=create_storage_key(tss_context_,srk_persistent_handle,authorisation,&out);
+		if (rc!=0) {
+			log(1,"Unable to create the user key");
+			throw Tpm_error("Unable to create the user key");
+		}
+		log(1,"User key created");
+
+		Load_Out load_out;
+		rc=load_key(tss_context_,"",srk_persistent_handle,out.outPublic,out.outPrivate,&load_out);
+		if (rc!=0) {
+			log(1,"Unable to load the user key");
+			throw Tpm_error("Unable to load the user key");
+		}
+	
+		user_handle_=load_out.objectHandle;
+		if (dbg_level_>0) {
+			log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << '\n';
 		}
 
-		Byte_buffer pd=key_store_.public_data_bb("ek");
-		if (pd.size()==0)
-		{
-			log_ptr->write_to_log("Web_authn_tpm: get_endorsement_key_data: marshalling public data failed\n");
-			throw(Tpm_error("Marshalling EK public data failed"));
-		}
-		ek_pd=pd;
+		Byte_buffer public_data_bb=marshal_public_data_B(&out.outPublic);
+		log(1,vars_to_string("User's public data: ",public_data_bb));
+		Byte_buffer private_data_bb=marshal_private_data_B(&out.outPrivate);
+		log(1,vars_to_string("User's private data: ",private_data_bb));
+
+		bb_to_byte_array(user_kd_.public_data,public_data_bb);
+		bb_to_byte_array(user_kd_.private_data,private_data_bb);
+
+		return user_kd_;
+
 	}
 	catch (Tpm_error &e)
 	{
 		rc=1;
-		last_error_=std::string(e.what());
+		last_error_=vars_to_string("Web_authn_tpm: create_and_load_user_key: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Web_authn_tpm: create_and_load_user_key: runtime_error: ", e.what());
 	}
 	catch (...)
 	{
-		rc=2;
-		last_error_="Failed - uncaught exception";
+		rc=3;
+		last_error_="Web_authn_tpm: create_nad_load_user_key: failed - uncaught exception";
 	}
-
-	if (log_ptr->debug_level()>0)
-	{
-		log_ptr->os() << "Web_authn_tpm: get_endorsement_key_data returned:\npd: " << ek_pd.to_hex_string() << std::endl;
-	}
-	return rc;
+	
+	return Key_data{{0,nullptr},{0,nullptr}};
 }
-*/
+
 
 
 std::string Web_authn_tpm::get_last_error()
@@ -160,13 +182,43 @@ std::string Web_authn_tpm::get_last_error()
 	return error;
 }
 
+void Web_authn_tpm::flush_user_key()
+{
+	if (user_handle_==0) {
+		return;
+	}
+	flush_rp_key();
+	TPM_RC rc=flush_context(tss_context_,user_handle_);
+	if (rc!=0) {
+		log(0, "Unable to flush the user key");
+		throw Tpm_error("Unable to flush the user key");
+	}
+	user_handle_=0;
+	log(1,"User key flushed");
+}
+
+void Web_authn_tpm::flush_rp_key()
+{
+	if (rp_handle_==0) {
+		return;
+	}
+	TPM_RC rc=flush_context(tss_context_,rp_handle_);
+	if (rc!=0) {
+		log(0, "Unable to flush the relying party key");
+		throw Tpm_error("Unable to flush the relying party key");
+	}
+	rp_handle_=0;
+	log(1,"Relying party key flushed");
+}
+
 void Web_authn_tpm::release_memory()
 {
-	release_byte_array(kd_.public_data);
-	release_byte_array(kd_.private_data);
+	release_byte_array(user_kd_.public_data);
+	release_byte_array(user_kd_.private_data);
+	release_byte_array(rp_kd_.public_data);
+	release_byte_array(rp_kd_.private_data);
 	release_byte_array(pt_.x_coord);
 	release_byte_array(pt_.y_coord);
-	release_byte_array(signing_data_);
 	release_byte_array(sig_.sig_r);
 	release_byte_array(sig_.sig_s);
 	
@@ -178,21 +230,26 @@ void Web_authn_tpm::release_memory()
 
 void Web_authn_tpm::log(int dbg_level, std::string const& str)
 {
-	if (dbg_level<dbg_level_) {
+	if (dbg_level>dbg_level_) {
 		return;
 	}
-	log_ptr_->os() << str << '\n';
+	log_ptr_->os() <<  str << std::endl;
 }
 
 Web_authn_tpm::~Web_authn_tpm()
 {
+	if (user_handle_!=0) {
+		flush_context(tss_context_,user_handle_);
+	}
+	if (rp_handle_!=0) {
+		flush_context(tss_context_,rp_handle_);
+	}
 	if (tss_context_)
 	{
-		// Assumes all keys have bee flushed
 		shutdown(tss_context_);
 		TSS_Delete(tss_context_);
 	}
-
+    tss_context_=nullptr;
 	release_memory();
 }
 

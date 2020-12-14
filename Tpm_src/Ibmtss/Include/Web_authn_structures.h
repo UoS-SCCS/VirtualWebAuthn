@@ -16,7 +16,6 @@
 #include "Byte_array.h"
 #include "Tss_includes.h"
 
-
 struct Two_byte_arrays
 {
 	Byte_array one;
@@ -45,6 +44,14 @@ struct Key_ecc_point
 	Byte_array x_coord;
 	Byte_array y_coord;
 };
+
+/* The key data and the public key (ECC point)
+*/
+struct Relying_party_key
+{
+	Key_data key_blob;
+	Key_ecc_point key_point;
+}; 
 
 /* The data to be signed, this cannot be larger then the size of the hash being
  * used - SHA256 in our case. Note that MAX_DIGEST_SIZE may be larger than

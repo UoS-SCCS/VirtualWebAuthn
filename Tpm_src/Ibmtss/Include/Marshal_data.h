@@ -1,6 +1,6 @@
 /******************************************************************************
 * File:        Marshal_public_data.h
-* Description: Marshal a key's public data (TPMT_PUBLIC)
+* Description: Marshal a key's data 
 *
 * Author:      Chris Newton
 *

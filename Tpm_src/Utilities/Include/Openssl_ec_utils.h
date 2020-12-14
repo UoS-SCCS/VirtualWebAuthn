@@ -48,8 +48,8 @@ bool point_is_at_infinity(Ec_group_ptr const& ecgrp,G1_point const& pt_bb);
 
 G1_point ec_point_add(
 Ec_group_ptr const& ecgrp,
-G1_point pt_a_bb,
-G1_point pt_b_bb
+G1_point const& pt_a_bb,
+G1_point const& pt_b_bb
 );
 
 G1_point ec_generator_mul(
@@ -67,4 +67,14 @@ Ec_group_ptr const& ecgrp,
 G1_point const& pt_bb
 );
 
-Ec_key_pair_bb get_new_key_pair(Ec_group_ptr const& ecgrp);
+Ec_key_pair_bb get_new_key_pair(
+Ec_group_ptr const& ecgrp
+);
+
+bool verify_ecdsa_signature(
+std::string curve_name,
+G1_point const& ecdsa_public_key,
+Byte_buffer const& digest_to_sign,
+Byte_buffer const& sigR,
+Byte_buffer const& sigS
+);

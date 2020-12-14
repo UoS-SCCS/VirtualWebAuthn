@@ -56,3 +56,11 @@ void bb_to_byte_array(Byte_array& ba, Byte_buffer const& bb)
     memcpy(ba.data,bb.cdata(),ba.size);
 }
 
+std::string byte_array_to_string(Byte_array const& ba)
+{
+	char* char_ptr=reinterpret_cast<char*>(ba.data);
+	return std::string(char_ptr,ba.size);	
+}
+
+//void string_to_byte_array(Byte_array& ba, std::string const& str)
+

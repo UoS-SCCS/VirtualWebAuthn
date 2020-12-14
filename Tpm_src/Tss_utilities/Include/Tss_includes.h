@@ -23,7 +23,8 @@
 #include <tss2/tsscrypto.h>
 #include <tss2/tsstransmit.h>
 #include <tssproperties.h>
-#define TSS_RC TPM_RC   // Use this for shared routines
+using TSS_RC=TPM_RC;  // Use this for shared routines
+using TSS_TPMA_OBJECT=uint32_t;
 #elif defined(INTEL_TSS)
 #include <tss2_sys.h>
 #include <tss2_tcti_device.h>
@@ -32,7 +33,9 @@
 #define TPM_ST_ATTEST_QUOTE TPM2_ST_ATTEST_QUOTE
 #define TPM_ST_ATTEST_TIME TPM2_ST_ATTEST_TIME
 #define TPM_ST_ATTEST_CERTIFY TPM2_ST_ATTEST_CERTIFY
-#define TSS_RC TSS2_RC
+#define TPMA_OBJECT_SIGN_ENCRYPT  TPMA_OBJECT_SIGN_
+using TSS_RC=TSS2_RC;
+using TSS_TPMA_OBJECT=TPMA_OBJECT;
 #else
 #error "Invalid TSS type"
 #endif

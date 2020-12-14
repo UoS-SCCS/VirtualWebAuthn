@@ -37,12 +37,7 @@ typedef struct {
                         NULL,
                         TPM_CC_FlushContext,
                         TPM_RH_NULL, NULL, 0);
-    if (rc != 0)
-    {
-        log_ptr->os() << "flush_context: " << get_tpm_error(rc) << std::endl;
-        throw(Tpm_error("flush context failed"));
-    }
-    
+ 
     return rc;
 }
 

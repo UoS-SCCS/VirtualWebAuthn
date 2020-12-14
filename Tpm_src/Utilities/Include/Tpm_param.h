@@ -15,7 +15,7 @@
 #include "Tss_includes.h"
 #include "Byte_buffer.h"
 
-const std::string code_version("TPM Timing Experiments Version 0.1");
+const std::string code_version("TPM WebAuthn Experiments Version 0.1");
 
 const std::string platform_auth("p1atf0rmPwd");
 const std::string endorsement_auth("end0rseMe");

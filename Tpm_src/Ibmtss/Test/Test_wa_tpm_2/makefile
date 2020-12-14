@@ -1,9 +1,9 @@
 # =============================================================================
-#  Makefile for the library
+#  Makefile for test_wa_tpm_2
 # =============================================================================
 
 # Set paths and flags for TPM_experiments
-include ../makefile-lib
+include ../../makefile-ibm
 
 # Set executable names
 LD=g++
@@ -11,30 +11,13 @@ RM=rm -rf
 
 # build flags
 CXXFLAGS=$(COMMON_CPPFLAGS) $(CXXFLAGS_COMMON) -pg -O2
-LDFLAGS= -pg $(LDFLAGS_COMMON)  -shared
+LDFLAGS= -pg $(LDFLAGS_COMMON) 
 
 # libraries
-LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto -ltss 
+LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
 
-TARGET=$(LIB_ROOT)/Lib/libwatpm.so
-SRCS= Web_authn_tpm.cpp \
-        Web_authn_access_tpm.cpp \
-    	Hex_string.cpp \
-	Byte_buffer.cpp \
-	Byte_array.cpp \
-	Clock_utils.cpp \
-	Logging.cpp \
-	Io_utils.cpp \
-	Flush_context.cpp \
-	Tpm_error.cpp \
-	Tss_setup.cpp \
-	Tpm_initialisation.cpp \
-	Create_primary_rsa_key.cpp \
-	Create_ecdsa_key.cpp \
-	Create_storage_key.cpp \
-	Load_key.cpp \
-	Marshal_data.cpp \
-	Make_key_persistent.cpp 
+TARGET=$(PREFIX)test_wa_tpm_2
+SRCS=Test_wa_tpm_2.cpp
 
 $(TARGET): $(SRCS:.cpp=.o)
 	$(LD) $(TARGET_ARCH) $(LDFLAGS) $(SRCS:.cpp=.o) $(LDLIBS) -o $@

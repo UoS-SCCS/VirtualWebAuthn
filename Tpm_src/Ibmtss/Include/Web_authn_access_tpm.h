@@ -32,9 +32,9 @@ void uninstall_tpm(void* v_tpm_ptr);
 
 Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation);
 
-Key_ecc_point load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation);
+uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation);
 
-Key_data create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array authorisation);
+Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array authorisation);
 
 Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array authorisation);
 

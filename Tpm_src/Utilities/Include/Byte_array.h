@@ -28,3 +28,6 @@ Byte_buffer byte_array_to_bb(Byte_array const& ba);
 
 void bb_to_byte_array(Byte_array& ba, Byte_buffer const& bb);
 
+std::string byte_array_to_string(Byte_array const& ba);
+
+void string_to_byte_array(Byte_array& ba, std::string const& str);

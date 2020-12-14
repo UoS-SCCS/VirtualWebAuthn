@@ -1,12 +1,12 @@
 /******************************************************************************
-* File:        create_ecdsa_key.cpp
-* Description: Create an ECDSA signing key
+* File:        create_storage_key.cpp
+* Description: Create an ECC storage key
 *
 * Author:      Chris Newton
 *
-* Created:     Thursday 7 June 2018
+* Created:     Sunday 13 December 2020
 *
-* (C) (C) Copyright 2018, University of Surrey, all rights reserved.
+* (C) (C) Copyright 2020, University of Surrey, all rights reserved.
 *
 ******************************************************************************/
 
@@ -16,7 +16,9 @@
 #include "Tpm_error.h"
 #include "Tss_setup.h"
 #include "Tpm_defs.h"
-#include "Create_ecdsa_key.h"
+#include "Tss_includes.h"
+#include "Tss_key_helpers.h"
+#include "Create_storage_key.h"
 
 /*
 typedef struct {
@@ -38,16 +40,13 @@ typedef struct {
 } Create_Out;
 */
 
-TPM_RC create_ecdsa_key(
+TPM_RC create_storage_key(
 TSS_CONTEXT* tss_context,
 TPM_HANDLE parent_key_handle,
-std::string const& parent_auth,
-TPMI_ECC_CURVE curve_ID,
 std::string const& auth,
 Create_Out* out
 )
 {
-
     TPM_RC rc=0;
 
 	Create_In in;	
@@ -58,31 +57,30 @@ Create_Out* out
 	if (auth.size()>0) {
 		memcpy(in.inSensitive.sensitive.userAuth.t.buffer,auth.data(),auth.size());
 	}
+
 	in.inSensitive.sensitive.data.t.size = 0;
+	
 	TPMT_PUBLIC& tpmt_public = in.inPublic.publicArea;
 	tpmt_public.type = TPM_ALG_ECC;
 	tpmt_public.nameAlg = TPM_ALG_SHA256;
 
-	/* Table 32 - TPMA_OBJECT objectAttributes */
-	tpmt_public.objectAttributes.val = TPMA_OBJECT_FIXEDTPM |
-		TPMA_OBJECT_NODA |
-		TPMA_OBJECT_FIXEDPARENT |
-		TPMA_OBJECT_SENSITIVEDATAORIGIN |
-		TPMA_OBJECT_USERWITHAUTH |
-		TPMA_OBJECT_SIGN;
+	/* Table 32 - TPMA_OBJECT objectAttributes */ // Use NODA, for now
+	tpmt_public.objectAttributes.val = obj_storage | TPMA_OBJECT_NODA | TPMA_OBJECT_USERWITHAUTH;
 
 	/* Table 181 - Definition of {ECC} TPMS_ECC_PARMS Structure eccDetail */
 	/* Table 129 - Definition of TPMT_SYM_DEF_OBJECT Structure symmetric */
-	/* Non-storage keys must have TPM_ALG_NULL for the symmetric algorithm */
-	tpmt_public.parameters.eccDetail.symmetric.algorithm = TPM_ALG_NULL;
+	tpmt_public.parameters.eccDetail.symmetric.algorithm = TPM_ALG_AES;
+    tpmt_public.parameters.eccDetail.symmetric.keyBits.aes = 128;
+    /* Table 126 - TPMU_SYM_MODE mode */
+    tpmt_public.parameters.eccDetail.symmetric.mode.aes = TPM_ALG_CFB;
 
-	tpmt_public.parameters.eccDetail.scheme.scheme = TPM_ALG_ECDSA;
-	tpmt_public.parameters.eccDetail.scheme.details.ecdsa.hashAlg = TPM_ALG_SHA256;
-	tpmt_public.parameters.eccDetail.curveID = curve_ID;
-	// Although the curve requires a particular KDF algorithm this seems to be ignored 
-	// here unlike the signing scheme!
-	tpmt_public.parameters.eccDetail.kdf.scheme = TPM_ALG_NULL;
-	/* Table 177 - TPMU_PUBLIC_ID unique */
+	tpmt_public.parameters.eccDetail.scheme.scheme = TPM_ALG_NULL;
+	tpmt_public.parameters.eccDetail.scheme.details.anySig.hashAlg =0;
+	tpmt_public.parameters.eccDetail.curveID = TPM_ECC_NIST_P256;
+    tpmt_public.parameters.eccDetail.kdf.scheme = TPM_ALG_NULL;
+    tpmt_public.parameters.eccDetail.kdf.details.mgf1.hashAlg = 0;
+	
+		/* Table 177 - TPMU_PUBLIC_ID unique */
 	/* Table 177 - Definition of TPMU_PUBLIC_ID */
 	tpmt_public.unique.ecc.x.t.size = 0;
 	tpmt_public.unique.ecc.y.t.size = 0;
@@ -92,12 +90,13 @@ Create_Out* out
 	in.outsideInfo.t.size = 0;
 	/* Table 102 - TPML_PCR_SELECTION creationPCR */
 	in.creationPCR.count = 0;
+
 	rc = TSS_Execute(tss_context,
 		(RESPONSE_PARAMETERS *)out,
 		(COMMAND_PARAMETERS *)&in,
 		NULL,
 		TPM_CC_Create,
-        TPM_RS_PW, parent_auth.c_str(), 0,
+		TPM_RS_PW, NULL, 0,
 		TPM_RH_NULL, NULL, 0);
 	
     return rc;
