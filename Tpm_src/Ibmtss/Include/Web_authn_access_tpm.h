@@ -30,16 +30,18 @@ const char* get_last_error(void* v_tpm_ptr);
 
 void uninstall_tpm(void* v_tpm_ptr);
 
-Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation);
+// No parent authoriation as we are using the SRK with no passwd.
+Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array key_auth);
 
-// TPM_RC is a uint32_t, use this directly to avoid including too much
-uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation);
+// No parent authoriation as we are using the SRK with no passwd, key authorisation not need to load the key.
+// TPM_RC is a uint32_t, use this directly to avoid the #include just for this
+uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user);
 
-Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array authorisation);
+Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);
 
-Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array authorisation);
+Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);
 
-Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array signing_data);
+Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth);
 
 void flush_keys(void* v_tpm_ptr);
 

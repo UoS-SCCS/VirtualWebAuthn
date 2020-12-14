@@ -50,7 +50,8 @@ public:
 	 * party key (if one is loaded) are flushed and their data removed.
 	 * 
 	 * @param user - an identifier for the key user (at the moment this is not used).
-	 * @param authorisation - authorisation string for the key (password). This could be empty.
+	 * @param authorisation - authorisation string for the key (password). This could be empty. No authorisation is
+	 * required for the parent key as it is the SRK and will have no password set.
 	 *                  
 	 * @return Key_data - the public and private parts of the key, null Byte_arrays if the call fails.
 	 */
@@ -61,11 +62,21 @@ public:
 	 * 
 	 * @param key - the public and private parts of the key
 	 * @param user - an identifier for the key user (at the moment this is not used).
-	 * @param authorisation - authorisation string for the  key (password). This could be empty.
 	 *                   
 	 * @return TPM_RC- this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
-	TPM_RC load_user_key(Key_data const& key, std::string const& user, std::string const& authorisation);
+	TPM_RC load_user_key(Key_data const& key, std::string const& user);
+	/**
+	 * Creates a new user (storage) key and loads it ready for use. If a user key is already in place, it and its relying
+	 * party key (if one is loaded) are flushed and their data removed.
+	 * 
+	 * @param user - an identifier for the key user (at the moment this is not used).
+	 * @param authorisation - authorisation string for the key (password). This could be empty. No authorisation is
+	 * required for the parent key as it is the SRK and will have no password set.
+	 *                  
+	 * @return Key_data - the public and private parts of the key, null Byte_arrays if the call fails.
+	 */
+	Relying_party_key create_and_load_rp_key(std::string const& relying_party, std::string const& user_auth, std::string const& rp_key_auth);
 	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.
 	 *
@@ -99,6 +110,7 @@ private:
 	Log_ptr log_ptr_;
 	std::string last_error_;
 
+	const TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;
 	TPM_HANDLE user_handle_{0};
 	TPM_HANDLE rp_handle_{0};
 

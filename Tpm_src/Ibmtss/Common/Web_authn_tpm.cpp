@@ -172,10 +172,9 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const& user, std::s
 	return Key_data{{0,nullptr},{0,nullptr}};
 }
 
-TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user, std::string const& authorisation)
+TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user)
 {
-	log(1,"load_user_key");
-	log(1,vars_to_string("User: ",user,"\tAuthorisation: ",authorisation));
+	log(1,vars_to_string("load_user_key: User: ",user));
 
 	flush_user_key();
 	TPM_RC rc=0;
@@ -234,6 +233,68 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user
 
 	return rc;
 }
+
+Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relying_party, std::string const& user_auth, std::string const& rp_key_auth)
+{
+	log(1,"create_and_load_rp_key");
+	log(1,vars_to_string("Relying party: ",relying_party,"\tUser (parent) authorisation: ",user_auth, "\tRp_auth: ", rp_key_auth));
+
+	flush_rp_key();
+	TPM_RC rc=0;
+	try
+	{
+		Create_Out out;
+		rc=create_ecdsa_key(tss_context_,user_handle_,user_auth,curve_ID,rp_key_auth,&out);
+		if (rc!=0) {
+			log(1,"Unable to create the user key");
+			throw Tpm_error("Unable to create the user key");
+		}
+		log(1,"Relying party key created");
+
+		Load_Out load_out;
+		rc=load_key(tss_context_,user_auth,user_handle_,out.outPublic,out.outPrivate,&load_out);
+		if (rc!=0) {
+			log(1,"Unable to load the relying party key");
+			throw Tpm_error("Unable to load the relying party key");
+		}
+	
+		rp_handle_=load_out.objectHandle;
+		if (dbg_level_<=1) {
+			log_ptr_->os() << "Relying party key loaded, handle: " << std::hex << rp_handle_ << std::endl;
+		}
+
+/*
+		Byte_buffer public_data_bb=marshal_public_data_B(&out.outPublic);
+		log(1,vars_to_string("User's public data: ",public_data_bb));
+		Byte_buffer private_data_bb=marshal_private_data_B(&out.outPrivate);
+		log(1,vars_to_string("User's private data: ",private_data_bb));
+
+		bb_to_byte_array(user_kd_.public_data,public_data_bb);
+		bb_to_byte_array(user_kd_.private_data,private_data_bb);
+
+		return user_kd_;
+*/
+
+	}
+	catch (Tpm_error &e)
+	{
+		rc=1;
+		last_error_=vars_to_string("Web_authn_tpm: create_and_load_user_key: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Web_authn_tpm: create_and_load_user_key: runtime_error: ", e.what());
+	}
+	catch (...)
+	{
+		rc=3;
+		last_error_="Web_authn_tpm: create_and_load_user_key: failed - uncaught exception";
+	}
+
+	return Relying_party_key{{{0,nullptr},{0,nullptr}},{{0,nullptr},{0,nullptr}}};
+}
+
 
 
 std::string Web_authn_tpm::get_last_error()

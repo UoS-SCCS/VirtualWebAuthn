@@ -62,6 +62,13 @@ int main(int argc, char *argv[])
 	bb_to_byte_array(auth_ba,auth_bb);
 	Key_data kd=create_and_load_user_key(v_tpm_ptr,usr_ba,auth_ba);
 	// kd received from web_authn_tpm - no need to free it
+	if (kd.private_data.size==0) {
+		std::cerr << "Creating the user key failed\n";
+		release_byte_array(usr_ba);
+		release_byte_array(auth_ba);
+		uninstall_tpm(v_tpm_ptr);
+		return EXIT_FAILURE;
+	}
 
 	Byte_buffer user_private_data=byte_array_to_bb(kd.private_data);
 	Byte_buffer user_public_data=byte_array_to_bb(kd.public_data);
@@ -71,6 +78,8 @@ int main(int argc, char *argv[])
 	release_byte_array(usr_ba);
 	release_byte_array(auth_ba);
 	uninstall_tpm(v_tpm_ptr);
+
+	// Start again
 
 	v_tpm_ptr=install_tpm();
 	if (v_tpm_ptr==nullptr)
@@ -93,10 +102,28 @@ int main(int argc, char *argv[])
 	bb_to_byte_array(kd_local.private_data,user_private_data); 
 	bb_to_byte_array(kd_local.public_data,user_public_data); 
 
-	uint32_t rc=load_user_key(v_tpm_ptr,kd_local,usr_ba,auth_ba);
-	if (rc==0) {
-		std::cout << "User key loaded successfully\n";
+	uint32_t rc=load_user_key(v_tpm_ptr,kd_local,usr_ba);
+	if (rc!=0) {
+		std::cout << "User key failed to load\n";
+		// Tidy up
+		uninstall_tpm(v_tpm_ptr);
+
+		release_byte_array(usr_ba);
+		release_byte_array(auth_ba);
+		release_byte_array(kd_local.private_data);
+		release_byte_array(kd_local.public_data);
+		return EXIT_FAILURE;
 	}
+
+	Byte_buffer rp_bb{"Troy"};
+	Byte_array rp_ba;
+	bb_to_byte_array(rp_ba,rp_bb);
+	Byte_buffer rp_key_auth_bb{"rpPwd"};
+	Byte_array rp_key_auth_ba;
+	bb_to_byte_array(rp_key_auth_ba,rp_key_auth_bb);
+
+	Relying_party_key rpk=create_and_load_rp_key(v_tpm_ptr,rp_ba,auth_ba,rp_key_auth_ba);
+
 
 	uninstall_tpm(v_tpm_ptr);
 
@@ -104,6 +131,8 @@ int main(int argc, char *argv[])
 	release_byte_array(auth_ba);
 	release_byte_array(kd_local.private_data);
 	release_byte_array(kd_local.public_data);
+	release_byte_array(rp_ba);
+	release_byte_array(rp_key_auth_ba);
 
     return EXIT_SUCCESS;
 }

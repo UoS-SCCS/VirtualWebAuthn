@@ -66,7 +66,7 @@ const char* get_last_error(void* v_tpm_ptr)
 
 }
 
-Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation)
+Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array key_auth)
 {
 	if (v_tpm_ptr==nullptr) {
 		return Key_data{{0,nullptr},{0,nullptr}};
@@ -75,13 +75,13 @@ Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array a
 	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	std::string user_str=byte_array_to_string(user);
-	std::string auth_str=byte_array_to_string(authorisation);
+	std::string auth_str=byte_array_to_string(key_auth);
 
 	return tpm_ptr->create_and_load_user_key(user_str,auth_str);
 }
 
-#define WEB_AUTHN_ERROR uint32_t(-1) 	// Defien this properly later to not clash with other return values
-uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation)
+#define WEB_AUTHN_ERROR uint32_t(-1) 	// Define this properly later to not clash with other return values
+uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user)
 {
 	if (v_tpm_ptr==nullptr) {
 		return WEB_AUTHN_ERROR;
@@ -90,10 +90,25 @@ uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array
 	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	std::string user_str=byte_array_to_string(user);
-	std::string auth_str=byte_array_to_string(authorisation);
 
-	return tpm_ptr->load_user_key(kd, user_str, auth_str);
+	return tpm_ptr->load_user_key(kd, user_str);
 }
+
+Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth)
+{
+	if (v_tpm_ptr==nullptr) {
+		return Relying_party_key{{{0,nullptr},{0,nullptr}},{{0,nullptr},{0,nullptr}}};
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+
+	std::string rp_str=byte_array_to_string(relying_party);
+	std::string user_auth_str=byte_array_to_string(user_auth);
+	std::string rp_key_auth_str=byte_array_to_string(rp_key_auth);
+
+	return tpm_ptr->create_and_load_rp_key(rp_str,user_auth_str,rp_key_auth_str);
+}
+
 
 
 void uninstall_tpm(void* v_tpm_ptr)
