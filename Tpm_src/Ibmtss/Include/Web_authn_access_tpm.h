@@ -32,6 +32,7 @@ void uninstall_tpm(void* v_tpm_ptr);
 
 Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation);
 
+// TPM_RC is a uint32_t, use this directly to avoid including too much
 uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation);
 
 Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array authorisation);

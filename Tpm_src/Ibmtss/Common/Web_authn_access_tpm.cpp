@@ -68,7 +68,6 @@ const char* get_last_error(void* v_tpm_ptr)
 
 Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array authorisation)
 {
-
 	if (v_tpm_ptr==nullptr) {
 		return Key_data{{0,nullptr},{0,nullptr}};
 	}
@@ -81,6 +80,21 @@ Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array a
 	return tpm_ptr->create_and_load_user_key(user_str,auth_str);
 }
 
+#define WEB_AUTHN_ERROR uint32_t(-1) 	// Defien this properly later to not clash with other return values
+uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user, Byte_array authorisation)
+{
+	if (v_tpm_ptr==nullptr) {
+		return WEB_AUTHN_ERROR;
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+
+	std::string user_str=byte_array_to_string(user);
+	std::string auth_str=byte_array_to_string(authorisation);
+
+	return tpm_ptr->load_user_key(kd, user_str, auth_str);
+}
+
 
 void uninstall_tpm(void* v_tpm_ptr)
 {
@@ -89,6 +103,8 @@ void uninstall_tpm(void* v_tpm_ptr)
 		delete tpm_ptr;
 	}
 }
+
+// For initial testing
 
 Byte_array get_byte_array(void* v_tpm_ptr)
 {

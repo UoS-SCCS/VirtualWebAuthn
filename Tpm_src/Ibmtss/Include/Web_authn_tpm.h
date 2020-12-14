@@ -61,11 +61,11 @@ public:
 	 * 
 	 * @param key - the public and private parts of the key
 	 * @param user - an identifier for the key user (at the moment this is not used).
-	 * @param authorisation - authorisation string for the key (password). This could be empty.
+	 * @param authorisation - authorisation string for the  key (password). This could be empty.
 	 *                   
 	 * @return TPM_RC- this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
-	TPM_RC load_user_key(Key_data key, std::string const& user, std::string const& authorisation);
+	TPM_RC load_user_key(Key_data const& key, std::string const& user, std::string const& authorisation);
 	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.
 	 *

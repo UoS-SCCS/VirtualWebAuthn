@@ -138,8 +138,8 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const& user, std::s
 		}
 	
 		user_handle_=load_out.objectHandle;
-		if (dbg_level_>0) {
-			log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << '\n';
+		if (dbg_level_<=1) {
+			log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << std::endl;
 		}
 
 		Byte_buffer public_data_bb=marshal_public_data_B(&out.outPublic);
@@ -166,12 +166,74 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const& user, std::s
 	catch (...)
 	{
 		rc=3;
-		last_error_="Web_authn_tpm: create_nad_load_user_key: failed - uncaught exception";
+		last_error_="Web_authn_tpm: create_and_load_user_key: failed - uncaught exception";
 	}
 	
 	return Key_data{{0,nullptr},{0,nullptr}};
 }
 
+TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user, std::string const& authorisation)
+{
+	log(1,"load_user_key");
+	log(1,vars_to_string("User: ",user,"\tAuthorisation: ",authorisation));
+
+	flush_user_key();
+	TPM_RC rc=0;
+
+	try
+	{
+		Byte_buffer public_data_bb=byte_array_to_bb(key.public_data);
+		log(1,vars_to_string("User's public data: ",public_data_bb));
+		Byte_buffer private_data_bb=byte_array_to_bb(key.private_data);
+		log(1,vars_to_string("User's private data: ",private_data_bb));
+
+		TPM2B_PUBLIC tpm2b_public;
+		rc=unmarshal_public_data_B(public_data_bb, &tpm2b_public);
+		if (rc!=0) {
+			log(1,"Unable to unmarshall the public data for the user key");
+			throw Tpm_error("Unable to unmarshall the public data for the user key");
+		}
+
+		TPM2B_PRIVATE tpm2b_private;
+		rc=unmarshal_private_data_B(private_data_bb, &tpm2b_private);
+		if (rc!=0) {
+			log(1,"Unable to unmarshall the private data for the user key");
+			throw Tpm_error("Unable to unmarshall the private data for the user key");
+		}
+
+		Load_Out load_out;
+		rc=load_key(tss_context_,"",srk_persistent_handle,tpm2b_public,tpm2b_private,&load_out);
+		if (rc!=0) {
+			log(1,"Unable to load the user key");
+			throw Tpm_error("Unable to load the user key");
+		}
+
+		user_handle_=load_out.objectHandle;
+
+		if (dbg_level_<=1) {
+			log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << std::endl;
+		}
+
+		// !!!!!!!!!!!! Should I copy the key data to kd_ for consistency ? !!!!!!!!!!!!
+	}
+	catch (Tpm_error &e)
+	{
+		rc=1;
+		last_error_=vars_to_string("Web_authn_tpm: load_user_key: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Web_authn_tpm: load_user_key: runtime_error: ", e.what());
+	}
+	catch (...)
+	{
+		rc=3;
+		last_error_="Web_authn_tpm: load_user_key: failed - uncaught exception";
+	}
+
+	return rc;
+}
 
 
 std::string Web_authn_tpm::get_last_error()
@@ -187,6 +249,7 @@ void Web_authn_tpm::flush_user_key()
 	if (user_handle_==0) {
 		return;
 	}
+
 	flush_rp_key();
 	TPM_RC rc=flush_context(tss_context_,user_handle_);
 	if (rc!=0) {
@@ -202,6 +265,7 @@ void Web_authn_tpm::flush_rp_key()
 	if (rp_handle_==0) {
 		return;
 	}
+
 	TPM_RC rc=flush_context(tss_context_,rp_handle_);
 	if (rc!=0) {
 		log(0, "Unable to flush the relying party key");
@@ -238,6 +302,7 @@ void Web_authn_tpm::log(int dbg_level, std::string const& str)
 
 Web_authn_tpm::~Web_authn_tpm()
 {
+	log(1,"Tidying up");
 	if (user_handle_!=0) {
 		flush_context(tss_context_,user_handle_);
 	}
