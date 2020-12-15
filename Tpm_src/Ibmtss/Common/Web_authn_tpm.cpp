@@ -119,10 +119,11 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const& user, std::s
 	log(1,"create_and_load_user_key");
 	log(1,vars_to_string("User: ",user,"\tAuthorisation: ",authorisation));
 
-	flush_user_key();
 	TPM_RC rc=0;
 	try
 	{
+		flush_user_key();
+
 		Create_Out out;
 		rc=create_storage_key(tss_context_,srk_persistent_handle,authorisation,&out);
 		if (rc!=0) {
@@ -177,11 +178,12 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user
 {
 	log(1,vars_to_string("load_user_key: User: ",user));
 
-	flush_user_key();
 	TPM_RC rc=0;
 
 	try
 	{
+		flush_user_key();
+	
 		Byte_buffer public_data_bb=byte_array_to_bb(key.public_data);
 		log(1,vars_to_string("User's public data: ",public_data_bb));
 		Byte_buffer private_data_bb=byte_array_to_bb(key.private_data);
@@ -213,7 +215,6 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user
 		if (dbg_level_<=1) {
 			log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << std::endl;
 		}
-
 		// !!!!!!!!!!!! Should I copy the key data to kd_ for consistency ? !!!!!!!!!!!!
 	}
 	catch (Tpm_error &e)
@@ -240,10 +241,12 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 	log(1,"create_and_load_rp_key");
 	log(1,vars_to_string("Relying party: ",relying_party,"\tUser (parent) authorisation: ",user_auth, "\tRp_auth: ", rp_key_auth));
 
-	flush_rp_key();
 	TPM_RC rc=0;
+	
 	try
 	{
+		flush_rp_key();
+		
 		Create_Out out;
 		rc=create_ecdsa_key(tss_context_,user_handle_,user_auth,curve_ID,rp_key_auth,&out);
 		if (rc!=0) {
@@ -255,8 +258,8 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
         TPMT_PUBLIC ecdsa_pub_out=out.outPublic.publicArea;
         Byte_buffer ecdsa_key_x=tpm2b_to_bb(ecdsa_pub_out.unique.ecc.x);
         Byte_buffer ecdsa_key_y=tpm2b_to_bb(ecdsa_pub_out.unique.ecc.y);
-        log(1,vars_to_string("ECDSA public key x: ", ecdsa_key_x));           
-        log(1,vars_to_string("ECDSA public key y: ", ecdsa_key_y));           
+        log(1,vars_to_string("RP ECDSA public key x: ", ecdsa_key_x));           
+        log(1,vars_to_string("RP ECDSA public key y: ", ecdsa_key_y));           
 
 		Load_Out load_out;
 		rc=load_key(tss_context_,user_auth,user_handle_,out.outPublic,out.outPrivate,&load_out);
@@ -277,14 +280,14 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 		log(1,vars_to_string("RP's private data: ",private_data_bb));
 
 		Relying_party_key rpk;
-		Key_data& kd=rpk.key_blob;
-		bb_to_byte_array(kd.public_data,public_data_bb);
-		bb_to_byte_array(kd.private_data,private_data_bb);
+		bb_to_byte_array(rp_kd_.public_data,public_data_bb);
+		bb_to_byte_array(rp_kd_.private_data,private_data_bb);
+		rpk.key_blob=rp_kd_;
 
-		Key_ecc_point& kp=rpk.key_point;
-		bb_to_byte_array(kp.x_coord,ecdsa_key_x);
-		bb_to_byte_array(kp.y_coord,ecdsa_key_y);
-
+		bb_to_byte_array(pt_.x_coord,ecdsa_key_x);
+		bb_to_byte_array(pt_.y_coord,ecdsa_key_y);
+		rpk.key_point=pt_;
+		
 		return rpk;
 	}
 	catch (Tpm_error &e)
@@ -306,6 +309,77 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 	return Relying_party_key{{{0,nullptr},{0,nullptr}},{{0,nullptr},{0,nullptr}}};
 }
 
+Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const& key, std::string const& relying_party, std::string const& user_auth)
+{
+	log(1,vars_to_string("load_rp_key: User: ",relying_party," User auth: ",user_auth));
+
+	TPM_RC rc=0;
+
+	try
+	{
+		flush_rp_key();
+
+		Byte_buffer public_data_bb=byte_array_to_bb(key.public_data);
+		log(1,vars_to_string("RP's public data: ",public_data_bb));
+		Byte_buffer private_data_bb=byte_array_to_bb(key.private_data);
+		log(1,vars_to_string("RP's private data: ",private_data_bb));
+
+		TPM2B_PUBLIC tpm2b_public;
+		rc=unmarshal_public_data_B(public_data_bb, &tpm2b_public);
+		if (rc!=0) {
+			log(1,"Unable to unmarshall the public data for the RP key");
+			throw Tpm_error("Unable to unmarshall the public data for the RP key");
+		}
+
+		TPM2B_PRIVATE tpm2b_private;
+		rc=unmarshal_private_data_B(private_data_bb, &tpm2b_private);
+		if (rc!=0) {
+			log(1,"Unable to unmarshall the private data for the RP key");
+			throw Tpm_error("Unable to unmarshall the private data for the RP key");
+		}
+
+		Load_Out load_out;
+		rc=load_key(tss_context_,user_auth,user_handle_,tpm2b_public,tpm2b_private,&load_out);
+		if (rc!=0) {
+			log(1,"Unable to load the RP key");
+			throw Tpm_error("Unable to load the RP key");
+		}
+
+		rp_handle_=load_out.objectHandle;
+
+		if (dbg_level_<=1) {
+			log_ptr_->os() << "RP key loaded, handle: " << std::hex << user_handle_ << std::endl;
+		}
+
+        TPMT_PUBLIC ecdsa_pub_out=tpm2b_public.publicArea;
+        Byte_buffer ecdsa_key_x=tpm2b_to_bb(ecdsa_pub_out.unique.ecc.x);
+        Byte_buffer ecdsa_key_y=tpm2b_to_bb(ecdsa_pub_out.unique.ecc.y);
+        log(1,vars_to_string("RP ECDSA public key x: ", ecdsa_key_x));           
+        log(1,vars_to_string("RP ECDSA public key y: ", ecdsa_key_y));           
+
+		bb_to_byte_array(pt_.x_coord,ecdsa_key_x);
+		bb_to_byte_array(pt_.y_coord,ecdsa_key_y);
+
+		// !!!!!!!!!!!! Should I copy the key data to kd_ for consistency ? !!!!!!!!!!!!
+	}
+	catch (Tpm_error &e)
+	{
+		rc=1;
+		last_error_=vars_to_string("Web_authn_tpm: load_user_key: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Web_authn_tpm: load_user_key: runtime_error: ", e.what());
+	}
+	catch (...)
+	{
+		rc=3;
+		last_error_="Web_authn_tpm: load_user_key: failed - uncaught exception";
+	}
+
+	return pt_;
+}
 
 
 std::string Web_authn_tpm::get_last_error()

@@ -36,6 +36,7 @@ public:
  	Web_authn_tpm() : setup_{false}, hw_tpm_(false), dbg_level_(1), tss_context_(nullptr), last_error_("No error") {}
 	Web_authn_tpm(Web_authn_tpm const& t)=delete;
 	Web_authn_tpm& operator=(Web_authn_tpm const& t)=delete;
+	
 	/**
 	 * Setup the Web_authn_tpm class. Installs the persistent SRK, if it is not already in place
 	 *
@@ -45,6 +46,7 @@ public:
 	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
     TPM_RC setup(Tss_setup const& tps,std::string log_filename);
+	
 	/**
 	 * Creates a new user (storage) key and loads it ready for use. If a user key is already in place, it and its relying
 	 * party key (if one is loaded) are flushed and their data removed.
@@ -56,6 +58,7 @@ public:
 	 * @return Key_data - the public and private parts of the key, null Byte_arrays if the call fails.
 	 */
 	Key_data create_and_load_user_key(std::string const& user, std::string const& authorisation);
+	
 	/**
 	 * Loads a user (storage) key and loads it ready for use. If a user key is already in place, it and its relying
 	 * party key (if one is loaded) are flushed and their data removed.
@@ -66,6 +69,7 @@ public:
 	 * @return TPM_RC- this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
 	TPM_RC load_user_key(Key_data const& key, std::string const& user);
+	
 	/**
 	 * Creates a new user (storage) key and loads it ready for use. If a user key is already in place, it and its relying
 	 * party key (if one is loaded) are flushed and their data removed.
@@ -74,15 +78,28 @@ public:
 	 * @param authorisation - authorisation string for the key (password). This could be empty. No authorisation is
 	 * required for the parent key as it is the SRK and will have no password set.
 	 *                  
-	 * @return Key_data - the public and private parts of the key, null Byte_arrays if the call fails.
+	 * @return Relying_party_key - the key blob, public and private parts of the key and the ECC point. Null Byte_arrays if the call fails.
 	 */
 	Relying_party_key create_and_load_rp_key(std::string const& relying_party, std::string const& user_auth, std::string const& rp_key_auth);
+	
+	/**
+	 * Load the relying party's key and get it ready for use. If a relying party key is already in place, it is flushed
+	 * and its data removed.
+	 * 
+	 * @param relying_party - an identifier for the key's relying party (at the moment this is not used).
+	 * @param user_auth - authorisation string for the key's user (parent). This could be empty. 
+	 *                  
+	 * @return Key_ecc_point - the ECC point corresponding to the public key, null Byte_arrays if the call fails.
+	 */
+	Key_ecc_point load_rp_key(Key_data const& key, std::string const& relying_party, std::string const& user_auth);
+	
 	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.
 	 *
 	 * @return - a string containing the last error that was reported.
 	 */
 	std::string get_last_error();
+	
 	/**
 	 * The destructor - tidies up. In particular flushing all of the transient keys from the TPM and doing an orderly shutdown.
 	 *
@@ -94,6 +111,7 @@ public:
 	 * @return - zero on success, a TPM error code otherwise.
 	 */
 	TPM_RC flush_data();
+	
 	/**
 	 * Returns the TSS_CONTEXT pointer. Only used for testing, particularly with the TPM simulator.
 	 *

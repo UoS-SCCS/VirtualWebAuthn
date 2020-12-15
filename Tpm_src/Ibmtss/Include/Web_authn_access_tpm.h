@@ -39,7 +39,7 @@ TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user);
 
 Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);
 
-Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);
+Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array user_auth);
 
 Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth);
 

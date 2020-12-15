@@ -121,6 +121,12 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	Byte_buffer rp_private_data=byte_array_to_bb(rpk.key_blob.private_data);
+	Byte_buffer rp_public_data=byte_array_to_bb(rpk.key_blob.public_data);
+	std::cout << "Public: " << rp_public_data << '\n';
+	std::cout << "Private: " << rp_private_data << '\n';
+
+
 	Key_ecc_point const& pt=rpk.key_point;
 	Byte_buffer ecdsa_key_x=byte_array_to_bb(pt.x_coord);
 	Byte_buffer ecdsa_key_y=byte_array_to_bb(pt.y_coord);
@@ -128,6 +134,29 @@ int main(int argc, char *argv[])
     std::cout << "ECDSA public key x: " << ecdsa_key_x << '\n';           
     std::cout << "ECDSA public key y: " << ecdsa_key_y << '\n';
 
+	Key_data rp_kd;
+	copy_byte_array(rp_kd.private_data,rpk.key_blob.private_data);
+	copy_byte_array(rp_kd.public_data,rpk.key_blob.public_data);
+
+	Key_ecc_point loaded_rp=load_rp_key(v_tpm_ptr,rp_kd,rp_ba,auth_ba);
+	if (loaded_rp.x_coord.size==0) {
+		std::cerr << "Failed to load the RP key\n";
+		release_byte_array(usr_ba);
+		release_byte_array(auth_ba);
+		release_byte_array(kd_local.private_data);
+		release_byte_array(kd_local.public_data);
+		release_byte_array(rp_ba);
+		release_byte_array(rp_key_auth_ba);
+		release_byte_array(rp_kd.private_data);
+		release_byte_array(rp_kd.public_data);
+		uninstall_tpm(v_tpm_ptr);
+		return EXIT_FAILURE;
+	}
+
+	ecdsa_key_x=byte_array_to_bb(loaded_rp.x_coord);
+	ecdsa_key_y=byte_array_to_bb(loaded_rp.y_coord);
+    std::cout << "ECDSA public key x: " << ecdsa_key_x << '\n';           
+    std::cout << "ECDSA public key y: " << ecdsa_key_y << '\n';
 
 	uninstall_tpm(v_tpm_ptr);
 
@@ -137,6 +166,8 @@ int main(int argc, char *argv[])
 	release_byte_array(kd_local.public_data);
 	release_byte_array(rp_ba);
 	release_byte_array(rp_key_auth_ba);
+	release_byte_array(rp_kd.private_data);
+	release_byte_array(rp_kd.public_data);
 
     return EXIT_SUCCESS;
 }
