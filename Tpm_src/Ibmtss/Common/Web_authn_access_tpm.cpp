@@ -123,6 +123,21 @@ Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party
 	return tpm_ptr->load_rp_key(kd,rp_str,user_auth_str);
 }
 
+Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth)
+{
+	if (v_tpm_ptr==nullptr) {
+		return Ecdsa_sig{{0,nullptr},{0,nullptr}};
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+
+	std::string rp_str=byte_array_to_string(relying_party);
+	std::string rp_key_auth_str=byte_array_to_string(rp_key_auth);
+	Byte_buffer digest_to_sign=byte_array_to_bb(signing_data);
+
+	return tpm_ptr->sign_using_rp_key(rp_str,digest_to_sign,rp_key_auth_str);
+}
+
 TPM_RC flush_data(void* v_tpm_ptr)
 {
 	if (v_tpm_ptr==nullptr) {

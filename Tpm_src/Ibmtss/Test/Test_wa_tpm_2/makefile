@@ -17,7 +17,8 @@ LDFLAGS= -pg $(LDFLAGS_COMMON)
 LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
 
 TARGET=$(PREFIX)test_wa_tpm_2
-SRCS=Test_wa_tpm_2.cpp
+SRCS=Test_wa_tpm_2.cpp \
+	Sha256.cpp
 
 $(TARGET): $(SRCS:.cpp=.o)
 	$(LD) $(TARGET_ARCH) $(LDFLAGS) $(SRCS:.cpp=.o) $(LDLIBS) -o $@

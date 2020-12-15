@@ -33,6 +33,7 @@ SRCS= Web_authn_tpm.cpp \
 	Create_ecdsa_key.cpp \
 	Create_storage_key.cpp \
 	Load_key.cpp \
+	Ecdsa_sign.cpp \
 	Marshal_data.cpp \
 	Make_key_persistent.cpp 
 

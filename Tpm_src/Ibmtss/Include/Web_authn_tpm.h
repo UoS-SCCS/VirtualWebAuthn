@@ -93,10 +93,17 @@ public:
 	 */
 	Key_ecc_point load_rp_key(Key_data const& key, std::string const& relying_party, std::string const& user_auth);
 	
-	
-	
-	
-	Ecdsa_sig sign_using_rp_key(Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth);
+	/**
+	 * Load the relying party's key and get it ready for use. If a relying party key is already in place, it is flushed
+	 * and its data removed.
+	 * 
+	 * @param relying_party - an identifier for the key's relying party (at the moment this is not used).
+	 * @param digest - the digest to sign, this should be the same size as the hash function being used (SHA256, in this case)
+	 * @param rp_key_auth - authorisation string for the relying party's ECDSA key. This could be empty. 
+	 *                  
+	 * @return Ecdsa_sig - the ECDSA signature, null Byte_arrays if the call fails.
+	 */
+	Ecdsa_sig sign_using_rp_key(std::string const& relying_party, Byte_buffer const& digest, std::string const& rp_key_auth);
 
 	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.

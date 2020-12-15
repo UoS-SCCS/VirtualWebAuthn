@@ -26,6 +26,7 @@
 #include "Tss_setup.h"
 #include "Tpm_defs.h"
 #include "Tpm_param.h"
+#include "Sha.h"
 #include "Tpm_initialisation.h"
 #include "Web_authn_structures.h"
 #include "Web_authn_access_tpm.h"
@@ -160,6 +161,23 @@ int main(int argc, char *argv[])
     std::cout << "ECDSA public key x: " << ecdsa_key_x << '\n';           
     std::cout << "ECDSA public key y: " << ecdsa_key_y << '\n';
 
+	Byte_buffer msg{"This is a test message ZZZ"};
+	Byte_buffer digest=sha256_bb(msg);
+	Byte_array digest_ba{0,nullptr};
+	bb_to_byte_array(digest_ba,digest);
+
+	Ecdsa_sig sig=sign_using_rp_key(v_tpm_ptr,rp_ba,digest_ba,rp_key_auth_ba);
+	if (sig.sig_r.size==0)
+	{
+		std::cerr << "Signature using the RP key failed\n";
+		std::cerr << get_last_error(v_tpm_ptr) << std::endl;
+	}
+
+	Byte_buffer sig_r=byte_array_to_bb(sig.sig_r);
+	Byte_buffer sig_s=byte_array_to_bb(sig.sig_s);
+	std::cout << "ECDSA signature R: " << sig_r << '\n';
+	std::cout << "ECDSA signature S: " << sig_s << '\n';
+
 	uninstall_tpm(v_tpm_ptr);
 
 	release_byte_array(usr_ba);
@@ -170,6 +188,7 @@ int main(int argc, char *argv[])
 	release_byte_array(rp_key_auth_ba);
 	release_byte_array(rp_kd.private_data);
 	release_byte_array(rp_kd.public_data);
+	release_byte_array(digest_ba);
 
     return EXIT_SUCCESS;
 }

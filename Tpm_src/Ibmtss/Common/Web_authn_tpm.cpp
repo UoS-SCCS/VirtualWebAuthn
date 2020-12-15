@@ -27,6 +27,7 @@
 #include "Create_storage_key.h"
 #include "Create_ecdsa_key.h"
 #include "Load_key.h"
+#include "Ecdsa_sign.h"
 #include "Marshal_data.h"
 #include "Openssl_ec_utils.h"
 #include "Clock_utils.h"
@@ -251,7 +252,7 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user
 Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relying_party, std::string const& user_auth, std::string const& rp_key_auth)
 {
 	log(1,"create_and_load_rp_key");
-	log(1,vars_to_string("Relying party: ",relying_party,"\tUser (parent) authorisation: ",user_auth, "\tRp_auth: ", rp_key_auth));
+	log(1,vars_to_string("Relying party: ",relying_party,"\tUser (parent) authorisation: ",user_auth, "\tRP auth: ", rp_key_auth));
 
 	TPM_RC rc=0;
 	
@@ -326,7 +327,7 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 
 Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const& key, std::string const& relying_party, std::string const& user_auth)
 {
-	log(1,vars_to_string("load_rp_key: User: ",relying_party," User auth: ",user_auth));
+	log(1,vars_to_string("load_rp_key: relying party: ",relying_party," User auth: ",user_auth));
 
 	TPM_RC rc=0;
 
@@ -384,12 +385,12 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const& key, std::string const&
 	catch (Tpm_error &e)
 	{
 		rc=1;
-		last_error_=vars_to_string("Web_authn_tpm: load_user_key: Tpm_error: ",e.what());
+		last_error_=vars_to_string("Web_authn_tpm: load_rp_key: Tpm_error: ",e.what());
 	}
 	catch(std::runtime_error &e)
 	{
 		rc=2;
-		last_error_=vars_to_string("Web_authn_tpm: load_user_key: runtime_error: ", e.what());
+		last_error_=vars_to_string("Web_authn_tpm: load_rp_key: runtime_error: ", e.what());
 	}
 	catch (...)
 	{
@@ -400,6 +401,58 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const& key, std::string const&
 	return pt_;
 }
 
+Ecdsa_sig Web_authn_tpm::sign_using_rp_key(std::string const& relying_party, Byte_buffer const& digest, std::string const& rp_key_auth)
+{
+	log(1,vars_to_string("sign_using_rp_key: RP: ",relying_party," RP auth: ",rp_key_auth));
+	log(1,vars_to_string("digest to sign: ",digest));
+
+	TPM_RC rc=0;
+
+	try
+	{
+		std::string error;
+
+		Sign_Out sign_out;
+
+		rc=ecdsa_sign(tss_context_,rp_handle_,digest,rp_key_auth,&sign_out);
+		if (rc != 0)
+		{
+			error=vars_to_string("Sign operation failed: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
+		}
+
+		TPMS_SIGNATURE_ECDSA sig=sign_out.signature.signature.ecdsa;
+
+		Byte_buffer sig_r=tpm2b_to_bb(sig.signatureR);
+		Byte_buffer sig_s=tpm2b_to_bb(sig.signatureS);
+
+		log(1,vars_to_string("ECDSA signature R: ",sig_r));
+		log(1,vars_to_string("ECDSA signature S: ",sig_s));
+
+		bb_to_byte_array(sig_.sig_r,sig_r);
+		bb_to_byte_array(sig_.sig_s,sig_s);
+
+		return sig_;
+	}
+	catch (Tpm_error &e)
+	{
+		rc=1;
+		last_error_=vars_to_string("Web_authn_tpm: sign_using_rp_key: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Web_authn_tpm: sign_using_rp_key: runtime_error: ", e.what());
+	}
+	catch (...)
+	{
+		rc=3;
+		last_error_="Web_authn_tpm: sign_using_rp_key: failed - uncaught exception";
+	}
+
+	return Ecdsa_sig{{0,nullptr},{0,nullptr}};
+}
 
 std::string Web_authn_tpm::get_last_error()
 {
