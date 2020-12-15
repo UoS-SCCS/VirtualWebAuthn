@@ -17,6 +17,7 @@
 #include <string>
 #include <cstdlib>
 #include "Tss_includes.h"
+#include "Tss_setup.h"
 #include "Ibmtss_helpers.h"
 #include "Make_key_persistent.h"
 #include "Flush_context.h"
@@ -46,6 +47,8 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 		std::string filename=generate_log_filename(tps.data_dir.value, log_file);
 		log_ptr_.reset(new Timed_file_log(filename));
 		log_ptr_->set_debug_level(dbg_level_);
+		data_dir_=std::string(tps.data_dir.value);
+		
 		log(1,"TPM setup started");
 
         hw_tpm_=(tps.t==Tpm_type::device);
@@ -67,6 +70,9 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
             throw(Tpm_error("Web_authn_tpm: setup: failed to create a TSS context\n"));
         }
         tss_context_=nc.second;
+		// Fix the data directory to point to a character array inside the class
+		// (a fix for now as Tss_setup wasn't designed for this)
+		rc=TSS_SetProperty(tss_context_,TPM_DATA_DIR,data_dir_.c_str());
 
 		rc=startup(tss_context_);
 		if (rc!=0 && rc!=TPM_RC_INITIALIZE)

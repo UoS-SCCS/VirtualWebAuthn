@@ -136,6 +136,7 @@ private:
 	int dbg_level_;
 
 	TSS_CONTEXT* tss_context_;
+	std::string data_dir_;
 	Log_ptr log_ptr_;
 	std::string last_error_;
 
