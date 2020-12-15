@@ -180,7 +180,7 @@ class CTAPHID(USBHIDListener):
             msg_response (CTAPHIDKeepAliveResponse): keep alive response to send
         """
         temp_transaction = CTAPHIDTransaction(msg_response.get_cid())
-        temp_transaction.error(msg_response)
+        temp_transaction.keep_alive(msg_response)
         self.send_response(temp_transaction)
 
     def process_cancel_request(self, msg_request: CTAPHIDCancelRequest):
@@ -350,8 +350,8 @@ class CTAPHID(USBHIDListener):
             transaction (CTAPHIDTransaction): Transaction whose
                 response was sent and can now be reset
         """
-        ctaplog.debug("Response sent. Resetting transaction to idle state - isError:%s, %s",
-            transaction.is_error_transaction(), transaction)
+        ctaplog.debug("Response sent. Resetting transaction to idle state - isError:%s, isKeepAlive: %s, %s",
+            transaction.is_error_transaction(), transaction.is_keep_alive_transaction(), transaction)
         if transaction == self._transaction:
             #Return to idle state
             self._transaction.reset()

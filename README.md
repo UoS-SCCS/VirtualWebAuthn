@@ -15,7 +15,7 @@ Proof of concept implementation, currently status:
     * CTAPHID_WINK
 * Authenticator API
     * authenticatorMakeCredential
-    * authenticatorGetAssertion 
+    * authenticatorGetAssertion
     * authenticatorGetNextAssertion
     * authenticatorGetInfo
     * authenticatorClientPIN
@@ -29,12 +29,12 @@ Proof of concept implementation, currently status:
             * Using pinToken in authenticatorMakeCredential
             * Using pinToken in authenticatorGetAssertion
             * Without pinToken in authenticatorGetAssertion (*Needs testing*)
-    * authenticatorReset (0x07) 
+    * authenticatorReset (0x07)
 
 ### TODO
 * CTAPHID commands
     * CTAPHID_MSG - Will not implement in this version, it is for CTAP1/U2F which doesn't provide the functionality we want in any case
-    * CTAPHID_LOCK
+    * --- CTAPHID_LOCK --- implemented but not tested due to client not using it
 * Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented - This is largely complete, some additional validation will be required once all options and extensions are supported
 * Extensions and options in MakeCredential and GetAssertion
     * options (rk and uv) are in principle implemented by require some UI additions
@@ -44,12 +44,12 @@ Proof of concept implementation, currently status:
 * Additional Attestation Statement formats
 * Additional Crypto Providers
 * Additional Attestation Types
-* Documentation
+* --- Documentation --- code level documentation complete - all functions/methods classes
 
 _You should now run DICEKey.py to start the authenticator_
 
 ## Setup
-I would recommed performing the following in a Virtual Machine, I've tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device. 
+I would recommed performing the following in a Virtual Machine, I've tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device.
 
 ### Virtual Machine Setup
 * Download VirtualBox [https://www.virtualbox.org/](https://www.virtualbox.org/)
@@ -68,7 +68,7 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
 
 * Clone this repository
 * Ensure that the kernel sources have been installed:
-    ``` 
+    ```
     sudo apt-get update
     sudo apt-get install linux-source
     ```
@@ -131,7 +131,7 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
     [26094.309302] hid-generic 0003:16C0:05DF.0002: hiddev0,hidraw0: USB HID v1.01 Device [DICEProject DICEKey Software Authenticator] on usb-dummy_hcd.0-1/input0
 
     ```
-* At this point you should see three new devices, twoprefixed with `hidraw` and `hidg` (For example, `hidraw0` and `hidg0`), and one called `dicekey`. I have had some problems with this happening, particularly after a soft restart, i.e. out of suspend. If in doubt reboot and repeat the steps above. 
+* At this point you should see three new devices, twoprefixed with `hidraw` and `hidg` (For example, `hidraw0` and `hidg0`), and one called `dicekey`. I have had some problems with this happening, particularly after a soft restart, i.e. out of suspend. If in doubt reboot and repeat the steps above.
 
 ### Key Manager
 * Inside of the `examples` folder is a KeyManager.py that currently allows setting and changing of the PIN, issuing a WINK command, and getting a PIN Token and PIN retries.
@@ -149,7 +149,7 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
     state file does not exist, creating it
     [ERR] Current firmware version address: 0x5604f580f1ec
     [ERR] Current firmware version: 4.0.0.0 (04.00.00.00)
-    [STOR] Generated PIN SALT: e3 48 f4 7b 47 e8 96 9d 96 63 32 90 a3 d3 d8 ce 80 ee 37 06 97 37 e4 f9 03 e9 33 2c 3b 83 9e 63 
+    [STOR] Generated PIN SALT: e3 48 f4 7b 47 e8 96 9d 96 63 32 90 a3 d3 d8 ce 80 ee 37 06 97 37 e4 f9 03 e9 33 2c 3b 83 9e 63
     [STOR] pin not set.
     ```
 * In Chrome navigate to a test WebAuthN website and attempt to register

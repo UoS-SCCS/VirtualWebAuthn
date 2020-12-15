@@ -12,13 +12,19 @@ Classes:
 """
 import sys
 from abc import ABC, abstractmethod
+from enum import Enum, unique
+import os
+import time
+import threading
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QWidgetAction,QLabel,QApplication,
     QSystemTrayIcon, QMenu, QVBoxLayout, QFrame, QHBoxLayout, QCheckBox,
-    QAction, QDialog,QPushButton)
-from PyQt5.QtCore import QObject, Qt
-
+    QAction, QDialog,QPushButton, QDesktopWidget, QGraphicsDropShadowEffect,
+    QLineEdit)
+from PyQt5.QtCore import QObject, Qt, QEvent, QTimer
+result_available = threading.Event()
+result = None
 class DICEAuthenticatorListener(ABC):
     """Defines the listener interface for authenticators
     that wish to listen to UI events
@@ -37,6 +43,10 @@ class DICEAuthenticatorListener(ABC):
 
         Args:
             menu_item (str): menu item that was selected
+        """
+
+    def post_ui_load(self):
+        """Fired when the UI has finished loading
         """
 
 class DICEAuthenticatorUI(ABC):
@@ -73,6 +83,28 @@ class DICEAuthenticatorUI(ABC):
             if not just a default. Defaults to None.
         """
 
+    @abstractmethod
+    def get_user_password(self, msg:str=None):
+        """Requests a password from the user
+
+        Args:
+            msg (str, optional): The notification message to show
+            if not just a default. Defaults to None.
+        """
+
+    @abstractmethod
+    def check_user_verification(self, msg:str=None):
+        """Performs a user verification test
+
+        Args:
+            msg (str, optional): The notification message to show
+            if not just a default. Defaults to None.
+        """
+    @abstractmethod
+    def create(self):
+        """Creates the UI but doesn't show it yet
+        """
+
     def fire_event_shutdown(self):
         """Fires the shutdown event to all listeners
         """
@@ -87,6 +119,16 @@ class DICEAuthenticatorUI(ABC):
         """
         for listener in self._listeners:
             listener.menu_clicked(menu_item)
+
+    def fire_post_ui_loaded(self):
+        """Fires the menu clicked event
+
+        Args:
+            menu_item (str): menu item that was clicked
+        """
+        time.sleep(0.05)
+        for listener in self._listeners:
+            listener.post_ui_load()
 
 class ConsoleAuthenticatorUI(DICEAuthenticatorUI):
     """Simple console UI to allow the user to perform
@@ -111,6 +153,136 @@ class ConsoleAuthenticatorUI(DICEAuthenticatorUI):
     def check_user_presence(self, msg:str=None):
         pass
 
+    def get_user_password(self, msg:str=None):
+        pass
+
+    def check_user_verification(self, msg:str=None):
+        pass
+
+    def create(self):
+        pass
+
+@unique
+class DICE_UI_Event(Enum):
+    SHOW_UP = QEvent.Type(QEvent.registerEventType())
+    SHOW_UV = QEvent.Type(QEvent.registerEventType())
+    SHOW_PWD = QEvent.Type(QEvent.registerEventType())
+class DICEEvent(QEvent):
+    def __init__(self,action:DICE_UI_Event):
+        QEvent.__init__(self, action.value)
+        self.dice_type = action
+        self.msg = ""
+    def set_message(self, msg:str):
+        self.msg = msg
+
+class QTAuthenticatorUIApp(QApplication):
+    def __init__(self):
+        super().__init__([])
+        self.pwd_box = None
+        self.dialog = None
+
+    def customEvent(self, event):
+        if event.dice_type == DICE_UI_Event.SHOW_UP:
+            self.show_user_presence(event.msg)
+        if event.dice_type == DICE_UI_Event.SHOW_PWD:
+            self.get_user_password(event.msg)
+
+
+    def show_user_presence(self, msg:str="User Presence Check"):
+        self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.dialog.setAttribute(Qt.WA_TranslucentBackground)
+        parent_path = os.path.dirname(os.path.abspath(__file__))
+        outer_layout = QVBoxLayout(self.dialog)
+        outer_layout.setContentsMargins(0,0,0,0)
+        outer_frame = QFrame()
+
+        outer_frame.setProperty("bgFrame",True)
+        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n*[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +") 0 0 0 0 stretch stretch;}")
+
+
+        #background-image: url(" + parent_path +"/icons/bgpy.png" +"); background-repeat: no-repeat; background-size: auto;background-attachment: fixed}
+        #effect = QGraphicsDropShadowEffect()
+        #effect.setBlurRadius(5);
+        #self.dialog.setGraphicsEffect(effect);
+        outer_layout.addWidget(outer_frame)
+        layout = QVBoxLayout(outer_frame)
+        header = QLabel("DICE Key Notification");
+        header.setObjectName("header")
+        header.setAlignment(Qt.AlignCenter)
+        layout.addWidget(header)
+        label = QLabel(msg)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+        frame = QFrame()
+        blayout = QHBoxLayout(frame)
+        allow_button = QPushButton("Allow")
+        deny_button = QPushButton("Deny")
+        allow_button.clicked.connect(lambda:self._perm_button_clicked(True))
+        deny_button.clicked.connect(lambda:self._perm_button_clicked(False))
+        blayout.addWidget(allow_button)
+        blayout.addWidget(deny_button)
+        frame.setLayout(blayout)
+        layout.addWidget(frame)
+        outer_frame.setLayout(layout)
+        self.dialog.setLayout(outer_layout)
+
+
+        screen_shape = QDesktopWidget().screenGeometry()
+        self.dialog.setGeometry(screen_shape.width()-440,0,350,200)
+        self.dialog.show()
+
+    def get_user_password(self, msg:str="Enter Password"):
+        self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.dialog.setAttribute(Qt.WA_TranslucentBackground)
+        parent_path = os.path.dirname(os.path.abspath(__file__))
+        outer_layout = QVBoxLayout(self.dialog)
+        outer_layout.setContentsMargins(0,0,0,0)
+        outer_frame = QFrame()
+
+        outer_frame.setProperty("bgFrame",True)
+        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n*[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +") 0 0 0 0 stretch stretch;}")
+        outer_layout.addWidget(outer_frame)
+        layout = QVBoxLayout(outer_frame)
+        header = QLabel("DICE Key Notification");
+        header.setObjectName("header")
+        header.setAlignment(Qt.AlignCenter)
+        layout.addWidget(header)
+        label = QLabel(msg)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+        frame = QFrame()
+        blayout = QHBoxLayout(frame)
+        self.pwd_box = QLineEdit()
+        self.pwd_box.setEchoMode(QLineEdit.Password)
+        blayout.addWidget(self.pwd_box)
+        submit_button = QPushButton("Submit")
+        submit_button.clicked.connect(self._submit_pwd_button_clicked)
+        blayout.addWidget(submit_button)
+        frame.setLayout(blayout)
+        layout.addWidget(frame)
+        outer_frame.setLayout(layout)
+        self.dialog.setLayout(outer_layout)
+
+
+        screen_shape = QDesktopWidget().screenGeometry()
+        self.dialog.setGeometry(screen_shape.width()-440,0,350,125)
+        self.dialog.show()
+
+    def _perm_button_clicked(self, outcome:bool):
+        #self.user_presence_allow = outcome
+        self.dialog.close()
+        global result
+        result = outcome
+        result_available.set()
+
+    def _submit_pwd_button_clicked(self):
+        global result
+        result = self.pwd_box.text()
+        self.dialog.close()
+        result_available.set()
+
 class QTAuthenticatorUI(DICEAuthenticatorUI):
     """QT based UI that provides a system tray icon and more
     sophisticated user interaction functionality
@@ -122,13 +294,19 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         self.tray = None
         self.object = None
         self.dialog = None
+        self.user_presence_allow = False
 
-    def start(self):
-        self.app = QApplication([])
+
+
+    def create(self):
+        self.app = QTAuthenticatorUIApp()
         self.app.setQuitOnLastWindowClosed(False)
 
+
+
+        parent_path = os.path.dirname(os.path.abspath(__file__))
         # Create the icon
-        icon = QIcon("./ui/die.png")
+        icon = QIcon(parent_path + "/icons/die.png")
 
         # Create the tray
         self.tray = QSystemTrayIcon()
@@ -137,10 +315,18 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
 
         # Create the menu
         menu = QMenu()
-        self.object = QObject()
-        widget_action = QWidgetAction(menu)
-        widget_action.setDefaultWidget(QCheckBox("Hello"))
-        menu.addAction(widget_action)
+        prefs = QAction("Preferences")
+        prefs.triggered.connect(self._preferences)
+        menu.addAction(prefs)
+
+        user = QAction("Dummy User Presence")
+        user.triggered.connect(self._test_method)
+        menu.addAction(user)
+
+        #self.object = QObject()
+        #widget_action = QWidgetAction(menu)
+        #widget_action.setDefaultWidget(QCheckBox("Hello"))
+        #menu.addAction(widget_action)
 
         action = QAction("A menu item")
         menu.addAction(action)
@@ -149,36 +335,50 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         quit_app = QAction("Quit")
         quit_app.triggered.connect(self._quit)
         menu.addAction(quit_app)
-
+        self.menu = menu
         # Add the menu to the tray
         self.tray.setContextMenu(menu)
 
-        #self.dialog.show()
-        #for some reason this has to be called from the same function. Calling it later doesn't work
+
+    def start(self):
+        #QTimer.singleShot(50, self.fire_post_ui_loaded)
+        thread = threading.Thread(target=self.fire_post_ui_loaded)
+        thread.setDaemon(True)
+        thread.start()
         self.app.exec_()
 
-    def check_user_presence(self, msg=None):
-        print("inhere")
-        self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+    def _test_method(self):
+        print(self.check_user_presence("Relying Party: wishes to use your DICE Key"))
 
-        layout = QVBoxLayout(self.dialog)
-        layout.addWidget(QLabel("DICE Key Notification"))
-        label = QLabel("Website X wishes to access your DICEKey")
-        label.setWordWrap(True)
-        layout.addWidget(label)
-        frame = QFrame()
-        blayout = QHBoxLayout(frame)
-        blayout.addWidget(QPushButton("Allow"))
-        blayout.addWidget(QPushButton("Deny"))
-        frame.setLayout(blayout)
-        layout.addWidget(frame)
+    def _preferences(self):
+        pass
 
-        self.dialog.setLayout(layout)
-        #geo = self.tray.geometry()
+    def _reset_lock(self):
+        result_available.clear()
+        global result
+        result = None
 
-        #self.dialog.setGeometry(geo.left,geo.bottom)
-        self.dialog.show()
-        self.dialog.exec_()
+    def check_user_presence(self, msg:str="User Presence Check")->bool:
+        dice_event = DICEEvent(DICE_UI_Event.SHOW_UP)
+        dice_event.set_message(msg)
+        self._reset_lock()
+        QApplication.postEvent(self.app,dice_event)
+        result_available.wait()
+        return result
+
+    def get_user_password(self, msg:str=None)->str:
+        dice_event = DICEEvent(DICE_UI_Event.SHOW_PWD)
+        dice_event.set_message(msg)
+        self._reset_lock()
+        #QApplication.sendEvent(self.app,dice_event)
+        QApplication.postEvent(self.app,dice_event)
+        result_available.wait()
+        return result
+
+    def check_user_verification(self, msg:str=None):
+        pass
+
+
     def _quit(self):
         for listener in self._listeners:
             listener.shutdown()

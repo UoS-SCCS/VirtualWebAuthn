@@ -932,7 +932,7 @@ class DICEAuthenticatorException(Exception):
         message -- explanation of the error
     """
 
-    def __init__(self, err_code:ctap.constants.CTAP_STATUS_CODE,message="Storage Exception"):
+    def __init__(self, err_code:ctap.constants.CTAP_STATUS_CODE,message="Authenticator Exception"):
         self.message = message
         self.err_code = err_code
         super().__init__(self.message)

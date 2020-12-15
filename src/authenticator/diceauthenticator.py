@@ -67,7 +67,9 @@ class DICEAuthenticator(DICEAuthenticatorListener,ABC):
         self._generate_pin_token(pin_token_length)
         self._ui = ui
         if not self._ui is None:
+            self._ui.create()
             self._ui.add_listener(self)
+
 
     def shutdown(self):
         """Shutdown call to close and finish the USBHID connection

@@ -191,6 +191,28 @@ class DICEAuthenticatorStorage(ABC):
             bool: True if a wrapping key has been set, False if not
         """
 
+    @abstractmethod
+    def set_uv_value(self, uv_check_value:bytes)->bool:
+        """Sets an arbitrary byte value that contains the data to perform
+        user verification. It could be biometric, a test encryption or some
+        other data.
+
+        Args:
+            uv_check_value (bytes): user verification check data
+
+        Returns:
+            bool:  True if set, False if not
+        """
+
+    @abstractmethod
+    def get_uv_value(self)->bytes:
+        """Gets the user verification data
+
+        Returns:
+            bytes: user verification data if set, or None
+        """
+
+
     def convert_allow_list_to_map(self, allow_list:[PublicKeyCredentialDescriptor]):
         """Converts an allow list received from the client into a
         map for use with filtering credentials. In effect iterates

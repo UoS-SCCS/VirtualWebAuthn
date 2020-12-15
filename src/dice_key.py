@@ -19,12 +19,14 @@ from authenticator.datatypes import (DICEAuthenticatorException,AuthenticatorGet
     PublicKeyCredentialParameters,AuthenticatorVersion)
 from authenticator.cbor import (GetAssertionResp,MakeCredentialResp,GetClientPINResp,
     GetInfoResp,ResetResp,AUTHN_GETINFO_OPTION,AUTHN_GETINFO_TRANSPORT,AUTHN_GETINFO_VERSION)
-from authenticator.json_storage import JSONAuthenticatorStorage
+from authenticator.json_storage import JSONAuthenticatorStorage, EncryptedJSONAuthenticatorStorage
 
 import ctap.constants
 from ctap.credential_source import PublicKeyCredentialSource
 from ctap.keep_alive import CTAPHIDKeepAlive
 from ctap.attestation import AttestationObject
+
+from authenticator.ui import QTAuthenticatorUI
 
 log = logging.getLogger('debug')
 auth = logging.getLogger('debug.auth')
@@ -35,21 +37,21 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     """
     VERSION = AuthenticatorVersion(2,1,0,0)
     DICEKEY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
-
+    KEEP_ALIVE_TIME_MS=180000
     def __init__(self):
         #allow list of crypto providers, may be a subset of all available providers
         #super().__init__(ui=QTAuthenticatorUI())
-        super().__init__()
+        super().__init__(ui=QTAuthenticatorUI())
         #prepare authenticator
-        self._storage = JSONAuthenticatorStorage("./data/my_authenticator.json")
+
+
         AuthenticatorCryptoProvider.add_provider(TPMES256CryptoProvider())
         self._providers = []
         self._providers.append(TPMES256CryptoProvider().get_alg())
-        if not self._storage.is_initialised():
-            self._storage.init_new()
+
         self._credential_wrapper = AESCredentialWrapper()
         #This can be user configurable
-        self.default_to_rk=False
+        self.default_to_rk=True
 
 
         #self._providers_idx = {}
@@ -57,10 +59,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #    self._providers_idx[provider.get_alg()] = provider
         self.get_info_resp = GetInfoResp(DICEAuthenticator.AUTHENTICATOR_AAGUID.bytes)
         self.get_info_resp.set_auguid(DICEKey.DICEKEY_AUTHENTICATOR_AAGUID)
-        if not self._storage.get_pin() is None:
-            self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,True)
-        else:
-            self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,False)
+
         self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.RESIDENT_KEY,True)
         self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.USER_PRESENCE,True)
         #self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CONFIG,True)
@@ -69,9 +68,25 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         self.get_info_resp.add_transport(AUTHN_GETINFO_TRANSPORT.USB)
         self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
         #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.RS256))
+
+
+    def post_ui_load(self):
+        #will be called on a new thread
+        log.debug("In post UI load method, asking for password")
+        pwd = self._ui.get_user_password("Please enter your password:")
+        log.debug("Initialising Encrypted Storage")
+        self._storage = EncryptedJSONAuthenticatorStorage("./data/auth_store.enc",pwd)
+        if not self._storage.is_initialised():
+            self._storage.init_new()
         #Generate PIN Key Agreement at Startup
         if not self._storage.has_wrapping_key():
             self._storage.set_wrapping_key(self._credential_wrapper.generate_key())
+
+        if not self._storage.get_pin() is None:
+            self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,True)
+        else:
+            self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,False)
+
 
     def shutdown(self):
         """Shut down the authenticator
@@ -98,9 +113,14 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     def authenticator_make_credential(self, params:AuthenticatorMakeCredentialParameters,
             keep_alive:CTAPHIDKeepAlive) -> MakeCredentialResp:
         #TODO perform necessary checks
-        #TODO add non-residential key approach
+        keep_alive.start(DICEKey.KEEP_ALIVE_TIME_MS)
         #keep_alive.start()
-        self._ui.check_user_presence()
+        user_presence = self._ui.check_user_presence(params.get_rp_entity().get_name() + " requests access to your Authenticator.")
+
+        if not user_presence:
+            raise DICEAuthenticatorException(
+                ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Presence Denied")
+
         auth.debug("Make Credential called, req resident: %s, with params: %s",
             params.get_require_resident_key(), params)
         provider = None
@@ -133,16 +153,19 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
                     self._storage.get_wrapping_key(),credential_source))
 
 
-        authenticator_data = self._get_authenticator_data(credential_source,True,uv)
+        authenticator_data = self._get_authenticator_data(credential_source,user_presence,uv)
 
         attest_object = AttestationObject.create_packed_self_attestation_object(
             credential_source,authenticator_data,params.get_hash())
         auth.debug("Created attestation object: %s", attest_object)
+        keep_alive.stop()
         return MakeCredentialResp(attest_object)
 
 
     def authenticator_get_assertion(self, params:AuthenticatorGetAssertionParameters,
             keep_alive:CTAPHIDKeepAlive) -> GetAssertionResp:
+
+        keep_alive.start(DICEKey.KEEP_ALIVE_TIME_MS)
         #First find all resident creds (could be zero)
         creds = self._storage.get_credential_source_by_rp(params.get_rp_id(),
             params.get_allow_list())
@@ -158,7 +181,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
         number_of_credentials = len(creds)
 
-        #TODO Implement User verification and presence check
+        #TODO Implement User verification
         if number_of_credentials < 1:
             raise DICEAuthenticatorException(
                 ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
@@ -166,6 +189,13 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         credential_source = creds[0]
         uv = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),
             params.get_hash(),False)
+
+        user_presence = self._ui.check_user_presence(params.get_rp_id() + " requests access to your Authenticator.")
+
+        if not user_presence:
+            raise DICEAuthenticatorException(
+                ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Presence Denied")
+
         authenticator_data = self._get_authenticator_data_minus_creds(credential_source,True,uv)
 
         # Contains the following data
@@ -183,7 +213,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #We put this last so the returned value can be
         # updated - not sure this actually has any impact
         response[1]=credential_source.get_public_key_credential_descriptor()
-
+        keep_alive.stop()
         return GetAssertionResp(response,number_of_credentials)
 
     def authenticator_get_next_assertion(self, params:AuthenticatorGetAssertionParameters,idx:int,

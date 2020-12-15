@@ -6,7 +6,8 @@ import logging
 import json
 import ctap.constants
 from ctap.exceptions import TransactionStateException, TransactionChannelIDException
-from ctap.messages import CTAPHIDCMD, CTAPHIDCancelResponse, CTAPHIDErrorResponse
+from ctap.messages import (CTAPHIDCMD, CTAPHIDCancelResponse, CTAPHIDErrorResponse,
+    CTAPHIDKeepAliveResponse)
 
 log = logging.getLogger('debug')
 ctaplog = logging.getLogger('debug.ctap')
@@ -19,6 +20,7 @@ class TRANSACTION_STATE(Enum):
     EMPTY = 0
     REQUEST_RECV = 1
     RESPONSE_SET = 2
+    KEEP_ALIVE=7
     CANCEL = 8
     ERROR = 9
 
@@ -44,6 +46,7 @@ class CTAPHIDTransaction:
             bytes: channel id bytes
         """
         return self.channel_id
+
     def is_error_transaction(self)->bool:
         """Checks whether this is a special error transaction
         that may not have a corresponding request
@@ -52,6 +55,15 @@ class CTAPHIDTransaction:
             bool: True if it is an error transaciton, False if not
         """
         return self.state == TRANSACTION_STATE.ERROR
+
+    def is_keep_alive_transaction(self)->bool:
+        """Checks whether this is a special keep-alive transaction
+        that may not have a corresponding request
+
+        Returns:
+            bool: True if it is a keep-alive transaciton, False if not
+        """
+        return self.state == TRANSACTION_STATE.KEEP_ALIVE
 
     def __str__(self):
         out = {}
@@ -141,7 +153,15 @@ class CTAPHIDTransaction:
         self.state = TRANSACTION_STATE.ERROR
         self.response = response
 
+    def keep_alive(self,response: CTAPHIDKeepAliveResponse):
+        """Sets the transaction to a keep-alive state and sets the
+        keep-alive response to be sent.
 
+        Args:
+            response (CTAPHIDKeepAliveResponse): keep-alive response to send
+        """
+        self.state = TRANSACTION_STATE.KEEP_ALIVE
+        self.response = response
     def verify_state(self, target_state: TRANSACTION_STATE):
         """Verifies the state machine of the CTAP HID Transaction.
 

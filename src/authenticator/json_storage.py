@@ -13,6 +13,13 @@ Raises:
 import json
 import logging
 import os
+import base64
+
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
+
 from authenticator.storage import DICEAuthenticatorStorage, DICEAuthenticatorStorageException
 from ctap.credential_source import PublicKeyCredentialSource
 
@@ -30,7 +37,7 @@ class STORAGE_KEYS():
     PIN_RETRIES = "retries"
     PIN_VALUE = "pin_value"
     WRAP_KEY = "wrap_key"
-
+    UV_CHECK_VALUE = "uv_check_value"
 
 class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     """Concrete implementation of DICEAuthenticatorStorage
@@ -179,7 +186,18 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         pin = self._get_create_pin()
         pin[STORAGE_KEYS.PIN_VALUE]=pin_value.hex()
         self.set_pin_retries(8)
-        self._write_to_json()
+        return self._write_to_json()
+
+    def set_uv_value(self, uv_check_value:bytes):
+        self._data[STORAGE_KEYS.UV_CHECK_VALUE] = uv_check_value.hex()
+        return self._write_to_json()
+
+    def get_uv_value(self)->bytes:
+        if STORAGE_KEYS.UV_CHECK_VALUE in self._data:
+            return bytes.fromhex(self._data[STORAGE_KEYS.UV_CHECK_VALUE])
+        else:
+            return None
+
 
     def reset(self)->bool:
         self._data={"_version":"JSONAuthenticatorStorage_0.1"}
@@ -195,3 +213,55 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         except EnvironmentError:
             log.error("IO Exception writing JSON", exc_info=True)
             return False
+
+
+class EncryptedJSONAuthenticatorStorage(JSONAuthenticatorStorage):
+    """Concrete implementation of DICEAuthenticatorStorage
+    that stores contents in an encrypted JSON file
+    """
+    def __init__(self, path:str, pwd:str):
+        self._key = None
+        self._salt = None
+        self._prep_crypto(pwd,path)
+        super().__init__(path)
+
+    def _prep_crypto(self,pwd:str, path:str)->bytes:
+        """Derives the encryption key from the password
+
+        Args:
+            pwd (str): Password
+
+        Returns:
+            bytes: base64 encoded fernet encryption key
+        """
+
+        if os.path.exists(path):
+            with open(path,"rb") as file:
+                self._salt = file.read(16)
+        else:
+            self._salt = os.urandom(16)
+        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
+                length=32,salt=self._salt,iterations=100000,backend=default_backend())
+        self._key = base64.urlsafe_b64encode(kdf.derive(pwd.encode("UTF-8")))
+
+    def _write_to_json(self):
+        try:
+            data = json.dumps(self._data)
+            fernet = Fernet(self._key)
+            token = fernet.encrypt(data.encode("UTF-8"))
+            with open(self._path,"wb") as file:
+                file.write(self._salt)
+                file.write(token)
+            return True
+        except EnvironmentError:
+            log.error("IO Exception writing Encrypted JSON", exc_info=True)
+            return False
+
+    def _read_from_json(self):
+        data = None
+        with open(self._path,"rb") as file:
+            self._salt = file.read(16)
+            data = file.read()
+
+        fernet = Fernet(self._key)
+        return json.loads(str(fernet.decrypt(data),"UTF-8"))
