@@ -81,7 +81,7 @@ Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array k
 }
 
 #define WEB_AUTHN_ERROR uint32_t(-1) 	// Define this properly later to not clash with other return values
-uint32_t load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user)
+TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user)
 {
 	if (v_tpm_ptr==nullptr) {
 		return WEB_AUTHN_ERROR;
@@ -109,6 +109,16 @@ Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_par
 	return tpm_ptr->create_and_load_rp_key(rp_str,user_auth_str,rp_key_auth_str);
 }
 
+TPM_RC flush_data(void* v_tpm_ptr)
+{
+	if (v_tpm_ptr==nullptr) {
+		return WEB_AUTHN_ERROR;
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+
+	return tpm_ptr->flush_data();
+}
 
 
 void uninstall_tpm(void* v_tpm_ptr)

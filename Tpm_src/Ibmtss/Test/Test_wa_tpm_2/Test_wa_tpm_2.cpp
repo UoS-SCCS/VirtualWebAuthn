@@ -77,24 +77,11 @@ int main(int argc, char *argv[])
 
 	release_byte_array(usr_ba);
 	release_byte_array(auth_ba);
-	uninstall_tpm(v_tpm_ptr);
+	
+	// Start again flush out the data
 
-	// Start again
-
-	v_tpm_ptr=install_tpm();
-	if (v_tpm_ptr==nullptr)
-	{
-		std::cerr << "Unable to install the Web_authn_tpm class\n";
-		return EXIT_FAILURE;
-	}
-
-	std::string log_file2{"log2"};
-
-	if (setup_tpm(v_tpm_ptr,use_hw_tpm,data_dir.c_str(),log_file2.c_str())!=0) {
-		std::cerr << "Error setting up the TPM\n";
-		return EXIT_FAILURE;
-	}
-
+	flush_data(v_tpm_ptr);
+	
 	bb_to_byte_array(usr_ba,usr_bb);
 	bb_to_byte_array(auth_ba,auth_bb);
 
@@ -112,6 +99,7 @@ int main(int argc, char *argv[])
 		release_byte_array(auth_ba);
 		release_byte_array(kd_local.private_data);
 		release_byte_array(kd_local.public_data);
+		uninstall_tpm(v_tpm_ptr);
 		return EXIT_FAILURE;
 	}
 
@@ -123,6 +111,22 @@ int main(int argc, char *argv[])
 	bb_to_byte_array(rp_key_auth_ba,rp_key_auth_bb);
 
 	Relying_party_key rpk=create_and_load_rp_key(v_tpm_ptr,rp_ba,auth_ba,rp_key_auth_ba);
+	if (rpk.key_blob.private_data.size==0) {
+		std::cerr << "Creating the RP key failed\n";
+		release_byte_array(usr_ba);
+		release_byte_array(auth_ba);
+		release_byte_array(kd_local.private_data);
+		release_byte_array(kd_local.public_data);
+		uninstall_tpm(v_tpm_ptr);
+		return EXIT_FAILURE;
+	}
+
+	Key_ecc_point const& pt=rpk.key_point;
+	Byte_buffer ecdsa_key_x=byte_array_to_bb(pt.x_coord);
+	Byte_buffer ecdsa_key_y=byte_array_to_bb(pt.y_coord);
+
+    std::cout << "ECDSA public key x: " << ecdsa_key_x << '\n';           
+    std::cout << "ECDSA public key y: " << ecdsa_key_y << '\n';
 
 
 	uninstall_tpm(v_tpm_ptr);

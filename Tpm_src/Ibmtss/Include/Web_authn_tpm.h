@@ -89,6 +89,12 @@ public:
 	 */
 	~Web_authn_tpm();
 	/**
+	 * Flushes the keys and associated data.
+	 *
+	 * @return - zero on success, a TPM error code otherwise.
+	 */
+	TPM_RC flush_data();
+	/**
 	 * Returns the TSS_CONTEXT pointer. Only used for testing, particularly with the TPM simulator.
 	 *
 	 * @return - a pointer to the current TSS_CONTEXT.

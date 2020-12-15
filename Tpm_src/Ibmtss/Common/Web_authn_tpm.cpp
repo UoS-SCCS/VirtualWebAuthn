@@ -17,6 +17,7 @@
 #include <string>
 #include <cstdlib>
 #include "Tss_includes.h"
+#include "Ibmtss_helpers.h"
 #include "Make_key_persistent.h"
 #include "Flush_context.h"
 #include "Io_utils.h"
@@ -251,6 +252,12 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 		}
 		log(1,"Relying party key created");
 
+        TPMT_PUBLIC ecdsa_pub_out=out.outPublic.publicArea;
+        Byte_buffer ecdsa_key_x=tpm2b_to_bb(ecdsa_pub_out.unique.ecc.x);
+        Byte_buffer ecdsa_key_y=tpm2b_to_bb(ecdsa_pub_out.unique.ecc.y);
+        log(1,vars_to_string("ECDSA public key x: ", ecdsa_key_x));           
+        log(1,vars_to_string("ECDSA public key y: ", ecdsa_key_y));           
+
 		Load_Out load_out;
 		rc=load_key(tss_context_,user_auth,user_handle_,out.outPublic,out.outPrivate,&load_out);
 		if (rc!=0) {
@@ -263,33 +270,37 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 			log_ptr_->os() << "Relying party key loaded, handle: " << std::hex << rp_handle_ << std::endl;
 		}
 
-/*
+
 		Byte_buffer public_data_bb=marshal_public_data_B(&out.outPublic);
-		log(1,vars_to_string("User's public data: ",public_data_bb));
+		log(1,vars_to_string("RP's public data: ",public_data_bb));
 		Byte_buffer private_data_bb=marshal_private_data_B(&out.outPrivate);
-		log(1,vars_to_string("User's private data: ",private_data_bb));
+		log(1,vars_to_string("RP's private data: ",private_data_bb));
 
-		bb_to_byte_array(user_kd_.public_data,public_data_bb);
-		bb_to_byte_array(user_kd_.private_data,private_data_bb);
+		Relying_party_key rpk;
+		Key_data& kd=rpk.key_blob;
+		bb_to_byte_array(kd.public_data,public_data_bb);
+		bb_to_byte_array(kd.private_data,private_data_bb);
 
-		return user_kd_;
-*/
+		Key_ecc_point& kp=rpk.key_point;
+		bb_to_byte_array(kp.x_coord,ecdsa_key_x);
+		bb_to_byte_array(kp.y_coord,ecdsa_key_y);
 
+		return rpk;
 	}
 	catch (Tpm_error &e)
 	{
 		rc=1;
-		last_error_=vars_to_string("Web_authn_tpm: create_and_load_user_key: Tpm_error: ",e.what());
+		last_error_=vars_to_string("Web_authn_tpm: create_and_load_rp_key: Tpm_error: ",e.what());
 	}
 	catch(std::runtime_error &e)
 	{
 		rc=2;
-		last_error_=vars_to_string("Web_authn_tpm: create_and_load_user_key: runtime_error: ", e.what());
+		last_error_=vars_to_string("Web_authn_tpm: create_and_load_rp_key: runtime_error: ", e.what());
 	}
 	catch (...)
 	{
 		rc=3;
-		last_error_="Web_authn_tpm: create_and_load_user_key: failed - uncaught exception";
+		last_error_="Web_authn_tpm: create_and_load_rp_key: failed - uncaught exception";
 	}
 
 	return Relying_party_key{{{0,nullptr},{0,nullptr}},{{0,nullptr},{0,nullptr}}};
@@ -359,6 +370,36 @@ void Web_authn_tpm::log(int dbg_level, std::string const& str)
 		return;
 	}
 	log_ptr_->os() <<  str << std::endl;
+}
+
+TPM_RC Web_authn_tpm::flush_data()
+{
+
+	log(1, "flush_data");
+	release_memory();
+
+	TPM_RC rc=0;
+	try
+	{
+		flush_user_key();
+	}
+	catch (Tpm_error &e)
+	{
+		rc=1;
+		last_error_=vars_to_string("Flush_data: Tpm_error: ",e.what());
+	}
+	catch(std::runtime_error &e)
+	{
+		rc=2;
+		last_error_=vars_to_string("Flush_data: runtime_error: ", e.what());
+	}
+	catch (...)
+	{
+		rc=3;
+		last_error_="Flush_data: failed - uncaught exception";
+	}
+
+	return rc;
 }
 
 Web_authn_tpm::~Web_authn_tpm()
