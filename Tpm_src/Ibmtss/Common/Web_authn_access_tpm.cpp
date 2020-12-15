@@ -109,6 +109,20 @@ Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_par
 	return tpm_ptr->create_and_load_rp_key(rp_str,user_auth_str,rp_key_auth_str);
 }
 
+Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array user_auth)
+{
+	if (v_tpm_ptr==nullptr) {
+		return Key_ecc_point{{0,nullptr},{0,nullptr}};
+	}
+
+	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+
+	std::string rp_str=byte_array_to_string(relying_party);
+	std::string user_auth_str=byte_array_to_string(user_auth);
+
+	return tpm_ptr->load_rp_key(kd,rp_str,user_auth_str);
+}
+
 TPM_RC flush_data(void* v_tpm_ptr)
 {
 	if (v_tpm_ptr==nullptr) {
