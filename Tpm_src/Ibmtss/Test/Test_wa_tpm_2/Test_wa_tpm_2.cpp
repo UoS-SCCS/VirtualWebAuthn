@@ -139,8 +139,10 @@ int main(int argc, char *argv[])
 	copy_byte_array(rp_kd.public_data,rpk.key_blob.public_data);
 
 	Key_ecc_point loaded_rp=load_rp_key(v_tpm_ptr,rp_kd,rp_ba,auth_ba);
+	
 	if (loaded_rp.x_coord.size==0) {
 		std::cerr << "Failed to load the RP key\n";
+		std::cerr << get_last_error(v_tpm_ptr) << std::endl;
 		release_byte_array(usr_ba);
 		release_byte_array(auth_ba);
 		release_byte_array(kd_local.private_data);

@@ -1,6 +1,7 @@
 /******************************************************************************
 * File:        Web_authn_access_tpm.h
-* Description: Functions for Python to install the TPM and call its member functions
+* Description: Functions for Python to install the TPM and call its member
+*              functions
 *
 * Author:      Chris Newton
 *
@@ -31,10 +32,10 @@ const char* get_last_error(void* v_tpm_ptr);
 
 void uninstall_tpm(void* v_tpm_ptr);
 
-// No parent authoriation as we are using the SRK with no passwd.
+// No parent authorisation as we are using the SRK with no passwd.
 Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array key_auth);
 
-// No parent authoriation as we are using the SRK with no passwd, key authorisation not need to load the key.
+// No parent authorisation as we are using the SRK with no passwd, key authorisation not need to load the key.
 TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user);
 
 Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);

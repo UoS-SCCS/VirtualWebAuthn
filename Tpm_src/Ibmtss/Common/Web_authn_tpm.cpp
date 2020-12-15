@@ -123,20 +123,22 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const& user, std::s
 	try
 	{
 		flush_user_key();
-
+		std::string error;
 		Create_Out out;
 		rc=create_storage_key(tss_context_,srk_persistent_handle,authorisation,&out);
 		if (rc!=0) {
-			log(1,"Unable to create the user key");
-			throw Tpm_error("Unable to create the user key");
+			error=vars_to_string("Unable to create the user key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 		log(1,"User key created");
 
 		Load_Out load_out;
 		rc=load_key(tss_context_,"",srk_persistent_handle,out.outPublic,out.outPrivate,&load_out);
 		if (rc!=0) {
-			log(1,"Unable to load the user key");
-			throw Tpm_error("Unable to load the user key");
+			error=vars_to_string("Unable to load the user key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 	
 		user_handle_=load_out.objectHandle;
@@ -182,6 +184,7 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user
 
 	try
 	{
+		std::string error;
 		flush_user_key();
 	
 		Byte_buffer public_data_bb=byte_array_to_bb(key.public_data);
@@ -192,22 +195,25 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const& key, std::string const& user
 		TPM2B_PUBLIC tpm2b_public;
 		rc=unmarshal_public_data_B(public_data_bb, &tpm2b_public);
 		if (rc!=0) {
-			log(1,"Unable to unmarshall the public data for the user key");
-			throw Tpm_error("Unable to unmarshall the public data for the user key");
+			error=vars_to_string("Unable to unmarshall the public data for the user key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 
 		TPM2B_PRIVATE tpm2b_private;
 		rc=unmarshal_private_data_B(private_data_bb, &tpm2b_private);
 		if (rc!=0) {
-			log(1,"Unable to unmarshall the private data for the user key");
-			throw Tpm_error("Unable to unmarshall the private data for the user key");
+			error=vars_to_string("Unable to unmarshall the private data for the user key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 
 		Load_Out load_out;
 		rc=load_key(tss_context_,"",srk_persistent_handle,tpm2b_public,tpm2b_private,&load_out);
 		if (rc!=0) {
-			log(1,"Unable to load the user key");
-			throw Tpm_error("Unable to load the user key");
+			error=vars_to_string("Unable to load the user key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 
 		user_handle_=load_out.objectHandle;
@@ -245,13 +251,15 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 	
 	try
 	{
+		std::string error;
 		flush_rp_key();
 		
 		Create_Out out;
 		rc=create_ecdsa_key(tss_context_,user_handle_,user_auth,curve_ID,rp_key_auth,&out);
 		if (rc!=0) {
-			log(1,"Unable to create the user key");
-			throw Tpm_error("Unable to create the user key");
+			error=vars_to_string("Unable to create the RP key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 		log(1,"Relying party key created");
 
@@ -264,8 +272,9 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const& relyi
 		Load_Out load_out;
 		rc=load_key(tss_context_,user_auth,user_handle_,out.outPublic,out.outPrivate,&load_out);
 		if (rc!=0) {
-			log(1,"Unable to load the relying party key");
-			throw Tpm_error("Unable to load the relying party key");
+			error=vars_to_string("Unable to load the RP key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 	
 		rp_handle_=load_out.objectHandle;
@@ -317,6 +326,7 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const& key, std::string const&
 
 	try
 	{
+		std::string error;
 		flush_rp_key();
 
 		Byte_buffer public_data_bb=byte_array_to_bb(key.public_data);
@@ -327,22 +337,25 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const& key, std::string const&
 		TPM2B_PUBLIC tpm2b_public;
 		rc=unmarshal_public_data_B(public_data_bb, &tpm2b_public);
 		if (rc!=0) {
-			log(1,"Unable to unmarshall the public data for the RP key");
-			throw Tpm_error("Unable to unmarshall the public data for the RP key");
+			error=vars_to_string("Unable to unmarshall the public data for the RP key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 
 		TPM2B_PRIVATE tpm2b_private;
 		rc=unmarshal_private_data_B(private_data_bb, &tpm2b_private);
 		if (rc!=0) {
-			log(1,"Unable to unmarshall the private data for the RP key");
-			throw Tpm_error("Unable to unmarshall the private data for the RP key");
+			error=vars_to_string("Unable to unmarshall the private data for the RP key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 
 		Load_Out load_out;
 		rc=load_key(tss_context_,user_auth,user_handle_,tpm2b_public,tpm2b_private,&load_out);
 		if (rc!=0) {
-			log(1,"Unable to load the RP key");
-			throw Tpm_error("Unable to load the RP key");
+			error=vars_to_string("Unable to load the RP key: ",get_tpm_error(rc));
+			log(1,error);
+			throw Tpm_error(error.c_str());
 		}
 
 		rp_handle_=load_out.objectHandle;
@@ -392,6 +405,9 @@ std::string Web_authn_tpm::get_last_error()
 
 void Web_authn_tpm::flush_user_key()
 {
+	release_byte_array(user_kd_.public_data);
+	release_byte_array(user_kd_.private_data);
+
 	if (user_handle_==0) {
 		return;
 	}
@@ -408,6 +424,10 @@ void Web_authn_tpm::flush_user_key()
 
 void Web_authn_tpm::flush_rp_key()
 {
+	release_byte_array(rp_kd_.public_data);
+	release_byte_array(rp_kd_.private_data);
+	release_byte_array(pt_.x_coord);
+	release_byte_array(pt_.y_coord);
 	if (rp_handle_==0) {
 		return;
 	}

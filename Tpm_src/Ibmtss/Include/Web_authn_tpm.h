@@ -93,6 +93,11 @@ public:
 	 */
 	Key_ecc_point load_rp_key(Key_data const& key, std::string const& relying_party, std::string const& user_auth);
 	
+	
+	
+	
+	Ecdsa_sig sign_using_rp_key(Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth);
+
 	/**
 	 * Returns the last error reported, or the empty string. The last error is cleared ready for next time.
 	 *
