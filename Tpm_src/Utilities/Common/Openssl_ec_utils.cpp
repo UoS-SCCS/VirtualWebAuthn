@@ -12,16 +12,18 @@
 #include <exception>
 #include "Openssl_utils.h"
 #include "Number_conversions.h"
+#include "Io_utils.h"
 #include "Openssl_ec_utils.h"
 #include "Openssl_bn_utils.h"
 
 Ec_group_ptr new_ec_group(std::string const &curve_name)
 {
+    std::string cn_lower=str_tolower(curve_name);
     EC_GROUP *ecgrp = nullptr;
-    if (curve_name == "bnp256") {
+    if (cn_lower == "bnp256") {
         ecgrp = get_ec_group_bnp256();
     } else {
-        int nid = OBJ_txt2nid(curve_name.c_str());
+        int nid = OBJ_txt2nid(cn_lower.c_str());
         ecgrp = EC_GROUP_new_by_curve_name(nid);
     }
     if (ecgrp == nullptr) {
@@ -65,10 +67,10 @@ void bb2point(Ec_group_ptr const &ecgrp, G1_point const &pt_bb, Ec_point_ptr &pt
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr x_bn = new_bn();
     Bn_ptr y_bn = new_bn();
-//    BN_bin2bn(&pt_bb.first[0], pt_bb.first.size(), x_bn.get());
-    bb2bn(pt_bb.first,x_bn.get());
-//    BN_bin2bn(&pt_bb.second[0], pt_bb.second.size(), y_bn.get());
-    bb2bn(pt_bb.second,x_bn.get());
+    bin2bn(pt_bb.first.cdata(), pt_bb.first.size(), x_bn.get());
+//    bb2bn(pt_bb.first,x_bn.get());
+    bin2bn(pt_bb.second.cdata(), pt_bb.second.size(), y_bn.get());
+//    bb2bn(pt_bb.second,x_bn.get());
 
     if (1 != EC_POINT_set_affine_coordinates_GFp(ecgrp.get(), pt.get(), x_bn.get(), y_bn.get(), ctx.get())) {
         throw(Openssl_error("bb2point failed"));
@@ -214,3 +216,53 @@ Ec_key_pair_bb get_new_key_pair(Ec_group_ptr const &ecgrp)
 
     return result;
 }
+
+bool verify_ecdsa_signature(
+std::string curve_name,
+G1_point const& ecdsa_public_key,
+Byte_buffer const& digest_to_sign,
+Byte_buffer const& sigR,
+Byte_buffer const& sigS
+)
+{
+	Bn_ctx_ptr ctx=new_bn_ctx();
+	Ec_group_ptr ecgrp=new_ec_group(curve_name);
+
+	if (1!=EC_GROUP_check(ecgrp.get(),ctx.get())) {
+		throw(Openssl_error("EC_GROUP_check failed"));
+	}
+
+	if (!point_is_on_curve(ecgrp,ecdsa_public_key)) 	{
+		throw(Openssl_error("The ECDSA public key is not on the curve"));
+	}
+
+	Ec_key_ptr ec_key=new_ec_key();
+	EC_KEY_set_group(ec_key.get(),ecgrp.get());
+	Ec_point_ptr pub_key=new_ec_point(ecgrp);
+	bb2point(ecgrp,ecdsa_public_key,pub_key);
+
+	if (1!=EC_KEY_set_public_key(ec_key.get(), pub_key.get())) {
+	// could also use: EC_KEY_set_public_key_affine_coordinates 
+		throw(Openssl_error("Failed to load public key (OpenSSL)"));
+	}
+
+	BIGNUM* sig_r=BN_new(); // Freed when freeing ECDSA_SIG, so don't use unique pointer
+	bin2bn(sigR.cdata(),sigR.size(),sig_r);
+	BIGNUM* sig_s=BN_new();  // Freed when freeing ECDSA_SIG, so don't use unique pointer
+	bin2bn(sigS.cdata(),sigS.size(),sig_s);
+	ECDSA_SIG* ossl_sig=ECDSA_SIG_new();
+	ECDSA_SIG_set0(ossl_sig,sig_r,sig_s); 
+
+	int ret=ECDSA_do_verify(digest_to_sign.cdata(),static_cast<int>(digest_to_sign.size()),ossl_sig,ec_key.get());
+	if (ret<0) {
+		throw(Openssl_error("ECDSA_do_verify failed"));
+	}
+	bool verifiedOK=(ret==1);
+
+	if (ossl_sig) {
+		ECDSA_SIG_free(ossl_sig);
+	}
+
+	return verifiedOK;	
+}
+

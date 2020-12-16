@@ -10,7 +10,6 @@
 ****************************************************************************/
 
 #include <openssl/bn.h>
-#include <gmp.h>
 #include <cstring>
 #include <limits>
 #include "Number_conversions.h"
@@ -28,24 +27,10 @@ size_t bn2bin(BIGNUM const *bn, u8_ptr &bp)
     return sz;
 }
 
-void bin2bn(u8_const_ptr b, size_t const b_size, BIGNUM *bn)
+BIGNUM* bin2bn(u8_const_ptr b, size_t const b_size, BIGNUM *bn)
 {
-    if (b_size > std::numeric_limits<int>::max()) {
-        throw(std::runtime_error("bin2bn: number too large for conversion"));
-    }
-    BN_bin2bn(b, static_cast<int>(b_size), bn);
+    return BN_bin2bn(b, static_cast<int>(b_size), bn);
 }
-
-BIGNUM* bb2bn(Byte_buffer const& n_bb, BIGNUM *bn)
-{
-    size_t sz=n_bb.size();
-    if (sz > std::numeric_limits<int>::max()) {
-        throw(std::runtime_error("bb2bn: number too large for conversion"));
-    }
-
-    return BN_bin2bn(&n_bb[0],static_cast<int>(sz),bn);    
-}
-
 
 Byte_buffer bn2bb(BIGNUM const *bn)
 {

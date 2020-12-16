@@ -44,6 +44,10 @@ int main(int argc, char *argv[])
 	std::string data_dir{"/home/cn0016/TPM_data"};
 	std::string log_file{"log"};
 
+	TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;
+    std::string curve_name="prime256v1"; 
+
+
 	void* v_tpm_ptr=install_tpm();
 	if (v_tpm_ptr==nullptr)
 	{
@@ -138,6 +142,8 @@ int main(int argc, char *argv[])
 		ecdsa_key_y=byte_array_to_bb(loaded_rp_key.y_coord);
 		std::cout << "ECDSA public key x: " << ecdsa_key_x << '\n';           
 		std::cout << "ECDSA public key y: " << ecdsa_key_y << '\n';
+        G1_point ecdsa_public_key;
+		ecdsa_public_key=std::make_pair(ecdsa_key_x,ecdsa_key_y);
 
 		Ecdsa_sig sig=sign_using_rp_key(v_tpm_ptr,rp_ba,digest_ba,rp_key_auth_ba);
 		// sig received from web_authn_tpm - no need to free it
@@ -150,6 +156,15 @@ int main(int argc, char *argv[])
 		Byte_buffer sig_s=byte_array_to_bb(sig.sig_s);
 		std::cout << "ECDSA signature R: " << sig_r << '\n';
 		std::cout << "ECDSA signature S: " << sig_s << '\n';
+
+		if (verify_ecdsa_signature(curve_name,ecdsa_public_key,digest,sig_r,sig_s)) {
+			std::cout << "OpenSSL verified the ECDSA Signature\n";
+		} 
+		else {
+			std::cout << "OpenSSL failed to verify the ECDSA Signature\n";
+		}
+
+
 
 	}
 	catch(std::exception const& e)

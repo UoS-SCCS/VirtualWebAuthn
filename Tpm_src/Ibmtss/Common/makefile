@@ -23,6 +23,11 @@ SRCS= Web_authn_tpm.cpp \
 	Byte_buffer.cpp \
 	Byte_array.cpp \
 	Clock_utils.cpp \
+	Number_conversions.cpp \
+	Openssl_utils.cpp\
+	Openssl_bn_utils.cpp \
+	Openssl_bnp256.cpp \
+	Openssl_ec_utils.cpp \
 	Logging.cpp \
 	Io_utils.cpp \
 	Flush_context.cpp \
