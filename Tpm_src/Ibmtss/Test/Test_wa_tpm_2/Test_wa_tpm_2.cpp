@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	std::string data_dir{"/home/cn0016/TPM_data"};
 	std::string log_file{"log"};
 
-	TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;
+	// curve_name corresponds to TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;
     std::string curve_name="prime256v1"; 
 
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	Byte_array usr_auth_ba{0,nullptr};
 	bb_to_byte_array(usr_auth_ba,usr_auth_bb);
 
-	Key_data kd_local;
+	Key_data kd_local{{0,nullptr},{0,nullptr}};
 
 	Byte_buffer rp_bb{"Troy"};
 	Byte_array rp_ba;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	Byte_array rp_key_auth_ba;
 	bb_to_byte_array(rp_key_auth_ba,rp_key_auth_bb);
 
-	Key_data rp_kd;
+	Key_data rp_kd{{0,nullptr},{0,nullptr}};
 
 	Byte_buffer msg{"This is a test message ZZZ"};
 	Byte_buffer digest=sha256_bb(msg);
