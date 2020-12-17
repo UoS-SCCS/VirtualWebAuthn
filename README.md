@@ -133,6 +133,25 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
     ```
 * At this point you should see three new devices, twoprefixed with `hidraw` and `hidg` (For example, `hidraw0` and `hidg0`), and one called `dicekey`. I have had some problems with this happening, particularly after a soft restart, i.e. out of suspend. If in doubt reboot and repeat the steps above.
 
+#### Setup TPM
+* Follow the instructions in [Installing_IBM_software](Installing_IBM_software.md) to create and start the IBM Simulator
+* Once complete you should be able to run the simulator using `sudo /opt/ibmtpm/src/tpm_server`
+    * use `sudo /opt/ibmtpm/src/tpm_server --rm` to reset the software TPM
+* In this respository navigate to `./tpm/` and run `make`
+    * Once complete you should have a `./tpm/lib/libwatpm.so` file
+
+### Running DiceKey
+* Inside `./src` run `python3 dice_key.py`
+* You'll be asked for a password and once started should see an icon of a die (dice) in the top right hand corner.
+* Try creating a credential at [webauthni.io](https://webauthni.io)
+* Note: you will need to have set the environment variables in the terminal where you launch python from if it is different to the one you
+used previously. Use the following to set them up.
+
+    ```
+    export LD_LIBRARY_PATH=/opt/ibmtss/utils
+    export PATH=$PATH:/opt/ibmtss/utils
+    export TPM_INTERFACE_TYPE=socsim
+    ```
 ### Key Manager
 * Inside of the `examples` folder is a KeyManager.py that currently allows setting and changing of the PIN, issuing a WINK command, and getting a PIN Token and PIN retries.
 * You will need to set a PIN using the KeyManager to force Chrome to start requesting a PIN.
