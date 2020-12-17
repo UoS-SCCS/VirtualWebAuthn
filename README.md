@@ -34,17 +34,17 @@ Proof of concept implementation, currently status:
 ### TODO
 * CTAPHID commands
     * CTAPHID_MSG - Will not implement in this version, it is for CTAP1/U2F which doesn't provide the functionality we want in any case
-    * ~~ CTAPHID_LOCK ~~ implemented but not tested due to client not using it
-* ~~ Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented - This is largely complete, some additional validation will be required once all options and extensions are supported ~~
-* ~~ Extensions and options in MakeCredential and GetAssertion
-    * options (rk and uv) are in principle implemented by require some UI additions ~~
+    * ~~CTAPHID_LOCK~~ implemented but not tested due to client not using it
+* ~~Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented - This is largely complete, some additional validation will be required once all options and extensions are supported~~
+* ~~Extensions and options in MakeCredential and GetAssertion
+    * options (rk and uv) are in principle implemented by require some UI additions~~
 * ~~_Resident Key Option_~~ This is now complete, it is a parameter option
-* ~~ UI to obtain presence/user verification and display relying party information
-    * initial implementation has started - further investigation of exactly what constitutes verification and consent ~~
+* ~~UI to obtain presence/user verification and display relying party information
+    * initial implementation has started - further investigation of exactly what constitutes verification and consent~~
 * Additional Attestation Statement formats
-* ~~ Additional Crypto Providers ~~ TPM Crypto provider implemented
+* ~~Additional Crypto Providers~~ TPM Crypto provider implemented
 * Additional Attestation Types
-* ~~ Documentation ~~ code level documentation complete - all functions/methods classes
+* ~~Documentation~~ code level documentation complete - all functions/methods classes
 * Expand to handle different simultaneous TPM and non-TPM crypto providers for the same algorithm
 _You should now run DICEKey.py to start the authenticator_
 
