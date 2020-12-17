@@ -156,6 +156,7 @@ void uninstall_tpm(void* v_tpm_ptr)
 		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 		delete tpm_ptr;
 	}
+	v_tpm_ptr=nullptr;
 }
 
 // For initial testing

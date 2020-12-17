@@ -142,9 +142,9 @@ private:
     bool hw_tpm_;
 	int dbg_level_;
 
-	TSS_CONTEXT* tss_context_;
+	TSS_CONTEXT* tss_context_{nullptr};
 	std::string data_dir_;
-	Log_ptr log_ptr_;
+	Log_ptr log_ptr_{new Null_log};
 	std::string last_error_;
 
 	const TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;

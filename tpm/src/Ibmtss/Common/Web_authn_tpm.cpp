@@ -116,7 +116,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 		last_error_="Web_authn_tpm: setup: failed - uncaught exception";
 	}
 
-	log(1,"TPM setup complete");
+	log(1,vars_to_string("TPM setup completed with rc=",rc));
 
 	return rc;
 }
@@ -557,42 +557,25 @@ TPM_RC Web_authn_tpm::flush_data()
 
 Web_authn_tpm::~Web_authn_tpm()
 {
-	log(1,"Tidying up");
+	log(1,"Tidying up ...");
+
 	if (user_handle_!=0) {
 		flush_context(tss_context_,user_handle_);
+		user_handle_=0;
 	}
+
 	if (rp_handle_!=0) {
 		flush_context(tss_context_,rp_handle_);
+		rp_handle_=0;
 	}
+
 	if (tss_context_)
 	{
 		shutdown(tss_context_);
 		TSS_Delete(tss_context_);
+	    tss_context_=nullptr;
 	}
-    tss_context_=nullptr;
 	release_memory();
-}
-
-void ba_copy(Byte_array& lhs, Byte_array const& rhs)
-{
-	if (&lhs!=&rhs)
-	{
-		release_byte_array(lhs);		
-		lhs.size=rhs.size;
-		lhs.data=new Byte[lhs.size];
-		if (lhs.data==nullptr)
-		{
-			std::cerr << "Unable to aloocate memory the a Byte_array\n";
-			exit(1);
-		}
-		memcpy(lhs.data,rhs.data,rhs.size);
-	}
-}
-
-void tba_copy(Two_byte_arrays&lhs, Two_byte_arrays const& rhs)
-{
-	ba_copy(lhs.one,rhs.one);
-	ba_copy(lhs.two,rhs.two);
 }
 
 // Temporary member functions for testing
@@ -603,12 +586,18 @@ Byte_array Web_authn_tpm::get_byte_array()
 
 void Web_authn_tpm::put_byte_array(Byte_array ba)
 {
-	ba_copy(ba_,ba);
+	copy_byte_array(ba_,ba);
 }
 
 Two_byte_arrays Web_authn_tpm::get_two_byte_arrays()
 {
 	return tba_;
+}
+
+void tba_copy(Two_byte_arrays&lhs, Two_byte_arrays const& rhs)
+{
+	copy_byte_array(lhs.one,rhs.one);
+	copy_byte_array(lhs.two,rhs.two);
 }
 
 void Web_authn_tpm::put_two_byte_arrays(Two_byte_arrays tba)

@@ -86,11 +86,17 @@ int main(int argc, char *argv[])
 		std::cout << "Two_byte_arrays transfers failed\n";
 	}
 
-	uninstall_tpm(v_tpm_ptr);
-
 	release_byte_array(ba);
 	release_byte_array(tba.one);
 	release_byte_array(tba.two);
+
+	uninstall_tpm(v_tpm_ptr);
+
+	std::cout << "Re-install the wa_tpm class\n";
+	v_tpm_ptr=install_tpm();
+
+	std::cout << "Now directly un-install the wa_tpm class\n";
+	uninstall_tpm(v_tpm_ptr);
 
     return EXIT_SUCCESS;
 }
