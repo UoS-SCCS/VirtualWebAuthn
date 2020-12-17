@@ -46,7 +46,8 @@ Proof of concept implementation, currently status:
 * Additional Attestation Types
 * ~~Documentation~~ code level documentation complete - all functions/methods classes
 * Expand to handle different simultaneous TPM and non-TPM crypto providers for the same algorithm
-_You should now run DICEKey.py to start the authenticator_
+
+**You should now run dice_key.py to start the authenticator**
 
 ## Setup
 I would recommed performing the following in a Virtual Machine, I've tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device.
