@@ -3,10 +3,16 @@
 Classes:
     DICEKey
 """
+import os
 import logging
 import getpass
+import base64
 #for x509 cert
 from uuid import UUID
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
 
 from crypto.crypto_provider import AuthenticatorCryptoProvider,CRYPTO_PROVIDERS
 from crypto.tpm_es256_crypto_provider import TPMES256CryptoProvider
@@ -19,14 +25,14 @@ from authenticator.datatypes import (DICEAuthenticatorException,AuthenticatorGet
     PublicKeyCredentialParameters,AuthenticatorVersion)
 from authenticator.cbor import (GetAssertionResp,MakeCredentialResp,GetClientPINResp,
     GetInfoResp,ResetResp,AUTHN_GETINFO_OPTION,AUTHN_GETINFO_TRANSPORT,AUTHN_GETINFO_VERSION)
-from authenticator.json_storage import JSONAuthenticatorStorage, EncryptedJSONAuthenticatorStorage
-
+from authenticator.json_storage import EncryptedJSONAuthenticatorStorage
+from authenticator.ui import QTAuthenticatorUI
 import ctap.constants
 from ctap.credential_source import PublicKeyCredentialSource
 from ctap.keep_alive import CTAPHIDKeepAlive
 from ctap.attestation import AttestationObject
 
-from authenticator.ui import QTAuthenticatorUI
+
 
 log = logging.getLogger('debug')
 auth = logging.getLogger('debug.auth')
@@ -43,7 +49,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #super().__init__(ui=QTAuthenticatorUI())
         super().__init__(ui=QTAuthenticatorUI())
         #prepare authenticator
-
+        self._user_verification_capable = False
 
 
         self._providers = []
@@ -69,13 +75,60 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
         #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.RS256))
 
+    def validate_uv_check_value_exists(self, password:str)->bool:
+        """Checks that user verification value is set and working
+
+        Args:
+            password (str): password used to verify the user
+
+        Returns:
+            bool:True if valid, False if not
+        """
+        if self._storage.get_uv_value() is None:
+            salt = os.urandom(16)
+            kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
+                length=32,salt=salt,iterations=100000,backend=default_backend())
+            temp_key = base64.urlsafe_b64encode(kdf.derive(password.encode("UTF-8")))
+            fernet = Fernet(temp_key)
+            token = fernet.encrypt(os.urandom(32))
+            self._storage.set_uv_value(salt + token)
+            return True
+        return self.validate_uv_check_value(password)
+
+    def validate_uv_check_value(self, password:str)->bool:
+        """Validates the UV check value by decrypting it
+
+        Args:
+            password (str): password to check
+
+        Returns:
+            bool:True if valid, False if not
+        """
+        check_val = self._storage.get_uv_value()
+        salt = check_val[:16]
+        token = check_val[16:]
+        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
+            length=32,salt=salt,iterations=100000,backend=default_backend())
+        temp_key = base64.urlsafe_b64encode(kdf.derive(password.encode("UTF-8")))
+        fernet = Fernet(temp_key)
+        try:
+            fernet.decrypt(token)
+        except InvalidToken:
+            auth.debug("User verification failed")
+            return False
+        return True
 
     def post_ui_load(self):
         #will be called on a new thread
         log.debug("In post UI load method, asking for password")
         pwd = self._ui.get_user_password("Please enter your password:")
         log.debug("Initialising Encrypted Storage")
-        self._storage = EncryptedJSONAuthenticatorStorage("./data/auth_store.enc",pwd)
+        try:
+            self._storage = EncryptedJSONAuthenticatorStorage("./data/auth_store.enc",pwd)
+        except InvalidToken:
+            log.debug("Incorrect password entered")
+            self._ui.shutdown()
+            return
         if not self._storage.is_initialised():
             self._storage.init_new()
         #Generate PIN Key Agreement at Startup
@@ -87,13 +140,22 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         else:
             self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,False)
 
+        try:
+            self.validate_uv_check_value_exists(pwd)
+            self._user_verification_capable = True
+            self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.USER_VERIFICATION,True)
+            auth.debug("User Verification setup, advertising capability")
+        except InvalidToken:
+            log.debug("User verification check failed will set as not available")
+            self._user_verification_capable = False
         #Use this to reset
         #self._storage.delete_field("TPM_USER_KEY")
         tpm_user_key = self._storage.get_string("TPM_USER_KEY")
         tpm_crypto_provider = TPMES256CryptoProvider()
 
         if tpm_user_key is None:
-            self._storage.set_string("TPM_USER_KEY", tpm_crypto_provider.create_user_key(getpass.getuser(),pwd))
+            self._storage.set_string("TPM_USER_KEY",
+                tpm_crypto_provider.create_user_key(getpass.getuser(),pwd))
         else:
             tpm_crypto_provider.load_user_key(self._storage.get_string("TPM_USER_KEY"))
 
@@ -101,10 +163,12 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         self._providers.append(tpm_crypto_provider.get_alg())
 
     def shutdown(self):
-        """Shut down the authenticator
+        """Shuts down the authenticator
+
         """
         auth.debug("DICEKey shutdown called")
         super().shutdown()
+        AuthenticatorCryptoProvider.shutdown_providers()
 
 
     def get_aaguid(self)->UUID:
@@ -127,11 +191,29 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #TODO perform necessary checks
         keep_alive.start(DICEKey.KEEP_ALIVE_TIME_MS)
         #keep_alive.start()
-        user_presence = self._ui.check_user_presence(params.get_rp_entity().get_name() + " requests access to your Authenticator.")
+        user_verified = False
+        user_presence=False
+        if self._user_verification_capable and params.require_user_verification():
+            pwd = self._ui.check_user_verification("<b>"+params.get_rp_entity().get_name() + \
+                "</b> requests access to your Authenticator. \n\nEnter your password to authorise.")
+            if isinstance(pwd,bool):
+                if not pwd:
+                    raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Verification Denied")
+            if self.validate_uv_check_value(pwd):
+                auth.debug("User verified")
+                user_verified=True
+                user_presence=True
+            else:
+                raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Verification Denied")
+        else:
+            user_presence = self._ui.check_user_presence(
+                params.get_rp_entity().get_name() + " requests access to your Authenticator.")
 
-        if not user_presence:
-            raise DICEAuthenticatorException(
-                ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Presence Denied")
+            if not user_presence:
+                raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Presence Denied")
 
         auth.debug("Make Credential called, req resident: %s, with params: %s",
             params.get_require_resident_key(), params)
@@ -148,7 +230,14 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             auth.error("No matching public key provider found")
             raise Exception("No matching provider found")
 
-        uv = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),params.get_hash())
+        # We shouldn't have got here with user_verified as false having performed
+        # a user verification - it should error out. As such, this will not override
+        # a previous False value, just set it to True if no user verification was
+        # performed
+        user_verified = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),
+            params.get_hash())
+
+
 
         credential_source=PublicKeyCredentialSource()
         keypair = provider.create_new_key_pair(params.get_rp_entity().get_id())
@@ -165,7 +254,8 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
                     self._storage.get_wrapping_key(),credential_source))
 
 
-        authenticator_data = self._get_authenticator_data(credential_source,user_presence,uv)
+        authenticator_data = self._get_authenticator_data(credential_source,
+            user_presence,user_verified)
 
         attest_object = AttestationObject.create_packed_self_attestation_object(
             credential_source,authenticator_data,params.get_hash())
@@ -199,16 +289,37 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
                 ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)
 
         credential_source = creds[0]
-        uv = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),
+        user_verified = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),
             params.get_hash(),False)
 
-        user_presence = self._ui.check_user_presence(params.get_rp_id() + " requests access to your Authenticator.")
 
-        if not user_presence:
-            raise DICEAuthenticatorException(
-                ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Presence Denied")
+        user_verified = False
+        user_presence=False
+        if self._user_verification_capable and params.require_user_verification():
+            pwd = self._ui.check_user_verification("<b>" + params.get_rp_id() +"</b>" + \
+                " requests access to your Authenticator. \n\nEnter your password to authorise.")
+            if isinstance(pwd,bool):
+                if not pwd:
+                    raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Verification Denied")
+            if self.validate_uv_check_value(pwd):
+                auth.debug("User verified")
+                user_verified=True
+                user_presence=True
+            else:
+                raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Verification Denied")
+        else:
+            user_presence = self._ui.check_user_presence(
+                "<b>" + params.get_rp_id() + "</b> requests access to your Authenticator.")
 
-        authenticator_data = self._get_authenticator_data_minus_creds(credential_source,True,uv)
+            if not user_presence:
+                raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Presence Denied")
+
+
+        authenticator_data = self._get_authenticator_data_minus_creds(
+            credential_source,user_presence,user_verified)
 
         # Contains the following data
         #   credential  0x01    definite length map (CBOR major type 5).
@@ -392,4 +503,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

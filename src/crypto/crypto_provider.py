@@ -187,6 +187,17 @@ class AuthenticatorCryptoProvider(ABC):
         """
         CRYPTO_PROVIDERS[provider.get_alg()]=provider
 
+    @classmethod
+    def shutdown_providers(cls):
+        """Calls shutdown on providers to allow them to clean up and gracefully close
+        """
+        for prov in CRYPTO_PROVIDERS:
+            prov.shutdown()
+
+    def shutdown(self):
+        """Override to implement additional shutdown operations, like clearing a TPM
+        """
+
     @abstractmethod
     def create_new_key_pair(self,relying_party:str=None)->AuthenticatorCryptoKeyPair:
         """Generate a new key pair using this crypto provider

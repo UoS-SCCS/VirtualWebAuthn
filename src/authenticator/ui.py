@@ -105,6 +105,10 @@ class DICEAuthenticatorUI(ABC):
         """Creates the UI but doesn't show it yet
         """
 
+    @abstractmethod
+    def shutdown(self):
+        """Requests the UI to initiate a shutdown, equivalent to exit in the UI
+        """
     def fire_event_shutdown(self):
         """Fires the shutdown event to all listeners
         """
@@ -162,6 +166,10 @@ class ConsoleAuthenticatorUI(DICEAuthenticatorUI):
     def create(self):
         pass
 
+    def shutdown(self):
+        self.fire_event_shutdown()
+        sys.exit(0)
+
 @unique
 class DICE_UI_Event(Enum):
     SHOW_UP = QEvent.Type(QEvent.registerEventType())
@@ -180,12 +188,14 @@ class QTAuthenticatorUIApp(QApplication):
         super().__init__([])
         self.pwd_box = None
         self.dialog = None
-
+        self.pwd_box_uv = None
     def customEvent(self, event):
         if event.dice_type == DICE_UI_Event.SHOW_UP:
             self.show_user_presence(event.msg)
         if event.dice_type == DICE_UI_Event.SHOW_PWD:
             self.get_user_password(event.msg)
+        if event.dice_type == DICE_UI_Event.SHOW_UV:
+            self.get_user_verification(event.msg)
 
 
     def show_user_presence(self, msg:str="User Presence Check"):
@@ -267,7 +277,57 @@ class QTAuthenticatorUIApp(QApplication):
 
 
         screen_shape = QDesktopWidget().screenGeometry()
-        self.dialog.setGeometry(screen_shape.width()-440,0,350,125)
+
+        self.pwd_box.setFocus()
+        self.dialog.setGeometry(screen_shape.width()-440,0,350,200)
+        self.dialog.show()
+
+    def get_user_verification(self, msg:str="Enter Password"):
+        self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.dialog.setAttribute(Qt.WA_TranslucentBackground)
+        parent_path = os.path.dirname(os.path.abspath(__file__))
+        outer_layout = QVBoxLayout(self.dialog)
+        outer_layout.setContentsMargins(0,0,0,0)
+        outer_frame = QFrame()
+
+        outer_frame.setProperty("bgFrame",True)
+        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n*[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +") 0 0 0 0 stretch stretch;}")
+        outer_layout.addWidget(outer_frame)
+        layout = QVBoxLayout(outer_frame)
+        header = QLabel("DICE Key Notification");
+        header.setObjectName("header")
+        header.setAlignment(Qt.AlignCenter)
+        layout.addWidget(header)
+        label = QLabel(msg)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+        frame = QFrame()
+        blayout = QHBoxLayout(frame)
+        self.pwd_box_uv = QLineEdit()
+        self.pwd_box_uv.setEchoMode(QLineEdit.Password)
+        blayout.addWidget(self.pwd_box_uv)
+        frame.setLayout(blayout)
+        layout.addWidget(frame)
+
+        framebtn = QFrame()
+        btnlayout = QHBoxLayout(framebtn)
+        allow_button = QPushButton("Allow")
+        deny_button = QPushButton("Deny")
+        allow_button.clicked.connect(lambda:self._uv_button_clicked(True))
+        deny_button.clicked.connect(lambda:self._uv_button_clicked(False))
+        btnlayout.addWidget(allow_button)
+        btnlayout.addWidget(deny_button)
+        framebtn.setLayout(btnlayout)
+        layout.addWidget(framebtn)
+
+        outer_frame.setLayout(layout)
+        self.dialog.setLayout(outer_layout)
+
+
+        screen_shape = QDesktopWidget().screenGeometry()
+        self.dialog.setGeometry(screen_shape.width()-440,0,350,200)
+        self.pwd_box_uv.setFocus()
         self.dialog.show()
 
     def _perm_button_clicked(self, outcome:bool):
@@ -280,6 +340,16 @@ class QTAuthenticatorUIApp(QApplication):
     def _submit_pwd_button_clicked(self):
         global result
         result = self.pwd_box.text()
+        self.dialog.close()
+        result_available.set()
+
+
+    def _uv_button_clicked(self, approved:bool):
+        global result
+        if approved:
+            result = self.pwd_box_uv.text()
+        else:
+            result = False
         self.dialog.close()
         result_available.set()
 
@@ -377,9 +447,16 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         return result
 
     def check_user_verification(self, msg:str=None):
-        pass
+        dice_event = DICEEvent(DICE_UI_Event.SHOW_UV)
+        dice_event.set_message(msg)
+        self._reset_lock()
+        #QApplication.sendEvent(self.app,dice_event)
+        QApplication.postEvent(self.app,dice_event)
+        result_available.wait()
+        return result
 
-
+    def shutdown(self):
+        self._quit()
     def _quit(self):
         for listener in self._listeners:
             listener.shutdown()

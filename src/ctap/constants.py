@@ -276,7 +276,7 @@ class AUTHN_MAKE_CREDENTIAL(Enum):
     PIN_AUTH = 8
     PIN_PROTOCOL = 9
     OPTIONS_RK = "rk"
-    OPTIONS_UV = "UV"
+    OPTIONS_UV = "uv"
 
 
 @unique
