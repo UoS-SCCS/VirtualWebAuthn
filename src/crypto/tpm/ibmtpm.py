@@ -1,4 +1,25 @@
+"""Contains the TPM classes for interfacing with the C TPM wrapper
 
+Includes a series of C structs for use with ctypes and various
+wrapper classes as well as the core TPM class
+
+Structs:
+    ByteArrayStr
+    TwoByteArrays
+    KeyData
+    KeyECCPoint
+    RelyingPartyKey
+    ECDSASig
+Wrapper Classes:
+    DICEECDSASig
+    DICEKeyPoint
+    DICERelyingPartyKey
+    DICEKeyData
+Classes:
+    TPM
+    TPMException
+
+"""
 import ctypes
 import os
 
@@ -8,7 +29,6 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import utils
 from cryptography.hazmat.primitives.asymmetric.ec import (EllipticCurvePublicKey,
     EllipticCurvePublicNumbers)
-from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
 class ByteArray(ctypes.Structure):
@@ -287,7 +307,8 @@ class TPM():
         if not os.path.exists(TPM.LIB_PATH):
             raise TPMException("TPM Library cannot be found at: " + TPM.LIB_PATH)
 
-        if not 'LD_LIBRARY_PATH' in os.environ or os.environ['LD_LIBRARY_PATH'].find("/opt/ibmtss/utils")<0:
+        if not 'LD_LIBRARY_PATH' in os.environ or \
+            os.environ['LD_LIBRARY_PATH'].find("/opt/ibmtss/utils")<0:
             raise TPMException("/opt/ibmtss/utils should be on the LD_LIBRARY_PATH")
 
         if not 'PATH' in os.environ or os.environ['PATH'].find("/opt/ibmtss/utils")<0:
@@ -534,60 +555,3 @@ class TPM():
 
         """
         self._check_error(self._tpm.flush_data(self._tpm_ptr))
-
-
-    ###Test methods TODO delete
-    def get_byte_array(self)->bytes:
-        buf = self._tpm.get_byte_array(self._tpm_ptr)
-        return bytes(ctypes.string_at(buf.data, ctypes.sizeof(ctypes.c_byte) * buf.size))
-
-    def put_byte_array(self, data:bytes):
-        ptr = ctypes.cast(data, ctypes.POINTER(ctypes.c_byte))
-        my_byte_array = ByteArray(len(data),ptr)
-        self._tpm.put_byte_array(self._tpm_ptr,my_byte_array)
-
-    def get_two_byte_arrays(self)->{}:
-        buf = self._tpm.get_two_byte_arrays(self._tpm_ptr)
-        in_one=bytes(ctypes.string_at(buf.one.data, ctypes.sizeof(ctypes.c_byte) * buf.one.size))
-        in_two=bytes(ctypes.string_at(buf.two.data, ctypes.sizeof(ctypes.c_byte) * buf.two.size))
-        return {'one':in_one,'two':in_two}
-
-    def put_two_byte_arrays(self, one:bytes, two:bytes):
-        ptr_one = ctypes.cast(one, ctypes.POINTER(ctypes.c_byte))
-        one_byte_array = ByteArray(len(one),ptr_one)
-        ptr_two = ctypes.cast(two, ctypes.POINTER(ctypes.c_byte))
-        two_byte_array = ByteArray(len(two),ptr_two)
-        two_byte_arrays = TwoByteArrays(one_byte_array,two_byte_array)
-        self._tpm.put_two_byte_arrays(self._tpm_ptr,two_byte_arrays)
-
-import getpass
-
-def test_tpm():
-    tpm = TPM()
-    tpm.start_up_tpm()
-    user_key = tpm.create_and_load_user_key(getpass.getuser(),os.urandom(16).hex())
-    relying_party=tpm.create_and_load_rp_key("webauthn.io",os.urandom(16).hex(),user_key.password)
-    test2=relying_party.as_json()
-
-    new_key = DICERelyingPartyKey.from_json(test2)
-
-    print(test2)
-    print(new_key.as_json())
-    tpm.load_rp_key(new_key,user_key.password)
-
-    msg = "This is a sig test".encode("UTF-8")
-    hash_alg = hashes.Hash(hashes.SHA256(),default_backend())
-    hash_alg.update(msg)
-    digest= hash_alg.finalize()
-
-    sig = tpm.sign_using_rp_key(relying_party.username,digest,relying_party.password)
-    der_sig = sig.get_as_der_encoded_signature()
-
-    relying_party.get_as_ec_public_key().verify(der_sig,msg,ec.ECDSA(hashes.SHA256()))
-    tpm.flush()
-    tpm.uninstall()
-    """
-    export TPM_INTERFACE_TYPE=socsim
-    export LD_LIBRARY_PATH=/opt/ibmtss/utils
-    export PATH=$PATH:/opt/ibmtss/utils
-    """
