@@ -76,6 +76,8 @@ It seems like user verification is hinged very much on registration. During a re
 The problem arises in that CTAP2 uses the UV flag in MakeCredential and GetAssertion responses as PIN checks. As such, the response will come back with UV set to True if the PinAuth was valid. If this is forwarded on to the RP (which it appears to be via the authenticatorData in the assertion), the RP will not be able to distinguish between genuine User Verification and PIN user verification.
 
 "User verification performed, but physical user presence not verified (a typical "smartcard scenario") " how is this possibly up=0, uv=1?
+
+Why is the ordering of PIN check and user verification different between makecredential and getassertion. Surely the PIN check should be performed first
 ## Token Binding
 Token binding is described throughout the WebAuthN standard, albeit as an optional parameter. However, there are some security questions with regards to whether it is important for ensuring security.
 
