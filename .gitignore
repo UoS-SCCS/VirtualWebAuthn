@@ -141,11 +141,12 @@ Create_USB_Gadget/*.mod
 Create_USB_Gadget/Module.*
 Create_USB_Gadget/modules.*
 
+data/
 # Prerequisites
 **/.d
 
 #vi swap files
-*.swp 
+*.swp
 
 # Compiled Object files
 *.o
@@ -165,3 +166,7 @@ Create_USB_Gadget/modules.*
 
 Tpm_src/Ibmtss/Test/Test_wa_tpm/ibmtss_test_wa_tpm
 Tpm_src/Ibmtss/Test/Test_wa_tpm_2/ibmtss_test_wa_tpm_2
+
+
+tpm/src/Ibmtss/Test/Test_wa_tpm/ibmtss_test_wa_tpm
+tpm/src/Ibmtss/Test/Test_wa_tpm_2/ibmtss_test_wa_tpm_2
