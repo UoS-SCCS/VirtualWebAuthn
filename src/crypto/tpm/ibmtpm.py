@@ -392,7 +392,7 @@ class TPM():
         """
         if self._tpm_ptr is None:
             raise TPMException("No TPM pointer set")
-
+        self.flush()
         self._tpm.uninstall_tpm(self._tpm_ptr)
         self._tpm_ptr = None
         self.tpm_started = False
