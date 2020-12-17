@@ -188,7 +188,7 @@ class AuthenticatorCryptoProvider(ABC):
         CRYPTO_PROVIDERS[provider.get_alg()]=provider
 
     @abstractmethod
-    def create_new_key_pair(self)->AuthenticatorCryptoKeyPair:
+    def create_new_key_pair(self,relying_party:str=None)->AuthenticatorCryptoKeyPair:
         """Generate a new key pair using this crypto provider
 
         This will implement the necessary algorithm for key generation and
@@ -196,6 +196,9 @@ class AuthenticatorCryptoProvider(ABC):
         AuthenticatorPrivateKey classes, before constructing an
         AuthenticatorCryptoKeyPair object
 
+        Args:
+            relying_party (str, optional): if set may be used during key generation as
+                an internal identifier, for example, on a TPM. Default is None
         Returns:
             AuthenticatorCryptoKeyPair: appropriately wrapped key pair
         """

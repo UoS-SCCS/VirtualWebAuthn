@@ -182,7 +182,40 @@ class DICEAuthenticatorStorage(ABC):
         Returns:
             bool: True if set, False if not
         """
+    @abstractmethod
+    def delete_field(self, key:str)->bool:
+        """Removes the specified key
 
+        Args:
+            key (str): key to remove
+
+        Returns:
+            bool: True if successful, False if not
+        """
+    @abstractmethod
+    def get_string(self, key:str)->str:
+        """Gets an arbitray string from the data store
+
+        This can be used to store additional arbitrary data, for
+        example, JSON encoded strings
+
+        Returns:
+            str: arbitrary string data or None if not set
+        """
+    @abstractmethod
+    def set_string(self, key:str, data:str)->bool:
+        """Sets an abitrary string in the data store
+
+        This can be used to store additional arbitrary data, for
+        example, JSON encoded strings
+
+        Args:
+            key (str): field key
+            data (str): data encoded as a string
+
+        Returns:
+            bool: True if stored, False if not
+        """
     @abstractmethod
     def has_wrapping_key(self)->bool:
         """Checks whether a wrapping key has been set

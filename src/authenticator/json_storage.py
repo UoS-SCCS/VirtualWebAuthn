@@ -198,6 +198,20 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         else:
             return None
 
+    def get_string(self, key:str)->str:
+        if key in self._data:
+            return self._data[key]
+        return None
+
+    def delete_field(self, key:str)->bool:
+        if key in self._data:
+            self._data.pop(key)
+            return self._write_to_json()
+        return False
+
+    def set_string(self, key:str, data:str)->bool:
+        self._data[key] = data
+        return self._write_to_json()
 
     def reset(self)->bool:
         self._data={"_version":"JSONAuthenticatorStorage_0.1"}

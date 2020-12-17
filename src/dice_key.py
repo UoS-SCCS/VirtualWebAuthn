@@ -4,7 +4,7 @@ Classes:
     DICEKey
 """
 import logging
-
+import getpass
 #for x509 cert
 from uuid import UUID
 
@@ -45,9 +45,9 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #prepare authenticator
 
 
-        AuthenticatorCryptoProvider.add_provider(TPMES256CryptoProvider())
+
         self._providers = []
-        self._providers.append(TPMES256CryptoProvider().get_alg())
+
 
         self._credential_wrapper = AESCredentialWrapper()
         #This can be user configurable
@@ -87,11 +87,23 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         else:
             self.get_info_resp.set_option(AUTHN_GETINFO_OPTION.CLIENT_PIN,False)
 
+        #Use this to reset
+        #self._storage.delete_field("TPM_USER_KEY")
+        tpm_user_key = self._storage.get_string("TPM_USER_KEY")
+        tpm_crypto_provider = TPMES256CryptoProvider()
+
+        if tpm_user_key is None:
+            self._storage.set_string("TPM_USER_KEY", tpm_crypto_provider.create_user_key(getpass.getuser(),pwd))
+        else:
+            tpm_crypto_provider.load_user_key(self._storage.get_string("TPM_USER_KEY"))
+
+        AuthenticatorCryptoProvider.add_provider(tpm_crypto_provider)
+        self._providers.append(tpm_crypto_provider.get_alg())
 
     def shutdown(self):
         """Shut down the authenticator
         """
-        auth.log("DICEKey shutdown called")
+        auth.debug("DICEKey shutdown called")
         super().shutdown()
 
 
@@ -139,7 +151,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         uv = self._check_pin(params.get_pin_auth(),params.get_pin_protocol(),params.get_hash())
 
         credential_source=PublicKeyCredentialSource()
-        keypair = provider.create_new_key_pair()
+        keypair = provider.create_new_key_pair(params.get_rp_entity().get_id())
         credential_source.init_new(provider.get_alg(),keypair,params.get_rp_entity(),
             params.get_user_entity())
 

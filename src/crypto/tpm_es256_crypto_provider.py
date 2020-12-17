@@ -9,6 +9,8 @@ Classes:
     ECCryptoPublicKey
     ES256CryptoProvider
 """
+import os
+import json
 from binascii import b2a_hex
 
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -24,62 +26,51 @@ from crypto.crypto_provider import (AuthenticatorCryptoProvider,
     AuthenticatorCryptoKeyPair, AuthenticatorCryptoPublicKey,
     AuthenticatorCryptoPrivateKey)
 
-class ECCryptoKeyPair(AuthenticatorCryptoKeyPair):
+from crypto.tpm.ibmtpm import TPM,DICEKeyData, DICERelyingPartyKey
+
+class TPMECCryptoKeyPair(AuthenticatorCryptoKeyPair):
     """Creates Elliptic Curve Key Pair
     """
-    def __init__(self, private_key:EllipticCurvePrivateKeyWithSerialization):
+    def __init__(self, private_key:DICERelyingPartyKey, tpm:TPM):
         """Initialise Elliptic Curve Crypto Key Pair from private key
 
         Args:
             private_key (EllipticCurvePrivateKeyWithSerialization): Underlying python crypto
                 private key
         """
-        super().__init__(ECCryptoPublicKey(private_key.public_key()),
-            ECCryptoPrivateKey(private_key))
+
+        super().__init__(TPMECCryptoPublicKey(private_key.get_as_ec_public_key()), TPMECCryptoPrivateKey(private_key,tpm))
+        self._private_key = private_key
 
     def get_encoded(self)->bytes:
-        return self._sk.get_private_key().private_bytes(Encoding.PEM,
-            PrivateFormat.PKCS8,NoEncryption())
+        return json.dumps(self._private_key.as_json()).encode("UTF-8")
 
-class ECCryptoPrivateKey(AuthenticatorCryptoPrivateKey):
+class TPMECCryptoPrivateKey(AuthenticatorCryptoPrivateKey):
     """Represents an Elliptic Curve private key
     """
-    def __init__(self, private_key:EllipticCurvePrivateKeyWithSerialization):
+    def __init__(self, private_key:DICERelyingPartyKey, tpm:TPM):
         """Initialise Elliptic Curve Crypto Private Key instance
 
         Args:
             private_key (EllipticCurvePrivateKeyWithSerialization): underlying private key
         """
         super().__init__(private_key)
-        self._sk = private_key
+        self._private_key = private_key
+        self._tpm = tpm
 
     def get_private_key(self):
-        return self._sk
+        return self._private_key
 
     def sign(self,msg:bytes):
-        return self._sk.sign(msg,ec.ECDSA(hashes.SHA256()))
+        hash_alg = hashes.Hash(hashes.SHA256(),default_backend())
+        hash_alg.update(msg)
+        digest= hash_alg.finalize()
+        return self._tpm.sign_using_rp_key(self._private_key.username,digest,self._private_key.password).get_as_der_encoded_signature()
 
     def get_encoded(self)->bytes:
-        self._sk.get_private_key().private_bytes(Encoding.PEM,PrivateFormat.PKCS8,NoEncryption())
+        return json.dumps(self._private_key.as_json()).encode("UTF-8")
 
-    def exchange(self,other_public_key:EllipticCurvePublicKey)->bytes:
-        """Performs first part of DH Key Exchange. This is required for
-        the PIN handling in CTAP. Note, this is not required for non-ES256
-        classes since the algorithm for PIN handling is fixed
-
-        This is not a standard ECDH key exchange, only part of it as per CTAP
-
-        Args:
-            other_public_key (EllipticCurvePublicKey): The other public key in the exchange
-
-        Returns:
-            bytes: hashed result of exchange as per CTAP standard
-        """
-        hash_alg = hashes.Hash(hashes.SHA256(),default_backend())
-        hash_alg.update(self._sk.exchange(ec.ECDH(), other_public_key))
-        return hash_alg.finalize()
-
-class ECCryptoPublicKey(AuthenticatorCryptoPublicKey):
+class TPMECCryptoPublicKey(AuthenticatorCryptoPublicKey):
     """Elliptic Curve Public Key
 
     """
@@ -109,7 +100,7 @@ class ECCryptoPublicKey(AuthenticatorCryptoPublicKey):
         Returns:
             ECCryptoPublicKey: instance of the public key
         """
-        return ECCryptoPublicKey(EllipticCurvePublicNumbers(
+        return TPMECCryptoPublicKey(EllipticCurvePublicNumbers(
                 int(b2a_hex(cose_data[-2]), 16),int(b2a_hex(cose_data[-3]), 16),
                 ec.SECP256R1()).public_key(default_backend()))
 
@@ -120,15 +111,46 @@ class TPMES256CryptoProvider(AuthenticatorCryptoProvider):
     def __init__(self):
         super().__init__()
         self._alg = -7 #cose algorithm number
+        self._tpm = TPM()
+        self._tpm.start_up_tpm(data_dir="./data/tpm")
+        self._user_key_data = None
 
-    def create_new_key_pair(self)->AuthenticatorCryptoKeyPair:
+    def create_user_key(self, username:str, password:str)->str:
+        """Creates a TPM user key and returns it encoded as string for storage
+
+        Args:
+            username (str): username
+            password (str): password
+
+        Returns:
+            (str): JSON encoded string of the user key
+        """
+        self._user_key_data=self._tpm.create_and_load_user_key(username,password)
+        return json.dumps(self._user_key_data.as_json())
+
+    def load_user_key(self, key_data:str):
+        """Loads the user key from JSON encoded key data
+
+        Args:
+            key_data (str): JSON encoded string data
+        """
+        self._user_key_data = DICEKeyData.from_json(json.loads(key_data))
+        self._tpm.load_user_key(self._user_key_data)
+
+    def create_new_key_pair(self, relying_party:str=None)->AuthenticatorCryptoKeyPair:
         #https://tools.ietf.org/html/draft-ietf-cose-webauthn-algorithms-04 specifies SECP256K1
-        return ECCryptoKeyPair(ec.generate_private_key(ec.SECP256R1,default_backend()))
+        return TPMECCryptoKeyPair(self._tpm.create_and_load_rp_key(relying_party,os.urandom(16).hex(),self._user_key_data.password),self._tpm)
 
-    def load_key_pair(self, data:bytes)->ECCryptoKeyPair:
-        return ECCryptoKeyPair(serialization.load_pem_private_key(data,
-            None, backend=default_backend()))
+    def load_key_pair(self, data:bytes)->TPMECCryptoKeyPair:
+        dice_relying_party_key = DICERelyingPartyKey.from_json(json.loads(data.decode("UTF-8")))
+        self._tpm.load_rp_key(dice_relying_party_key,self._user_key_data.password)
+        return TPMECCryptoKeyPair(dice_relying_party_key,self._tpm)
 
-    def public_key_from_cose(self, cose_data:{})->ECCryptoPublicKey:
-        return ECCryptoPublicKey.from_cose(cose_data)
-        
+    def public_key_from_cose(self, cose_data:{})->TPMECCryptoPublicKey:
+        return TPMECCryptoPublicKey.from_cose(cose_data)
+
+    def clean_up(self):
+        """Cleans up the underlying TPM and unloads it from memory
+        """
+        self._tpm.flush()
+        self._tpm.uninstall()

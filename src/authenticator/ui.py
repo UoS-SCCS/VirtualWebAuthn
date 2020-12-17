@@ -304,6 +304,14 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
 
 
 
+
+
+
+    def start(self):
+        #QTimer.singleShot(50, self.fire_post_ui_loaded)
+        thread = threading.Thread(target=self.fire_post_ui_loaded)
+        thread.setDaemon(True)
+        thread.start()
         parent_path = os.path.dirname(os.path.abspath(__file__))
         # Create the icon
         icon = QIcon(parent_path + "/icons/die.png")
@@ -338,13 +346,6 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         self.menu = menu
         # Add the menu to the tray
         self.tray.setContextMenu(menu)
-
-
-    def start(self):
-        #QTimer.singleShot(50, self.fire_post_ui_loaded)
-        thread = threading.Thread(target=self.fire_post_ui_loaded)
-        thread.setDaemon(True)
-        thread.start()
         self.app.exec_()
 
     def _test_method(self):

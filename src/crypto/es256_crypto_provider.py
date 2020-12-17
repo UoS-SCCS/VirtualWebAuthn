@@ -121,7 +121,7 @@ class ES256CryptoProvider(AuthenticatorCryptoProvider):
         super().__init__()
         self._alg = -7 #cose algorithm number
 
-    def create_new_key_pair(self)->AuthenticatorCryptoKeyPair:
+    def create_new_key_pair(self,relying_party:str=None)->AuthenticatorCryptoKeyPair:
         #https://tools.ietf.org/html/draft-ietf-cose-webauthn-algorithms-04 specifies SECP256K1
         return ECCryptoKeyPair(ec.generate_private_key(ec.SECP256R1,default_backend()))
 
@@ -131,4 +131,3 @@ class ES256CryptoProvider(AuthenticatorCryptoProvider):
 
     def public_key_from_cose(self, cose_data:{})->ECCryptoPublicKey:
         return ECCryptoPublicKey.from_cose(cose_data)
-        
