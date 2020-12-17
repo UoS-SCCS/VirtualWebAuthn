@@ -14,11 +14,9 @@ import json
 from binascii import b2a_hex
 
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.serialization import (PrivateFormat,
-    Encoding, NoEncryption)
 from cryptography.hazmat.primitives.asymmetric.ec import (EllipticCurvePublicKey,
-    EllipticCurvePublicNumbers, EllipticCurvePrivateKeyWithSerialization)
-from cryptography.hazmat.primitives import hashes, serialization
+    EllipticCurvePublicNumbers)
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
 from fido2.cose import ES256
@@ -39,7 +37,8 @@ class TPMECCryptoKeyPair(AuthenticatorCryptoKeyPair):
                 private key
         """
 
-        super().__init__(TPMECCryptoPublicKey(private_key.get_as_ec_public_key()), TPMECCryptoPrivateKey(private_key,tpm))
+        super().__init__(TPMECCryptoPublicKey(private_key.get_as_ec_public_key()),
+            TPMECCryptoPrivateKey(private_key,tpm))
         self._private_key = private_key
 
     def get_encoded(self)->bytes:
@@ -65,7 +64,8 @@ class TPMECCryptoPrivateKey(AuthenticatorCryptoPrivateKey):
         hash_alg = hashes.Hash(hashes.SHA256(),default_backend())
         hash_alg.update(msg)
         digest= hash_alg.finalize()
-        return self._tpm.sign_using_rp_key(self._private_key.username,digest,self._private_key.password).get_as_der_encoded_signature()
+        return self._tpm.sign_using_rp_key(self._private_key.username,digest,
+            self._private_key.password).get_as_der_encoded_signature()
 
     def get_encoded(self)->bytes:
         return json.dumps(self._private_key.as_json()).encode("UTF-8")
@@ -139,7 +139,8 @@ class TPMES256CryptoProvider(AuthenticatorCryptoProvider):
 
     def create_new_key_pair(self, relying_party:str=None)->AuthenticatorCryptoKeyPair:
         #https://tools.ietf.org/html/draft-ietf-cose-webauthn-algorithms-04 specifies SECP256K1
-        return TPMECCryptoKeyPair(self._tpm.create_and_load_rp_key(relying_party,os.urandom(16).hex(),self._user_key_data.password),self._tpm)
+        return TPMECCryptoKeyPair(self._tpm.create_and_load_rp_key(relying_party,
+            os.urandom(16).hex(),self._user_key_data.password),self._tpm)
 
     def load_key_pair(self, data:bytes)->TPMECCryptoKeyPair:
         dice_relying_party_key = DICERelyingPartyKey.from_json(json.loads(data.decode("UTF-8")))
@@ -149,6 +150,8 @@ class TPMES256CryptoProvider(AuthenticatorCryptoProvider):
     def public_key_from_cose(self, cose_data:{})->TPMECCryptoPublicKey:
         return TPMECCryptoPublicKey.from_cose(cose_data)
 
+    def shutdown(self):
+        self.clean_up()
     def clean_up(self):
         """Cleans up the underlying TPM and unloads it from memory
         """
