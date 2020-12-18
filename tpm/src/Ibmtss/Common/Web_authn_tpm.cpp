@@ -527,7 +527,6 @@ void Web_authn_tpm::log(int dbg_level, std::string const& str)
 
 TPM_RC Web_authn_tpm::flush_data()
 {
-
 	log(1, "flush_data");
 	release_memory();
 
@@ -559,13 +558,20 @@ Web_authn_tpm::~Web_authn_tpm()
 {
 	log(1,"Tidying up ...");
 
+	TPM_RC rc=0;
 	if (user_handle_!=0) {
-		flush_context(tss_context_,user_handle_);
+		rc=flush_context(tss_context_,user_handle_);
+		if (rc!=0) {
+			log_ptr->os() << "Falied to flush the user key, handle: " << user_handle_ << '\n';
+		}
 		user_handle_=0;
 	}
 
 	if (rp_handle_!=0) {
-		flush_context(tss_context_,rp_handle_);
+		rc=flush_context(tss_context_,rp_handle_);
+		if (rc!=0) {
+			log_ptr->os() << "Falied to flush the RP key, handle: " << rp_handle_ << std::endl;
+		}
 		rp_handle_=0;
 	}
 
