@@ -57,7 +57,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
         self._credential_wrapper = AESCredentialWrapper()
         #This can be user configurable
-        self.default_to_rk=True
+
 
 
         #self._providers_idx = {}
@@ -124,7 +124,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         pwd = self._ui.get_user_password("Please enter your password:")
         log.debug("Initialising Encrypted Storage")
         try:
-            self._storage = EncryptedJSONAuthenticatorStorage("./data/auth_store.enc",pwd)
+            self._storage = EncryptedJSONAuthenticatorStorage(self._prefs.get_auth_store_path(),pwd)
         except InvalidToken:
             log.debug("Incorrect password entered")
             self._ui.shutdown()
@@ -188,7 +188,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
     def authenticator_make_credential(self, params:AuthenticatorMakeCredentialParameters,
             keep_alive:CTAPHIDKeepAlive) -> MakeCredentialResp:
-        #TODO perform necessary checks
+
         keep_alive.start(DICEKey.KEEP_ALIVE_TIME_MS)
         #keep_alive.start()
         user_verified = False
@@ -199,7 +199,8 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             if isinstance(pwd,bool):
                 if not pwd:
                     raise DICEAuthenticatorException(
-                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED, "User Verification Denied")
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_OPERATION_DENIED,
+                         "User Verification Denied")
             if self.validate_uv_check_value(pwd):
                 auth.debug("User verified")
                 user_verified=True
@@ -245,7 +246,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             params.get_user_entity())
 
         #If requested to be an RK store as RK, or if default is RK set to
-        if params.get_require_resident_key() or self.default_to_rk:
+        if params.get_require_resident_key() or self._prefs.get_resident_key():
             self._storage.add_credential_source(params.get_rp_entity().get_id(),
                 params.get_user_entity(),credential_source)
         else:
@@ -283,7 +284,6 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
 
         number_of_credentials = len(creds)
 
-        #TODO Implement User verification
         if number_of_credentials < 1:
             raise DICEAuthenticatorException(
                 ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_NO_CREDENTIALS)

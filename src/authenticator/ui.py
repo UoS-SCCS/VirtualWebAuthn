@@ -172,24 +172,45 @@ class ConsoleAuthenticatorUI(DICEAuthenticatorUI):
 
 @unique
 class DICE_UI_Event(Enum):
+    """Enum to define different event types in the DICE app
+
+    """
     SHOW_UP = QEvent.Type(QEvent.registerEventType())
     SHOW_UV = QEvent.Type(QEvent.registerEventType())
     SHOW_PWD = QEvent.Type(QEvent.registerEventType())
 class DICEEvent(QEvent):
+    """Holds a DICE Event that represents one of the types
+    and potentially includes a message as well
+
+    """
     def __init__(self,action:DICE_UI_Event):
         QEvent.__init__(self, action.value)
         self.dice_type = action
         self.msg = ""
     def set_message(self, msg:str):
+        """Sets the underlying message for this event
+
+        Args:
+            msg (str): Message for this event
+        """
         self.msg = msg
 
 class QTAuthenticatorUIApp(QApplication):
+    """QT5 UI with system tray icon
+
+    """
     def __init__(self):
         super().__init__([])
         self.pwd_box = None
         self.dialog = None
         self.pwd_box_uv = None
     def customEvent(self, event):
+        """Processes the custom event firing
+
+        Args:
+            event (DICEevent): event that has been fired
+        """
+
         if event.dice_type == DICE_UI_Event.SHOW_UP:
             self.show_user_presence(event.msg)
         if event.dice_type == DICE_UI_Event.SHOW_PWD:
@@ -198,7 +219,15 @@ class QTAuthenticatorUIApp(QApplication):
             self.get_user_verification(event.msg)
 
 
+
+
     def show_user_presence(self, msg:str="User Presence Check"):
+        """Shows the user presence check dialog
+
+        Args:
+            msg (str, optional): The message to show the user in dialog.
+                Defaults to "User Presence Check".
+        """
         self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.dialog.setAttribute(Qt.WA_TranslucentBackground)
         parent_path = os.path.dirname(os.path.abspath(__file__))
@@ -207,13 +236,10 @@ class QTAuthenticatorUIApp(QApplication):
         outer_frame = QFrame()
 
         outer_frame.setProperty("bgFrame",True)
-        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n*[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +") 0 0 0 0 stretch stretch;}")
+        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n\
+        *[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +")\
+             0 0 0 0 stretch stretch;}")
 
-
-        #background-image: url(" + parent_path +"/icons/bgpy.png" +"); background-repeat: no-repeat; background-size: auto;background-attachment: fixed}
-        #effect = QGraphicsDropShadowEffect()
-        #effect.setBlurRadius(5);
-        #self.dialog.setGraphicsEffect(effect);
         outer_layout.addWidget(outer_frame)
         layout = QVBoxLayout(outer_frame)
         header = QLabel("DICE Key Notification");
@@ -243,6 +269,12 @@ class QTAuthenticatorUIApp(QApplication):
         self.dialog.show()
 
     def get_user_password(self, msg:str="Enter Password"):
+        """Shows the user password dialog
+
+        Args:
+            msg (str, optional): The message to show the user in the dialog.
+                Defaults to "Enter Password".
+        """
         self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.dialog.setAttribute(Qt.WA_TranslucentBackground)
         parent_path = os.path.dirname(os.path.abspath(__file__))
@@ -251,7 +283,9 @@ class QTAuthenticatorUIApp(QApplication):
         outer_frame = QFrame()
 
         outer_frame.setProperty("bgFrame",True)
-        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n*[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +") 0 0 0 0 stretch stretch;}")
+        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n\
+        *[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +")\
+            0 0 0 0 stretch stretch;}")
         outer_layout.addWidget(outer_frame)
         layout = QVBoxLayout(outer_frame)
         header = QLabel("DICE Key Notification");
@@ -283,6 +317,12 @@ class QTAuthenticatorUIApp(QApplication):
         self.dialog.show()
 
     def get_user_verification(self, msg:str="Enter Password"):
+        """Shows the user verification dialog
+
+        Args:
+            msg (str, optional): Message to show the user in the dialog.
+                Defaults to "Enter Password".
+        """
         self.dialog = QDialog(flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.dialog.setAttribute(Qt.WA_TranslucentBackground)
         parent_path = os.path.dirname(os.path.abspath(__file__))
@@ -291,10 +331,12 @@ class QTAuthenticatorUIApp(QApplication):
         outer_frame = QFrame()
 
         outer_frame.setProperty("bgFrame",True)
-        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n*[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +") 0 0 0 0 stretch stretch;}")
+        outer_frame.setStyleSheet("#header {font-weight:bold; text-align:center;}\n\
+        *[bgFrame='true'] {border-image: url(" + parent_path +"/icons/bgpy.png" +")\
+             0 0 0 0 stretch stretch;}")
         outer_layout.addWidget(outer_frame)
         layout = QVBoxLayout(outer_frame)
-        header = QLabel("DICE Key Notification");
+        header = QLabel("DICE Key Notification")
         header.setObjectName("header")
         header.setAlignment(Qt.AlignCenter)
         layout.addWidget(header)
@@ -365,6 +407,7 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         self.object = None
         self.dialog = None
         self.user_presence_allow = False
+        self.menu = None
 
 
 
@@ -378,7 +421,6 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
 
 
     def start(self):
-        #QTimer.singleShot(50, self.fire_post_ui_loaded)
         thread = threading.Thread(target=self.fire_post_ui_loaded)
         thread.setDaemon(True)
         thread.start()
@@ -392,34 +434,18 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         self.tray.setVisible(True)
 
         # Create the menu
-        menu = QMenu()
-        prefs = QAction("Preferences")
-        prefs.triggered.connect(self._preferences)
-        menu.addAction(prefs)
-
-        user = QAction("Dummy User Presence")
-        user.triggered.connect(self._test_method)
-        menu.addAction(user)
-
-        #self.object = QObject()
-        #widget_action = QWidgetAction(menu)
-        #widget_action.setDefaultWidget(QCheckBox("Hello"))
-        #menu.addAction(widget_action)
-
-        action = QAction("A menu item")
-        menu.addAction(action)
+        self.menu = QMenu()
+        #prefs = QAction("Preferences")
+        #prefs.triggered.connect(self._preferences)
+        #self.menu.addAction(prefs)
 
         # Add a Quit option to the menu.
         quit_app = QAction("Quit")
         quit_app.triggered.connect(self._quit)
-        menu.addAction(quit_app)
-        self.menu = menu
+        self.menu.addAction(quit_app)
         # Add the menu to the tray
-        self.tray.setContextMenu(menu)
+        self.tray.setContextMenu(self.menu)
         self.app.exec_()
-
-    def _test_method(self):
-        print(self.check_user_presence("Relying Party: wishes to use your DICE Key"))
 
     def _preferences(self):
         pass
@@ -441,7 +467,6 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         dice_event = DICEEvent(DICE_UI_Event.SHOW_PWD)
         dice_event.set_message(msg)
         self._reset_lock()
-        #QApplication.sendEvent(self.app,dice_event)
         QApplication.postEvent(self.app,dice_event)
         result_available.wait()
         return result
@@ -450,7 +475,6 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         dice_event = DICEEvent(DICE_UI_Event.SHOW_UV)
         dice_event.set_message(msg)
         self._reset_lock()
-        #QApplication.sendEvent(self.app,dice_event)
         QApplication.postEvent(self.app,dice_event)
         result_available.wait()
         return result

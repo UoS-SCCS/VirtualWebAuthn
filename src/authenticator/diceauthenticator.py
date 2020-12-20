@@ -31,7 +31,7 @@ from authenticator.datatypes import (AuthenticatorVersion, AuthenticatorGetAsser
 from authenticator.cbor import (GetInfoResp, MakeCredentialResp,GetAssertionResp,GetClientPINResp,
     ResetResp,GetNextAssertionResp)
 from authenticator.ui import DICEAuthenticatorListener, DICEAuthenticatorUI, ConsoleAuthenticatorUI
-
+from authenticator.preferences import DICEPreferences
 from crypto.crypto_provider import AuthenticatorCryptoProvider
 from crypto.es256_crypto_provider import ES256CryptoProvider
 
@@ -66,10 +66,13 @@ class DICEAuthenticator(DICEAuthenticatorListener,ABC):
         self._generate_authenticator_key_agreement_key()
         self._generate_pin_token(pin_token_length)
         self._ui = ui
+        self._prefs = DICEPreferences()
         if not self._ui is None:
             self._ui.create()
             self._ui.add_listener(self)
 
+    def get_prefs(self)->DICEPreferences:
+        return self._prefs
 
     def shutdown(self):
         """Shutdown call to close and finish the USBHID connection
