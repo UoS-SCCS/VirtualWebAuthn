@@ -815,11 +815,12 @@ class AuthenticatorMakeCredentialParameters:
                     "pinProtocol not int")
 
         if AUTHN_MAKE_CREDENTIAL.OPTIONS.value in self.parameters:
-            if not isinstance(self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value], bool):
+
+            if AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value in self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value] and not isinstance(self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_RK.value], bool):
                 raise DICEAuthenticatorException(
                     ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,
                     "option rk not boolean")
-            if not isinstance(self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value], bool):
+            if AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value in self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value] and not isinstance(self.parameters[AUTHN_MAKE_CREDENTIAL.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value], bool):
                 raise DICEAuthenticatorException(
                     ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_CBOR_UNEXPECTED_TYPE,
                     "option uv not boolean")
