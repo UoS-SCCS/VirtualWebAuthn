@@ -631,7 +631,12 @@ class AuthenticatorGetAssertionParameters:
         Returns:
             bool: True if required, False if not
         """
-        return self.parameters[AUTHN_GET_ASSERTION.OPTIONS.value][AUTHN_MAKE_CREDENTIAL.OPTIONS_UV.value]
+        if AUTHN_GET_ASSERTION.OPTIONS.value in self.parameters:
+            if AUTHN_GET_ASSERTION.OPTIONS.value in \
+                self.parameters[AUTHN_GET_ASSERTION.OPTIONS.value]:
+                return self.parameters[AUTHN_GET_ASSERTION.OPTIONS.value][AUTHN_GET_ASSERTION.OPTIONS_UV.value]
+            return False
+        return False
     def get_allow_list(self)->[PublicKeyCredentialDescriptor]:
         """Get a list of allowed PublicKey Credential Descriptors
 

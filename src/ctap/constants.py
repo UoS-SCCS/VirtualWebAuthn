@@ -316,7 +316,7 @@ class AUTHN_GET_ASSERTION(Enum):
     PIN_AUTH = 6
     PIN_PROTOCOL = 7
     OPTIONS_RK = "rk"
-    OPTIONS_UV = "UV"
+    OPTIONS_UV = "uv"
 
 @unique
 class AUTHN_CMD(Enum):
