@@ -490,7 +490,9 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     #       UI Methods
     #==========================
     def menu_clicked(self, menu_item:str):
-        pass
+        if menu_item == "debug":
+            self._storage.debug()
+
 
 
 

@@ -439,6 +439,9 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         #prefs.triggered.connect(self._preferences)
         #self.menu.addAction(prefs)
 
+        debug_app = QAction("Debug")
+        debug_app.triggered.connect(self._debug)
+        self.menu.addAction(debug_app)
         # Add a Quit option to the menu.
         quit_app = QAction("Quit")
         quit_app.triggered.connect(self._quit)
@@ -446,6 +449,9 @@ class QTAuthenticatorUI(DICEAuthenticatorUI):
         # Add the menu to the tray
         self.tray.setContextMenu(self.menu)
         self.app.exec_()
+
+    def _debug(self):
+        self.fire_menu_clicked("debug")
 
     def _preferences(self):
         pass

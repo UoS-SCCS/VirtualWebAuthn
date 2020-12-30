@@ -98,6 +98,24 @@ class PublicKeyCredentialSource():
             self._keypair.get_encoded().decode('utf-8')
         return bytes(json.dumps(data), 'utf-8')
 
+    def debug(self)->dict:
+        """Constructs a JSON str of the data within this credential
+
+        Returns:
+            dict: json debug object
+        """
+        data = {}
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.TYPE.value] = self._type
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.ID.value] = self._id.hex()
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.ALG.value] = self._alg
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.RP_ID.value] = self._rp_entity.get_as_dict()
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.USER_HANDLE.value] = self._user_handle.hex()
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.OTHER_UI.value] = self._other_ui
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.SIGNATURE_COUNTER.value] = self._signature_counter
+        data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.KEY_PAIR.value] = \
+            self._keypair.get_encoded().decode('utf-8')
+        return data
+
     def get_public_key_credential_descriptor(self)->dict:
         """Returns a dictionary containing the public key
         credential description, consisting of the credential

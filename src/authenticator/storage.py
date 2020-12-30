@@ -85,6 +85,11 @@ class DICEAuthenticatorStorage(ABC):
         """
 
     @abstractmethod
+    def debug(self):
+        """Prints a debug string about the contents of the storage medium, i.e. keys,
+        RPs etc
+        """
+    @abstractmethod
     def get_credential_source(self,rp_id:str,user_id:bytes)->PublicKeyCredentialSource:
         """gets a credential source using the Relying Party ID and User ID as indexes
 

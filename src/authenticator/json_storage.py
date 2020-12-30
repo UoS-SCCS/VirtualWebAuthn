@@ -103,6 +103,26 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         self._data[STORAGE_KEYS.SIGNATURE_COUNT]=b'\x00\x00\x00\x00'.hex()
         return self._write_to_json()
 
+    def debug(self):
+        log.debug("")
+        log.debug("Starting Storage Debug Output")
+        log.debug("=============================")
+        log.debug("")
+        for relying_party in self._data[STORAGE_KEYS.CREDENTIALS]:
+            log.debug("From Relying Party: %s",relying_party)
+            rp_debug = []
+            for cred in self._data[STORAGE_KEYS.CREDENTIALS][relying_party]:
+                credential_source = PublicKeyCredentialSource()
+                credential_source.from_bytes(bytes.fromhex(cred))
+                rp_debug.append(credential_source.debug())
+
+            log.debug("\t%s", json.dumps(rp_debug,indent=4))
+
+        log.debug("")
+        log.debug("Finished Storage Debug Output")
+        log.debug("=============================")
+        log.debug("")
+
     def get_signature_counter(self)->int:
         return int.from_bytes(bytes.fromhex(self._data[STORAGE_KEYS.SIGNATURE_COUNT]),"big")
 
