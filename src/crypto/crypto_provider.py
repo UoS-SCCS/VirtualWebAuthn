@@ -192,7 +192,7 @@ class AuthenticatorCryptoProvider(ABC):
         """Calls shutdown on providers to allow them to clean up and gracefully close
         """
         for prov in CRYPTO_PROVIDERS:
-            prov.shutdown()
+            CRYPTO_PROVIDERS[prov].shutdown()
 
     def shutdown(self):
         """Override to implement additional shutdown operations, like clearing a TPM
