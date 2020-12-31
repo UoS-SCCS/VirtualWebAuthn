@@ -114,7 +114,14 @@ private:
 
 std::string generate_log_number();
 
+std::string generate_log_date_time();
+
 std::string generate_log_filename(
+std::string const& base_dir,
+std::string const& prefix
+);
+
+std::string generate_date_time_log_filename(
 std::string const& base_dir,
 std::string const& prefix
 );

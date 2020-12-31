@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <ctime>
 #include "Clock_utils.h"
 #include "Logging.h"
 
@@ -86,6 +87,17 @@ std::string generate_log_number()
     return oss.str();    
 }
 
+std::string generate_log_date_time()
+{
+    // Get current time with native precision
+    auto tp = std::chrono::system_clock::now();
+	std::time_t t=std::chrono::system_clock::to_time_t(tp);
+    std::ostringstream oss;
+	oss << std::put_time(std::localtime(&t), "%Y%m%d-%H%M%S");
+
+    return oss.str();    
+}
+
 std::string generate_log_filename(
 std::string const& base_dir,
 std::string const& prefix
@@ -93,6 +105,17 @@ std::string const& prefix
 {	
 	std::ostringstream oss;
 	oss << base_dir << '/' << prefix << '_' << generate_log_number();
+
+	return oss.str();
+}
+
+std::string generate_date_time_log_filename(
+std::string const& base_dir,
+std::string const& prefix
+)
+{	
+	std::ostringstream oss;
+	oss << base_dir << '/' << prefix << '_' << generate_log_date_time();
 
 	return oss.str();
 }

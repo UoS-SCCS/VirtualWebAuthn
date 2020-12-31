@@ -24,7 +24,7 @@
 #include <tss2/tsstransmit.h>
 #include <tssproperties.h>
 using TSS_RC=TPM_RC;  // Use this for shared routines
-using TSS_TPMA_OBJECT=uint32_t;
+using TSS_TPMA_OBJECT=uint32_t; // TPMA_OBJECT.val
 #elif defined(INTEL_TSS)
 #include <tss2_sys.h>
 #include <tss2_tcti_device.h>

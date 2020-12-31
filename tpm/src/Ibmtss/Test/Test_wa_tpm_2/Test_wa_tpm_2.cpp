@@ -163,16 +163,14 @@ int main(int argc, char *argv[])
 		else {
 			std::cout << "OpenSSL failed to verify the ECDSA Signature\n";
 		}
-
-
-
 	}
 	catch(std::exception const& e)
 	{
 		std::cerr << e.what() << std::endl;
 		tests_ok=false;
 	}
-	
+
+	flush_data(v_tpm_ptr);	
 	uninstall_tpm(v_tpm_ptr);
 	
 	release_byte_array(usr_ba);
@@ -185,5 +183,5 @@ int main(int argc, char *argv[])
 	release_byte_array(rp_kd.public_data);
 	release_byte_array(digest_ba);
 
-    return tests_ok?EXIT_SUCCESS:EXIT_FAILURE;
+	return tests_ok?EXIT_SUCCESS:EXIT_FAILURE;
 }
