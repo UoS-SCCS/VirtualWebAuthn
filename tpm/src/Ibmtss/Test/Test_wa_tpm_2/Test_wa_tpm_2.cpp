@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	bool tests_ok{true};
 	bool use_hw_tpm{false};
 	std::string data_dir{"/home/cn0016/TPM_data"};
-	std::string log_file{"log"};
+	std::string log_file_prefix{"log"};
 
 	// curve_name corresponds to TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;
     std::string curve_name="prime256v1"; 
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (setup_tpm(v_tpm_ptr,use_hw_tpm,data_dir.c_str(),log_file.c_str())!=0) {
+	if (setup_tpm(v_tpm_ptr,use_hw_tpm,data_dir.c_str(),log_file_prefix.c_str())!=0) {
 		std::cerr << "Error setting up the TPM\n";
 		return EXIT_FAILURE;
 	}
@@ -98,12 +98,16 @@ int main(int argc, char *argv[])
 		std::cout << "Public: " << user_public_data << '\n';
 		std::cout << "Private: " << user_private_data << '\n';
 
-		flush_data(v_tpm_ptr);
+		TSS_RC rc=flush_data(v_tpm_ptr);
+		if (rc!=0) {
+			std::string error=vars_to_string("flush_data failed: ",get_last_error(v_tpm_ptr));
+			throw std::runtime_error(error);
+		}
 
 		bb_to_byte_array(kd_local.private_data,user_private_data); 
 		bb_to_byte_array(kd_local.public_data,user_public_data); 
 
-		uint32_t rc=load_user_key(v_tpm_ptr,kd_local,usr_auth_ba);
+		rc=load_user_key(v_tpm_ptr,kd_local,usr_auth_ba);
 		if (rc!=0) {
 			std::string error=vars_to_string("User key failed to load: ",get_last_error(v_tpm_ptr));
 			throw std::runtime_error(error);
@@ -170,7 +174,10 @@ int main(int argc, char *argv[])
 		tests_ok=false;
 	}
 
-	flush_data(v_tpm_ptr);	
+	TSS_RC rc=flush_data(v_tpm_ptr);
+	if (rc!=0) {
+		std::cerr << "flush_data failed: " << get_last_error(v_tpm_ptr) << std::endl;
+	}	
 	uninstall_tpm(v_tpm_ptr);
 	
 	release_byte_array(usr_ba);
