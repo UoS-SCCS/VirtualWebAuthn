@@ -1,5 +1,5 @@
 """Contains classes for the various different parameters and
-datatypes that are used my messages and CTAP, as well as the
+datatypes that are used by messages and CTAP, as well as the
 exception class used by authenticators
 Classes:
     AuthenticatorVersion

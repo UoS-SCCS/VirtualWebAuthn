@@ -1,13 +1,12 @@
-"""ES256 Crypto Provider
+"""TPM Based ES256 Crypto Provider
 
-Concrete implementation of ES256 crypto functions using
-python cryptography
+Concrete implementation of a TPM based ES256 crypto functions
 
 Classes:
-    ECCryptoKeyPair
-    ECCryptoPrivateKey
-    ECCryptoPublicKey
-    ES256CryptoProvider
+    TPMECCryptoKeyPair
+    TPMECCryptoPrivateKey
+    TPMECCryptoPublicKey
+    TPMES256CryptoProvider
 """
 import os
 import json
