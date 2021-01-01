@@ -45,7 +45,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 	TPM_RC rc=0;
 	try
 	{
-		std::string filename=generate_log_filename(tps.data_dir.value, log_file);
+		std::string filename=generate_date_time_log_filename(tps.data_dir.value, log_file);
 		log_ptr_.reset(new Timed_file_log(filename));
 		log_ptr_->set_debug_level(dbg_level_);
 		data_dir_=std::string(tps.data_dir.value);
@@ -502,6 +502,7 @@ void Web_authn_tpm::flush_rp_key()
 
 void Web_authn_tpm::release_memory()
 {
+	log(1,"Release TPM byte arrays");
 	release_byte_array(user_kd_.public_data);
 	release_byte_array(user_kd_.private_data);
 	release_byte_array(rp_kd_.public_data);
@@ -527,7 +528,7 @@ void Web_authn_tpm::log(int dbg_level, std::string const& str)
 
 TPM_RC Web_authn_tpm::flush_data()
 {
-	log(1, "flush_data");
+	log(1, "Flush_data");
 	release_memory();
 
 	TPM_RC rc=0;
@@ -551,6 +552,7 @@ TPM_RC Web_authn_tpm::flush_data()
 		last_error_="Flush_data: failed - uncaught exception";
 	}
 
+	log(1, "Flush_data completed");
 	return rc;
 }
 
@@ -558,30 +560,36 @@ Web_authn_tpm::~Web_authn_tpm()
 {
 	log(1,"Tidying up ...");
 
+	release_memory();
+
 	TPM_RC rc=0;
+
 	if (user_handle_!=0) {
+		log(1,"Flush user key");
 		rc=flush_context(tss_context_,user_handle_);
 		if (rc!=0) {
-			log_ptr->os() << "Falied to flush the user key, handle: " << user_handle_ << '\n';
+			log_ptr->os() << "Failed to flush the user key, handle: " << user_handle_ << '\n';
 		}
 		user_handle_=0;
 	}
 
 	if (rp_handle_!=0) {
+		log(1,"Flush relying pary key");
 		rc=flush_context(tss_context_,rp_handle_);
 		if (rc!=0) {
-			log_ptr->os() << "Falied to flush the RP key, handle: " << rp_handle_ << std::endl;
+			log_ptr->os() << "Failed to flush the RP key, handle: " << rp_handle_ << std::endl;
 		}
 		rp_handle_=0;
 	}
 
-	if (tss_context_)
-	{
+	if (tss_context_) {
+		log(1,"Delete TPM context");
 		shutdown(tss_context_);
 		TSS_Delete(tss_context_);
 	    tss_context_=nullptr;
 	}
-	release_memory();
+
+	log(1,"Tidying up completed");
 }
 
 // Temporary member functions for testing

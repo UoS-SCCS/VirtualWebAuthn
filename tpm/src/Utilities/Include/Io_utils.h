@@ -45,6 +45,10 @@ size_t len,
 bool remove_leading
 );
 
+
+// Recursive wersion of vars_to_string, may cause code to grow unnecessarily
+// see https://www.youtube.com/watch?v=CU3VYN6xGzM, C++ Weekly for an 
+// alternative using initialiser lists
 template<typename T>
 std::string vars_to_string(T const& t)
 {
