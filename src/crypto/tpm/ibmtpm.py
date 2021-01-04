@@ -326,6 +326,7 @@ class TPM():
         #Install TPM
         self._tpm.install_tpm.restype = ctypes.c_void_p
 
+        self._tpm.uninstall_tpm.argtypes = [ctypes.c_void_p]
         #Setup TPM
         self._tpm.setup_tpm.argtypes = [ctypes.c_void_p,ctypes.c_bool,
             ctypes.c_char_p,ctypes.c_char_p]
