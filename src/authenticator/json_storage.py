@@ -47,6 +47,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
         super().__init__()
         self._path = path
         if not self._check_exists():
+            os.mkdir(self._path)
             self._data={"_version":"JSONAuthenticatorStorage_0.1"}
             self._data[STORAGE_KEYS.CREDENTIALS]={}
             self._write_to_json()
