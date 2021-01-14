@@ -8,9 +8,8 @@ TPM Simulator - currently ibmtpm1119
 
 ```bash
 mkdir /opt/ibmtpm1119
-copy ibmtpm1119.tar.gz to /opt/ibmtpm1119
+copy ibmtpm1119.tar to /opt/ibmtpm1119
 
-gunzip ibmtpm1119.tar.gz
 tar -xvf ibmtpm1119.tar
 
 cd src
@@ -32,9 +31,8 @@ IBM TSS software stack - currently ibmtss1119
 
 ```bash
 mkdir /opt/ibmtss1119
-mv ibmtss1119.tar.gz /opt/ibmtss1119
+mv ibmtss1119.tar /opt/ibmtss1119
 
-gunzip ibmtss1119.tar.gz
 tar -xvf ibmtss1119.tar
 
 cd utils
