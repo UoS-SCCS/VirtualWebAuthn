@@ -5,7 +5,6 @@ wrapper classes as well as the core TPM class
 
 Structs:
     ByteArrayStr
-    TwoByteArrays
     KeyData
     KeyECCPoint
     RelyingPartyKey
@@ -43,12 +42,6 @@ class ByteArrayStr(ctypes.Structure):
     """
     _fields_ = [('size', ctypes.c_uint16),
                 ('data', ctypes.c_char_p)]
-
-class TwoByteArrays(ctypes.Structure):
-    """Ctypes structure containing two ByteArrays
-    """
-    _fields_ = [('one', ByteArray),
-                ('two', ByteArray)]
 
 
 class KeyData(ctypes.Structure):
@@ -361,15 +354,6 @@ class TPM():
         #Flush data
         self._tpm.flush_data.restype = ctypes.c_int
         self._tpm.flush_data.argtypes = [ctypes.c_void_p]
-
-        #Test Methods TODO remove
-        self._tpm.get_byte_array.argtypes = [ctypes.c_void_p]
-        self._tpm.get_byte_array.restype = ByteArray
-        self._tpm.put_byte_array.argtypes = [ctypes.c_void_p,ByteArray]
-
-        self._tpm.get_two_byte_arrays.argtypes = [ctypes.c_void_p]
-        self._tpm.get_two_byte_arrays.restype = TwoByteArrays
-        self._tpm.put_two_byte_arrays.argtypes = [ctypes.c_void_p,TwoByteArrays]
 
         self._install()
 
