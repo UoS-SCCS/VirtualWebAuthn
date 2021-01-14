@@ -62,7 +62,11 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
 ### Prerequisites
 * Install the following dependencies (note: this may not be a complete list, if you get errors create an issue):
     ```
-    sudo apt-get install build-essential git chromium-browser python3 pip3 libssl-dev
+    sudo apt-get install build-essential git chromium-browser python3 pip3 libssl-dev qt5-default
+    ```
+* In a terminal install some Python dependencies:
+    ```
+    pip3 install pyqt5 fido2
     ```
 
 ### Steps to setup:

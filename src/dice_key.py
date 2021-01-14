@@ -278,8 +278,14 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             if len(allow_cred.get_id())>ctap.constants.CREDENTIAL_ID_SIZE:
                 auth.debug("Wrapped key provided, will unwrap credential source")
                 #we have a wrapped credential
-                creds.append(self._credential_wrapper.unwrap(
+                try:
+                    creds.append(self._credential_wrapper.unwrap(
                     self._storage.get_wrapping_key(),allow_cred.get_id()))
+                except Exception as exp:
+                    raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CREDENTIAL,
+                        "Unwrapping failed") from exp
+
 
 
         number_of_credentials = len(creds)
@@ -348,9 +354,13 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             if len(allow_cred.get_id())>ctap.constants.CREDENTIAL_ID_SIZE:
                 auth.debug("Wrapped key provided, will unwrap credential source")
                 #we have a wrapped credential
-                creds.append(self._credential_wrapper.unwrap(
-                    self._storage.get_wrapping_key(),allow_cred.get_id()))
-
+                try:
+                    creds.append(self._credential_wrapper.unwrap(
+                        self._storage.get_wrapping_key(),allow_cred.get_id()))
+                except Exception as exp:
+                    raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CREDENTIAL,
+                        "Unwrapping failed") from exp
         number_of_credentials = len(creds)
         if number_of_credentials < 1:
             raise DICEAuthenticatorException(
