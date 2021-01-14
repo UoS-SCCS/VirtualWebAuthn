@@ -32,7 +32,7 @@ void* install_tpm()
 	return v_ptr;
 }
 
-int setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename)
+int32_t setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename)
 {
 	if (v_tpm_ptr==nullptr) {
 		return -1;
