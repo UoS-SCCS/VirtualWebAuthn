@@ -23,19 +23,22 @@
 
 
 extern "C" {
-
+// Allocate memory for the TPM class and return a void* pointer to it
 void* install_tpm();
 
-int setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename);
+// Setup the TPM
+int32_t setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename);
 
+// Return the last error
 const char* get_last_error(void* v_tpm_ptr);
 
+// Call the TPM class' destructor, flushing any keys from the TPM and freeing any memory
 void uninstall_tpm(void* v_tpm_ptr);
 
-// No parent authorisation as we are using the SRK with no passwd.
+// No parent authorisation as we are using the SRK with no password.
 Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array key_auth);
 
-// No parent authorisation as we are using the SRK with no passwd, key authorisation not need to load the key.
+// No parent authorisation as we are using the SRK with no password, key authorisation not needed to load the key.
 TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user);
 
 Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);

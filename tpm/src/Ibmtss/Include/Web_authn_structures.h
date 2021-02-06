@@ -23,12 +23,8 @@ struct Two_byte_arrays
 };
 
 
-/* The key data, the handles for the parent and (when loaded) the key itself.
- * Data passed to the TPM as authorisation data cannot be larger than the size
- * of the hash being used - we will start by using SHA256. Note that
- * MAX_DIGEST_SIZE may be larger than SHA256_DIGEST_SIZE.
- * Memory for the public and private data returned when the key is created will
- * be allocated and freed in in the C++ code.
+/* The key data. Memory for the public and private data returned when the key is
+ * created will be allocated and freed in in the C++ code.
  */
 struct Key_data
 {
@@ -37,7 +33,8 @@ struct Key_data
 };
 
 /* The public ECC key, a point on the chosen ECC curve the curve will initially
- * be NIST P_256. Note that MAX_ECC_KEY_BYTES may be larger than necessary.
+ * be NIST P_256. Memory for the x_coord and y_coord will be allocated and
+ * freed in the C++ code
 */
 struct Key_ecc_point
 {
@@ -45,7 +42,8 @@ struct Key_ecc_point
 	Byte_array y_coord;
 };
 
-/* The key data and the public key (ECC point)
+/* The key data and the public key (ECC point). Memory needed will be allocated
+ * and freed in the C++ code 
 */
 struct Relying_party_key
 {
@@ -57,11 +55,12 @@ struct Relying_party_key
  * used - SHA256 in our case. Note that MAX_DIGEST_SIZE may be larger than
  * SHA256_DIGEST_SIZE.
  * 
- * Just a Byte_array
+ * Just a Byte_array, allocated and freed by the caller
  */
 
 /* The ECDSA signature returned from the TPM. Note the actual size may be less
- * than MAX_ECC_KEY_BYTES.
+ * than MAX_ECC_KEY_BYTES. Memory needed will be allocated and freed in the C++
+ * code 
 */
 struct Ecdsa_sig
 {

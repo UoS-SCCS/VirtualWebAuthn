@@ -32,6 +32,7 @@
 #include "Openssl_ec_utils.h"
 #include "Clock_utils.h"
 #include "Tss_setup.h"
+#include "Tss_key_helpers.h"
 #include "Tpm_initialisation.h"
 #include "Tpm_defs.h"
 #include "Tpm_param.h"
@@ -76,27 +77,22 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 		rc=TSS_SetProperty(tss_context_,TPM_DATA_DIR,data_dir_.c_str());
 
 		rc=startup(tss_context_);
-		if (rc!=0 && rc!=TPM_RC_INITIALIZE)
-		{
+		if (rc!=0 && rc!=TPM_RC_INITIALIZE) {
 			shutdown(tss_context_);
 			log(1,"Web_authn_tpm: setup: TPM startup failed (reset the TPM)");
 			throw(Tpm_error("TPM startup failed (reset the TPM)"));
 		}
 
         if (!persistent_key_available(tss_context_,srk_persistent_handle)) {
-	       	uint32_t object_attributes = TPMA_OBJECT_FIXEDTPM |		// TPMA_OBJECT is a bit field
-					    TPMA_OBJECT_FIXEDPARENT |
-    		       		TPMA_OBJECT_SENSITIVEDATAORIGIN |
-				       	TPMA_OBJECT_USERWITHAUTH |
-                       	TPMA_OBJECT_RESTRICTED |
-                       	TPMA_OBJECT_NODA |
-				       	TPMA_OBJECT_DECRYPT;
+	       	uint32_t object_attributes = obj_primary |		// TPMA_OBJECT is a bit field
+				       	TPMA_OBJECT_USERWITHAUTH;
 			CreatePrimary_Out out;
 			rc=create_primary_rsa_key(tss_context_,TPM_RH_OWNER,object_attributes,Byte_buffer(),&out);
 			log(1,"Primary key created");
 			rc=make_key_persistent(tss_context_,out.objectHandle,srk_persistent_handle);
 			log(1,"Primary key made persistent");
-		} else {
+		}
+		else {
 			log(1,"Primary key already installed");
 		}
     }
