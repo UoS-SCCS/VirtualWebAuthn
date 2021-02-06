@@ -16,6 +16,7 @@ from cryptography.hazmat.backends import default_backend
 
 from crypto.crypto_provider import AuthenticatorCryptoProvider,CRYPTO_PROVIDERS
 from crypto.tpm_es256_crypto_provider import TPMES256CryptoProvider
+from crypto.es256_crypto_provider import ES256CryptoProvider
 from crypto.aes_credential_wrapper import AESCredentialWrapper
 from crypto.algs import PUBLIC_KEY_ALG
 from authenticator.ui import DICEAuthenticatorListener
@@ -24,7 +25,8 @@ from authenticator.datatypes import (DICEAuthenticatorException,AuthenticatorGet
     AuthenticatorGetAssertionParameters,AuthenticatorMakeCredentialParameters,
     PublicKeyCredentialParameters,AuthenticatorVersion)
 from authenticator.cbor import (GetAssertionResp,MakeCredentialResp,GetClientPINResp,
-    GetInfoResp,ResetResp,AUTHN_GETINFO_OPTION,AUTHN_GETINFO_TRANSPORT,AUTHN_GETINFO_VERSION)
+    GetInfoResp,ResetResp,AUTHN_GETINFO_OPTION,AUTHN_GETINFO_TRANSPORT,AUTHN_GETINFO_VERSION,
+    AUTHN_GETINFO_PIN_UV_PROTOCOL)
 from authenticator.json_storage import EncryptedJSONAuthenticatorStorage
 from authenticator.ui import QTAuthenticatorUI
 import ctap.constants
@@ -36,7 +38,7 @@ from ctap.attestation import AttestationObject
 
 log = logging.getLogger('debug')
 auth = logging.getLogger('debug.auth')
-
+USE_TPM=False
 class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     """Concrete implementation of a CTAP2 authenticator
 
@@ -73,6 +75,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #self.get_info_resp.add_version(AUTHN_GETINFO_VERSION.CTAP1)
         self.get_info_resp.add_transport(AUTHN_GETINFO_TRANSPORT.USB)
         self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.ES256))
+        self.get_info_resp.add_pin_uv_supported_protocol(AUTHN_GETINFO_PIN_UV_PROTOCOL.VERSION_1)
         #self.get_info_resp.add_algorithm(PublicKeyCredentialParameters(PUBLIC_KEY_ALG.RS256))
 
     def validate_uv_check_value_exists(self, password:str)->bool:
@@ -150,17 +153,23 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
             self._user_verification_capable = False
         #Use this to reset
         #self._storage.delete_field("TPM_USER_KEY")
-        tpm_user_key = self._storage.get_string("TPM_USER_KEY")
-        tpm_crypto_provider = TPMES256CryptoProvider()
+        if USE_TPM:
+            tpm_user_key = self._storage.get_string("TPM_USER_KEY")
+            tpm_crypto_provider = TPMES256CryptoProvider()
 
-        if tpm_user_key is None:
-            self._storage.set_string("TPM_USER_KEY",
-                tpm_crypto_provider.create_user_key(getpass.getuser(),pwd))
+            if tpm_user_key is None:
+                self._storage.set_string("TPM_USER_KEY",
+                    tpm_crypto_provider.create_user_key(getpass.getuser(),pwd))
+            else:
+                tpm_crypto_provider.load_user_key(self._storage.get_string("TPM_USER_KEY"))
+
+            AuthenticatorCryptoProvider.add_provider(tpm_crypto_provider)
+            self._providers.append(tpm_crypto_provider.get_alg())
         else:
-            tpm_crypto_provider.load_user_key(self._storage.get_string("TPM_USER_KEY"))
 
-        AuthenticatorCryptoProvider.add_provider(tpm_crypto_provider)
-        self._providers.append(tpm_crypto_provider.get_alg())
+            crypto_provider = ES256CryptoProvider()
+            AuthenticatorCryptoProvider.add_provider(crypto_provider)
+            self._providers.append(crypto_provider.get_alg())
 
     def shutdown(self):
         """Shuts down the authenticator

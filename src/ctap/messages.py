@@ -536,7 +536,8 @@ class CTAPHIDInitResponse(CTAPHIDCMD):
         payload[14] = version.minor_version
         payload[15] = version.build_version
         payload[16] = CTAPHIDInitResponse.CAPABILITY_CBOR[0] \
-            | CTAPHIDInitResponse.CAPABILITY_WINK[0]
+            | CTAPHIDInitResponse.CAPABILITY_NMSG[0] | CTAPHIDInitResponse.CAPABILITY_WINK[0]
+        ctaplog.debug("Capability value: %s",bin(payload[16]))
         ctaplog.debug("Creating initial response: %s",payload.hex())
         super().__init__(ctap.constants.BROADCAST_ID,
             ctap.constants.CTAP_CMD.CTAPHID_INIT,17,payload)
