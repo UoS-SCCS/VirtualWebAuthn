@@ -27,7 +27,7 @@ extern "C" {
 void* install_tpm();
 
 // Setup the TPM
-int32_t setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename);
+TPM_RC setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename);
 
 // Return the last error
 const char* get_last_error(void* v_tpm_ptr);

@@ -98,6 +98,7 @@ CreatePrimary_Out* out
         TPMU_SYM_MODE       mode;           // default mode 
     } TPMT_SYM_DEF_OBJECT;
 
+    */
     /* Table 128 - Definition of TPMT_SYM_DEF_OBJECT Structure
 
     typedef struct {

@@ -112,11 +112,11 @@ bool persistent_key_available(TSS_CONTEXT* tss_context,TPM_HANDLE handle)
             throw(Tpm_error("persistent_key_available: GetCapability (TPM_PT_HR_PERSISTENT) failed"));        
     }
 
-    size_t ph_count=out.capabilityData.data.tpmProperties.tpmProperty[0].value;
+    auto ph_count=out.capabilityData.data.tpmProperties.tpmProperty[0].value;
     if (ph_count!=0)
     {
             auto handles=retrieve_persistent_handles(tss_context,ph_count);
-            for (int i=0;i<handles.size();++i)
+            for (size_t i=0;i<handles.size();++i)
             {
                     if (handles[i]==handle)
                     {
@@ -129,7 +129,7 @@ bool persistent_key_available(TSS_CONTEXT* tss_context,TPM_HANDLE handle)
     return key_available;
 }
 
-std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, size_t ph_count)
+std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, uint32_t ph_count)
 {
     //!!!!!!!Need to fix this for the case where there is more data
     //!!!!!!!Not needed here as we should only have one, or two persistent handles
@@ -145,7 +145,7 @@ std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, si
     GetCapability_In in;
     GetCapability_Out out;         
     in.capability=TPM_CAP_HANDLES;
-    in.property=TPM_HT_PERSISTENT << 24;
+    in.property=static_cast<uint32_t>(TPM_HT_PERSISTENT) << 24;
     in.propertyCount=ph_count;
     rc=TSS_Execute(tss_context,
             (RESPONSE_PARAMETERS*)&out,
@@ -160,8 +160,8 @@ std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, si
             throw(Tpm_error("Tpm_daa: GetCapability (TPM_HT_PERSISTENT) failed"));        
     }
 
-    size_t h_count=out.capabilityData.data.handles.count;
-    for (int i=0;i<h_count;++i)
+    uint32_t h_count=out.capabilityData.data.handles.count;
+    for (uint32_t i=0;i<h_count;++i)
     {
             handles.push_back(out.capabilityData.data.handles.handle[i]);
     }

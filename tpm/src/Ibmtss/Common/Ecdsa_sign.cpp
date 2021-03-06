@@ -31,7 +31,7 @@ Sign_Out* sign_out
     sign_in.keyHandle=handle;
     sign_in.inScheme.scheme=TPM_ALG_ECDSA;
     sign_in.inScheme.details.ecdsa.hashAlg=TPM_ALG_SHA256;
-    sign_in.digest.t.size = digest_to_sign.size();
+    sign_in.digest.t.size = static_cast<uint16_t>(digest_to_sign.size());
     memcpy(&sign_in.digest.t.buffer,digest_to_sign.cdata(),digest_to_sign.size());
 
     sign_in.validation.tag = TPM_ST_HASHCHECK;

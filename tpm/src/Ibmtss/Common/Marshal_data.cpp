@@ -61,7 +61,7 @@ TPM2B_PUBLIC* public_data_ptr
 	TSS_RC rc=0;
 
 	Byte* tmp_bb=&pd_bb[0];
-	int32_t tmp_size=pd_bb.size();
+	int32_t tmp_size=static_cast<int32_t>(pd_bb.size());
 	rc = TPM2B_PUBLIC_Unmarshal(public_data_ptr, &tmp_bb, &tmp_size, YES);
 
 	return rc;
@@ -96,7 +96,7 @@ TPM2B_PRIVATE* private_data_ptr
 	TSS_RC rc=0;
 
 	Byte* tmp_bb=&pd_bb[0];
-	int32_t tmp_size=pd_bb.size();
+	int32_t tmp_size=static_cast<int32_t>(pd_bb.size());
 	rc = TPM2B_PRIVATE_Unmarshal(private_data_ptr, &tmp_bb, &tmp_size);
 
 	return rc;
@@ -133,7 +133,7 @@ TPMS_ATTEST* attest_data_ptr
 	Byte_buffer padded_data=atd_bb;
 	padded_data.pad_right(sizeof(TPMS_ATTEST));
 	Byte* tmp_bb=&padded_data[0];
-	int32_t tmp_size=atd_bb.size();
+	int32_t tmp_size=static_cast<int32_t>(atd_bb.size());
 	rc = TPMS_ATTEST_Unmarshal(attest_data_ptr, &tmp_bb, &tmp_size);
 
 	return rc;

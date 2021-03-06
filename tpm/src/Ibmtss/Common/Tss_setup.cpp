@@ -17,19 +17,19 @@
 
 void Tss_setup::put(std::ostream& os) const
 {
-    std::cout << "Base class\n";
+   os << "Base class\n";
 }
 
 void Simulator_setup::put(std::ostream& os) const
 {
     Tss_setup::put(os);
-    std::cout << "Simulator setup class\n";
+    os << "Simulator setup class\n";
 }
 
 void Device_setup::put(std::ostream& os) const
 {
     Tss_setup::put(os);
-    std::cout << "Device setup class\n";
+    os << "Device setup class\n";
 }
 
 TPM_RC Tss_setup::set_properties(TSS_CONTEXT* context) const

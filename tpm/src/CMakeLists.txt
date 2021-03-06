@@ -5,6 +5,8 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Set the project name to your project name
 project(webAuthnLib CXX)
 include(Cmake/StandardProjectSettings.cmake)
@@ -52,17 +54,20 @@ find_library(tss_lib
 
 target_include_directories(watpm
     PUBLIC
-        ${CMAKE_SOURCE_DIR}/Utilities/Include 
-        ${CMAKE_SOURCE_DIR}/Tss_utilities/Include 
-        ${CMAKE_SOURCE_DIR}/Ibmtss/Include 
+#        ${CMAKE_SOURCE_DIR}/Utilities/Include 
+#        ${CMAKE_SOURCE_DIR}/Tss_utilities/Include 
+#        ${CMAKE_SOURCE_DIR}/Ibmtss/Include 
         ${tss_includes}
 )
 
 target_compile_definitions(watpm PRIVATE TPM_POSIX)
 
-add_library(tss SHARED IMPORTED)
+target_compile_options(watpm PRIVATE -pg -O3)
 
-target_link_libraries(watpm PUBLIC project_options project_warnings ${ossl_libs} ${tss_lib})
+target_link_options(watpm PRIVATE -pg)
+
+target_link_libraries(watpm PUBLIC project_options project_warnings stdc++ ${ossl_libs} ${tss_lib})
+#target_link_libraries(watpm PRIVATE project_options project_warnings)
 
 add_subdirectory(Utilities)
 add_subdirectory(Tss_utilities)

@@ -32,10 +32,12 @@ void* install_tpm()
 	return v_ptr;
 }
 
-int32_t setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename)
+#define WEB_AUTHN_ERROR uint32_t(-1) 	// Define this properly later to not clash with other return values
+
+TPM_RC setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename)
 {
 	if (v_tpm_ptr==nullptr) {
-		return -1;
+		return WEB_AUTHN_ERROR;
 	}
 
 	Setup_ptr sp;
@@ -80,7 +82,6 @@ Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array k
 	return tpm_ptr->create_and_load_user_key(user_str,auth_str);
 }
 
-#define WEB_AUTHN_ERROR uint32_t(-1) 	// Define this properly later to not clash with other return values
 TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user)
 {
 	if (v_tpm_ptr==nullptr) {

@@ -53,7 +53,7 @@ Create_Out* out
 	in.parentHandle = parent_key_handle;
 	/* Table 133 - Definition of TPMS_SENSITIVE_CREATE Structure <IN>sensitive  */
 	/* Table 75 - Definition of Types for TPM2B_AUTH userAuth */
-	in.inSensitive.sensitive.userAuth.t.size = auth.size();
+	in.inSensitive.sensitive.userAuth.t.size =static_cast<uint16_t>(auth.size());
 	if (auth.size()>0) {
 		memcpy(in.inSensitive.sensitive.userAuth.t.buffer,auth.data(),auth.size());
 	}
