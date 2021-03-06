@@ -14,7 +14,7 @@
 #include <iomanip>
 #include <string>
 #include <cstring>
-#include "Marshal_public_data.h"
+#include "Marshal_data.h"
 #include "Ibmtss_helpers.h"
 #include "Io_utils.h"
 #include "Tpm_error.h"

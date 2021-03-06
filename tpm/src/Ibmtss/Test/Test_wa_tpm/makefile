@@ -14,7 +14,8 @@ CXXFLAGS=$(COMMON_CPPFLAGS) $(CXXFLAGS_COMMON) -pg -O2
 LDFLAGS= -pg $(LDFLAGS_COMMON) 
 
 # libraries
-LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
+#LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
+LDLIBS=$(LDLIBS_COMMON)  -L$(LIB_DIR) -lwatpm
 
 TARGET=$(PREFIX)test_wa_tpm
 SRCS=Test_wa_tpm.cpp

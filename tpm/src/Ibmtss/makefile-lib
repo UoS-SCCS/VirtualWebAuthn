@@ -4,7 +4,7 @@
 
 PREFIX=ibmtss_
 USING_TSS=IBM_TSS
-CPP_STD?=c++14
+CPP_STD?=c++17
 RPI_CXXFLAGS?=
 
 UTILS_ROOT=../../Utilities
