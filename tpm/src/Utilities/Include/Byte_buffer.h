@@ -33,7 +33,7 @@ public:
 	Byte_buffer(Byte_buffer const& bb)=default;
 	Byte_buffer(Byte_buffer&& bb)=default;
 	Byte_buffer& operator=(Byte_buffer const& bb)=default;
-	Byte_buffer(std::initializer_list<Byte> il);
+	explicit Byte_buffer(std::initializer_list<Byte> il);
 	Byte_buffer(size_t sz, Byte b);
 	explicit Byte_buffer(std::string const& str);	// Each character is one Byte 
 	explicit Byte_buffer(Hex_string const & hs);	// Every two hex characters are one Byte

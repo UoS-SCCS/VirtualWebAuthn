@@ -42,12 +42,12 @@
 #include "Web_authn_tpm.h"
 
 
-TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
+TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string const& log_filename)
 {
 	TPM_RC rc=0;
 	try
 	{
-		std::string filename=generate_date_time_log_filename(tps.data_dir.value, log_file);
+		std::string filename=generate_date_time_log_filename(tps.data_dir.value, log_filename);
 		log_ptr_ = std::make_unique<Timed_file_log>(filename);
 		log_ptr_->set_debug_level(dbg_level_);
 		data_dir_=std::string(tps.data_dir.value);
@@ -515,12 +515,12 @@ void Web_authn_tpm::release_memory()
 	release_byte_array(tba_.two);
 }
 
-void Web_authn_tpm::log(uint32_t dbg_level, std::string const& str)
+void Web_authn_tpm::log(uint32_t dbg_level, std::string const& log_str)
 {
 	if (dbg_level>dbg_level_) {
 		return;
 	}
-	log_ptr_->os() <<  str << std::endl;
+	log_ptr_->os() <<  log_str << std::endl;
 }
 
 TPM_RC Web_authn_tpm::flush_data()

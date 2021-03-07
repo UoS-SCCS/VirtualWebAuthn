@@ -47,7 +47,7 @@ public:
 	 *                  the number is generated from the time
 	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
-        TPM_RC setup(Tss_setup const& tps,std::string log_filename);
+        TPM_RC setup(Tss_setup const& tps,std::string const& log_filename);
 	
 	/**
 	 * Creates a new user (storage) key and loads it ready for use. If a user key is already loaded, it and its

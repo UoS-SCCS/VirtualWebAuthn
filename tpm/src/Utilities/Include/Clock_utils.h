@@ -50,7 +50,7 @@ class Timing_data
 {
 public:
     Timing_data()=delete;
-    Timing_data(std::string  str,Rep t) : label_(std::move(str)), time_(t) {}
+    Timing_data(std::string str,Rep t) : label_(std::move(str)), time_(t) {}
     Timing_data(Timing_data const&)=default;
     Timing_data(Timing_data&&)=default;
     std::string label() const {return label_;}
