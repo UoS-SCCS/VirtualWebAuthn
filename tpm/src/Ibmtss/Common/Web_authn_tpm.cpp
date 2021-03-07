@@ -13,6 +13,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <cstdlib>
@@ -34,7 +35,7 @@
 #include "Tss_setup.h"
 #include "Tss_key_helpers.h"
 #include "Tpm_initialisation.h"
-#include "Tpm_defs.h"
+#include "Tpm_timer.h"
 #include "Tpm_param.h"
 #include "Byte_array.h"
 #include "Web_authn_structures.h"
@@ -47,7 +48,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const& tps, std::string log_file)
 	try
 	{
 		std::string filename=generate_date_time_log_filename(tps.data_dir.value, log_file);
-		log_ptr_.reset(new Timed_file_log(filename));
+		log_ptr_ = std::make_unique<Timed_file_log>(filename);
 		log_ptr_->set_debug_level(dbg_level_);
 		data_dir_=std::string(tps.data_dir.value);
 		
@@ -514,7 +515,7 @@ void Web_authn_tpm::release_memory()
 	release_byte_array(tba_.two);
 }
 
-void Web_authn_tpm::log(int dbg_level, std::string const& str)
+void Web_authn_tpm::log(uint32_t dbg_level, std::string const& str)
 {
 	if (dbg_level>dbg_level_) {
 		return;

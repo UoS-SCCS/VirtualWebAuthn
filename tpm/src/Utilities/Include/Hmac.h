@@ -17,7 +17,8 @@
 
 using Hmac_ctx_ptr=std::unique_ptr<HMAC_CTX,decltype(&::HMAC_CTX_free)>;
 
-const unsigned int sha256_bytes=32;
+constexpr unsigned int sha256_bytes=32;
+constexpr unsigned int sha384_bytes=48;
 
 Byte_buffer hmac_sha256(Byte_buffer const& key, Byte_buffer const& data);
 

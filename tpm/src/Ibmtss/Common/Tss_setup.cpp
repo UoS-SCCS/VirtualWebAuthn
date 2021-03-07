@@ -37,7 +37,7 @@ TPM_RC Tss_setup::set_properties(TSS_CONTEXT* context) const
     TPM_RC rc=0;
     // For the moment just set the common setting and ignore the others
     if (trace_level.value != Tss_default::trace_level.value)
-		  rc=TSS_SetProperty(NULL,trace_level.type,trace_level.value);
+		  rc=TSS_SetProperty(nullptr,trace_level.type,trace_level.value);
 
     if (rc==0 && encrypt_sessions.value != Tss_default::encrypt_sessions.value)
 		  rc=TSS_SetProperty(context,encrypt_sessions.type,encrypt_sessions.value);

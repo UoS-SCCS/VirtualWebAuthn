@@ -40,9 +40,9 @@ Sign_Out* sign_out
         
     if (rc == 0) {
         rc = TSS_Execute(tss_context,
-            (RESPONSE_PARAMETERS *)sign_out,
-            (COMMAND_PARAMETERS *)&sign_in,
-            NULL,
+            reinterpret_cast<RESPONSE_PARAMETERS *>(sign_out),
+            reinterpret_cast<COMMAND_PARAMETERS *>(&sign_in),
+            nullptr,
             TPM_CC_Sign,
             TPM_RS_PW, (ecdsa_auth.size()==0?nullptr:ecdsa_auth.c_str()), 0,            
             TPM_RH_NULL, NULL, 0);

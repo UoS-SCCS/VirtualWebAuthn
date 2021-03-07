@@ -37,7 +37,7 @@ Byte_buffer hmac_sha256(Byte_buffer const &key, Byte_buffer const &data)
 
 Byte_buffer hmac_sha384(Byte_buffer const &key, Byte_buffer const &data)
 {
-    unsigned int len = 48;// The length of the sha256 hash
+    unsigned int len = sha384_bytes;
     Byte_buffer result(len, 0);
 
     Hmac_ctx_ptr ctx = new_hmac_ctx();

@@ -36,9 +36,9 @@ typedef struct {
     in.persistentHandle = persistent_handle;
     /* call TSS to execute the command */
         rc = TSS_Execute(tssContext,
-                         NULL, 
-                         (COMMAND_PARAMETERS *)&in,
-                         NULL,
+                         nullptr, 
+                         reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+                         nullptr,
                          TPM_CC_EvictControl,
                          TPM_RS_PW, NULL, 0,
                          TPM_RH_NULL, NULL, 0);

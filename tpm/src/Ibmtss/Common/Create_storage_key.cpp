@@ -15,7 +15,7 @@
 #include <cstring>
 #include "Tpm_error.h"
 #include "Tss_setup.h"
-#include "Tpm_defs.h"
+#include "Tpm_timer.h"
 #include "Tss_includes.h"
 #include "Tss_key_helpers.h"
 #include "Create_storage_key.h"
@@ -92,9 +92,9 @@ Create_Out* out
 	in.creationPCR.count = 0;
 
 	rc = TSS_Execute(tss_context,
-		(RESPONSE_PARAMETERS *)out,
-		(COMMAND_PARAMETERS *)&in,
-		NULL,
+		reinterpret_cast<RESPONSE_PARAMETERS *>(out),
+		reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+		nullptr,
 		TPM_CC_Create,
 		TPM_RS_PW, NULL, 0,
 		TPM_RH_NULL, NULL, 0);

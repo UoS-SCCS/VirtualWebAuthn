@@ -33,9 +33,9 @@ function(set_project_warnings project_name)
                            # function
   )
 
-#  if (WARNINGS_AS_ERRORS)
-#    set(CLANG_WARNINGS ${CLANG_WARNINGS} -Werror)
-#  endif()
+  if (WARNINGS_AS_ERRORS)
+    set(CLANG_WARNINGS ${CLANG_WARNINGS} -Werror)
+  endif()
 
   set(GCC_WARNINGS
       ${CLANG_WARNINGS}
@@ -49,7 +49,8 @@ function(set_project_warnings project_name)
   )
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(PROJECT_WARNINGS ${CLANG_WARNINGS})
+    set(PROJECT_WARNINGS ${CLANG_WARNINGS} -Wno-extern-c-compat -Wno-cast-align)
+    # cast-align causes issues with IBM TSS code
   else()
     set(PROJECT_WARNINGS ${GCC_WARNINGS})
   endif()

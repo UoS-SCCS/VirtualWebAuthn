@@ -120,9 +120,9 @@ std::ostream& os
     ECC_Parameters_Out ep_out;
     ep_in.curveID=curve_id;
 	rc = TSS_Execute(tss_context,
-		(RESPONSE_PARAMETERS *)&ep_out,
-		(COMMAND_PARAMETERS *)&ep_in,
-		NULL,
+		reinterpret_cast<RESPONSE_PARAMETERS *>(&ep_out),
+		reinterpret_cast<COMMAND_PARAMETERS *>(&ep_in),
+		nullptr,
 		TPM_CC_ECC_Parameters,
 		TPM_RH_NULL, NULL, 0);
     if (rc!=0)

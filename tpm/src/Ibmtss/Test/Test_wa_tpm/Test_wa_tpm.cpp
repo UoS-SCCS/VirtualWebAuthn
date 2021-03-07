@@ -24,7 +24,7 @@
 #include "Tpm_utils.h"
 #include "Marshal_data.h"
 #include "Tss_setup.h"
-#include "Tpm_defs.h"
+#include "Tpm_timer.h"
 #include "Tpm_param.h"
 #include "Tpm_initialisation.h"
 #include "Web_authn_structures.h"

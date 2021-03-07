@@ -32,9 +32,9 @@ typedef struct {
 } FlushContext_In;
 */    
     rc = TSS_Execute(tssContext,
-                        NULL, 
-                        (COMMAND_PARAMETERS *)&in,
-                        NULL,
+                        nullptr, 
+                        reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+                        nullptr,
                         TPM_CC_FlushContext,
                         TPM_RH_NULL, NULL, 0);
  

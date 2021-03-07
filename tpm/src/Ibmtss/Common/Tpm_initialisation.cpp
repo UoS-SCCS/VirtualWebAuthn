@@ -18,7 +18,7 @@
 #include "Tpm_error.h"
 #include "Tpm_utils.h"
 #include "Tpm_param.h"
-#include "Tpm_defs.h"
+#include "Tpm_timer.h"
 #include "Sha.h"
 #include "Make_key_persistent.h"
 #include "Flush_context.h"
@@ -64,9 +64,9 @@ TPM_RC startup(TSS_CONTEXT* tss_context)
     Startup_In in;
     in.startupType = TPM_SU_CLEAR;
     rc = TSS_Execute(tss_context,
-                    NULL, 
-                    (COMMAND_PARAMETERS *)&in,
-                    NULL,
+                    nullptr, 
+                    reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+                    nullptr,
                     TPM_CC_Startup,
                     TPM_RH_NULL, NULL, 0);
 
@@ -80,9 +80,9 @@ TPM_RC shutdown(TSS_CONTEXT* tss_context)
     Shutdown_In in;
     in.shutdownType = TPM_SU_CLEAR;
     rc = TSS_Execute(tss_context,
-                    NULL, 
-                    (COMMAND_PARAMETERS *)&in,
-                    NULL,
+                    nullptr, 
+                    reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+                    nullptr,
                     TPM_CC_Shutdown,
                     TPM_RH_NULL, NULL, 0);
 
@@ -101,9 +101,9 @@ bool persistent_key_available(TSS_CONTEXT* tss_context,TPM_HANDLE handle)
     in.property=TPM_PT_HR_PERSISTENT;
     in.propertyCount=1;
     rc=TSS_Execute(tss_context,
-            (RESPONSE_PARAMETERS*)&out,
-            (COMMAND_PARAMETERS*)&in,
-            NULL,
+            reinterpret_cast<RESPONSE_PARAMETERS*>(&out),
+            reinterpret_cast<COMMAND_PARAMETERS*>(&in),
+            nullptr,
             TPM_CC_GetCapability,
             TPM_RH_NULL,NULL,0
     );
@@ -116,9 +116,11 @@ bool persistent_key_available(TSS_CONTEXT* tss_context,TPM_HANDLE handle)
     if (ph_count!=0)
     {
             auto handles=retrieve_persistent_handles(tss_context,ph_count);
-            for (size_t i=0;i<handles.size();++i)
+            //for (size_t i=0;i<handles.size();++i)
+            for (auto h : handles)
             {
-                    if (handles[i]==handle)
+                   // if (handles[i]==handle)
+                    if (h==handle)
                     {
                             key_available=true;
                             break;
@@ -148,9 +150,9 @@ std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, ui
     in.property=static_cast<uint32_t>(TPM_HT_PERSISTENT) << 24;
     in.propertyCount=ph_count;
     rc=TSS_Execute(tss_context,
-            (RESPONSE_PARAMETERS*)&out,
-            (COMMAND_PARAMETERS*)&in,
-            NULL,
+            reinterpret_cast<RESPONSE_PARAMETERS*>(&out),
+            reinterpret_cast<COMMAND_PARAMETERS*>(&in),
+            nullptr,
             TPM_CC_GetCapability,
             TPM_RH_NULL,NULL,0
     );

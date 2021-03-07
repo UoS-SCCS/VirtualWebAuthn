@@ -11,6 +11,7 @@
 *
 ******************************************************************************/
 
+#include <memory>
 #include <string>
 #include <chrono>
 #include <array>
@@ -25,7 +26,7 @@ extern "C" {
 void* install_tpm()
 {
 	void* v_ptr=nullptr;
-	Web_authn_tpm* tpm_ptr=new Web_authn_tpm();
+	auto* tpm_ptr=new Web_authn_tpm();
 
 	v_ptr=reinterpret_cast<void*>(tpm_ptr);
 
@@ -42,14 +43,14 @@ TPM_RC setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, con
 
 	Setup_ptr sp;
 	if (use_hw_tpm) {
-		sp.reset(new Device_setup());
+		sp = std::make_unique<Device_setup>();
 	}
 	else {
-		sp.reset(new Simulator_setup());
+		sp = std::make_unique<Simulator_setup>();
 	}
 	sp->data_dir.value=tpm_data_dir;
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 
 	return tpm_ptr->setup(*sp,log_filename);
 }
@@ -60,7 +61,7 @@ const char* get_last_error(void* v_tpm_ptr)
 		return "NULL pointer passed for the TPM";
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 
 	static std::string last_error=tpm_ptr->get_last_error();
 
@@ -74,7 +75,7 @@ Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array k
 		return Key_data{{0,nullptr},{0,nullptr}};
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	std::string user_str=byte_array_to_string(user);
 	std::string auth_str=byte_array_to_string(key_auth);
@@ -88,7 +89,7 @@ TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user)
 		return WEB_AUTHN_ERROR;
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	std::string user_str=byte_array_to_string(user);
 
@@ -101,7 +102,7 @@ Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_par
 		return Relying_party_key{{{0,nullptr},{0,nullptr}},{{0,nullptr},{0,nullptr}}};
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 
 	std::string rp_str=byte_array_to_string(relying_party);
 	std::string user_auth_str=byte_array_to_string(user_auth);
@@ -116,7 +117,7 @@ Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party
 		return Key_ecc_point{{0,nullptr},{0,nullptr}};
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 
 	std::string rp_str=byte_array_to_string(relying_party);
 	std::string user_auth_str=byte_array_to_string(user_auth);
@@ -130,7 +131,7 @@ Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_arra
 		return Ecdsa_sig{{0,nullptr},{0,nullptr}};
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 
 	std::string rp_str=byte_array_to_string(relying_party);
 	std::string rp_key_auth_str=byte_array_to_string(rp_key_auth);
@@ -145,7 +146,7 @@ TPM_RC flush_data(void* v_tpm_ptr)
 		return WEB_AUTHN_ERROR;
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	return tpm_ptr->flush_data();
 }
@@ -154,7 +155,7 @@ TPM_RC flush_data(void* v_tpm_ptr)
 void uninstall_tpm(void* v_tpm_ptr)
 {
 	if (v_tpm_ptr) {
-		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
+		auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);
 		delete tpm_ptr;
 	}
 	v_tpm_ptr=nullptr;
@@ -168,7 +169,7 @@ Byte_array get_byte_array(void* v_tpm_ptr)
 		return Byte_array{0,nullptr};
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	return tpm_ptr->get_byte_array();
 }
@@ -176,7 +177,7 @@ Byte_array get_byte_array(void* v_tpm_ptr)
 void put_byte_array(void* v_tpm_ptr, Byte_array ba)
 {
 	if (v_tpm_ptr!=nullptr) {
-		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+		auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 		tpm_ptr->put_byte_array(ba);
 	}
 }
@@ -187,7 +188,7 @@ Two_byte_arrays get_two_byte_arrays(void* v_tpm_ptr)
 		return Two_byte_arrays{{0,nullptr},{0,nullptr}};
 	}
 
-	Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+	auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 
 	return tpm_ptr->get_two_byte_arrays();
 
@@ -196,7 +197,7 @@ Two_byte_arrays get_two_byte_arrays(void* v_tpm_ptr)
 void put_two_byte_arrays(void* v_tpm_ptr, Two_byte_arrays tba)
 {
 	if (v_tpm_ptr!=nullptr) {
-		Web_authn_tpm* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
+		auto* tpm_ptr=reinterpret_cast<Web_authn_tpm*>(v_tpm_ptr);	
 		tpm_ptr->put_two_byte_arrays(tba);
 	}
 }

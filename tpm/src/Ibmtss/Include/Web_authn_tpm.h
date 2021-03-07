@@ -20,7 +20,7 @@
 #include "Tss_setup.h"
 #include "Logging.h"
 #include "Byte_buffer.h"
-#include "Tpm_defs.h"
+#include "Tpm_timer.h"
 #include "Web_authn_structures.h"
 
 /**
@@ -145,8 +145,8 @@ public:
 
 private:
 	bool setup_;
-    bool hw_tpm_;
-	int dbg_level_;
+        bool hw_tpm_;
+	uint32_t dbg_level_;
 
 	TSS_CONTEXT* tss_context_{nullptr};
 	std::string data_dir_;
@@ -191,7 +191,7 @@ private:
 	 * @param str - the string to be written to the log+ newline
 	 * 
 	 */
-	void log(int dbg_level,std::string const& log_str);
+	void log(uint32_t dbg_level,std::string const& log_str);
 
 };
 
