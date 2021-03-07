@@ -9,4 +9,4 @@ target_include_directories(watpm PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Include)
 set(ibmtss_lib tss)
 
 add_subdirectory(Common)
-#add_subdirectory(Test)
+add_subdirectory(Test)

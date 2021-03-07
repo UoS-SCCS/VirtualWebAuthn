@@ -37,7 +37,7 @@
     #define IBM_TSS
 #endif
 
-int main(int argc, char *argv[])
+int main(/*int argc, char *argv[]*/)
 {
 	bool tests_ok{true};
 	bool use_hw_tpm{false};

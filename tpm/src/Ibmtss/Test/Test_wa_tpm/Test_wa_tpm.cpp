@@ -35,7 +35,7 @@
     #define IBM_TSS
 #endif
 
-int main(int argc, char *argv[])
+int main(/*int argc, char *argv[]*/)
 {
 	bool use_hw_tpm{false};
 	std::string data_dir{"/home/cn0016/TPM_data"};

@@ -12,6 +12,18 @@ set(Sources
 
 add_executable(test_wa_tpm ${Sources})
 
-target_include_directories(test_wa_tpm SYSTEM PRIVATE ${include_dirs} ${tss2_includes})
+target_compile_definitions(test_wa_tpm PRIVATE TPM_POSIX)
 
-target_link_libraries(test_wa_tpm PRIVATE project_options project_warnings ${tss2_libs} ${ossl_libs} stdc++ webauthntpm)
+target_compile_options(test_wa_tpm PRIVATE -pg -O3)
+
+target_link_options(test_wa_tpm PRIVATE -pg)
+
+target_include_directories(test_wa_tpm PRIVATE
+        ${CMAKE_SOURCE_DIR}/Utilities/Include
+        ${CMAKE_SOURCE_DIR}/Tss_utilities/Include
+        ${CMAKE_SOURCE_DIR}/Ibmtss/Include
+        ${tss_includes}
+)
+
+target_link_libraries(test_wa_tpm PRIVATE project_options project_warnings ${tss_lib} ${ossl_libs} stdc++ watpm)
+

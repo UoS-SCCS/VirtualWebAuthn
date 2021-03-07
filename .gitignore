@@ -167,5 +167,3 @@ data/
 # CMake build files
 **/Build
 
-tpm/src/Ibmtss/Test/Test_wa_tpm/ibmtss_test_wa_tpm
-tpm/src/Ibmtss/Test/Test_wa_tpm_2/ibmtss_test_wa_tpm_2
