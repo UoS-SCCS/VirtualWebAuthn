@@ -155,7 +155,8 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
             return []
         allowed = None
         check_allowed=False
-        if not allow_list is None:
+        #Checks allow list is set and not empty
+        if not allow_list is None and allow_list:
             allowed = self.convert_allow_list_to_map(allow_list)
             check_allowed=True
         results = []
