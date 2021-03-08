@@ -203,19 +203,21 @@ class PublicKeyCredentialUserEntity():
         if not AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value in self.parameters:
             raise DICEAuthenticatorException(
                 ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"Missing ID in UserEntity")
-        if not AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value in self.parameters:
-            raise DICEAuthenticatorException(
-                ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,
-                    "Missing displayName in UserEntity")
+        #Display name is optional
+        #if not AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value in self.parameters:
+        #    raise DICEAuthenticatorException(
+        #        ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,
+        #            "Missing displayName in UserEntity")
 
         if not isinstance(self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.ID.value],bytes):
             raise DICEAuthenticatorException(
                 ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,"id in UserEntity not bytes")
-        if not isinstance(
-                self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value],str):
-            raise DICEAuthenticatorException(
-                ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,
-                    "displayName in UserEntity not str")
+        if AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value in self.parameters:
+            if not isinstance(
+                    self.parameters[AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.DISPLAYNAME.value],str):
+                raise DICEAuthenticatorException(
+                    ctap.constants.CTAP_STATUS_CODE.CTAP2_ERR_INVALID_CBOR,
+                        "displayName in UserEntity not str")
 
         if AUTHN_PUBLIC_KEY_CREDENTIAL_USER_ENTITY.NAME.value in self.parameters:
             if not isinstance(
@@ -538,10 +540,11 @@ class AuthenticatorGetAssertionParameters:
     """
     def __init__(self, cbor_data:bytes):
         self.parameters = fido2.cbor.decode(cbor_data)
-
         self.allow_list = []
-        for allowed in self.parameters[AUTHN_GET_ASSERTION.ALLOW_LIST.value]:
-            self.allow_list.append(PublicKeyCredentialDescriptor(allowed))
+        if AUTHN_GET_ASSERTION.ALLOW_LIST.value in self.parameters:
+
+            for allowed in self.parameters[AUTHN_GET_ASSERTION.ALLOW_LIST.value]:
+                self.allow_list.append(PublicKeyCredentialDescriptor(allowed))
         self.verify()
         auth.debug("Decoded GetAssertionParameters: %s", self.parameters)
 
