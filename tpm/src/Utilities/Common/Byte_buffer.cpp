@@ -25,19 +25,17 @@
 
 Byte_buffer::Byte_buffer()
 {
-    initialise();
+    byte_buf_.reserve(initial_reserved_size);
 }
 
 Byte_buffer::Byte_buffer(std::initializer_list<Byte> il) : byte_buf_(il) {}
 
-Byte_buffer::Byte_buffer(size_t const sz, Byte const b)
-{
-    byte_buf_.assign(sz, b);
-}
+Byte_buffer::Byte_buffer(size_t const sz) : byte_buf_(sz) {}
+
+Byte_buffer::Byte_buffer(size_t const sz, Byte const &b) : byte_buf_(sz, b) {}
 
 Byte_buffer::Byte_buffer(std::string const &str)
 {
-    initialise();
     size_t buf_size = str.size();
     byte_buf_.resize(buf_size);
     for (size_t i = 0; i < buf_size; ++i) {
@@ -51,7 +49,6 @@ Byte_buffer::Byte_buffer(Bytes bv) : byte_buf_(std::move(bv)) {}
 
 Byte_buffer::Byte_buffer(Hex_string const &hs)
 {
-    initialise();
     size_t buf_size = hs.size() / 2;
     byte_buf_.resize(buf_size);
     std::string bstr;
@@ -64,10 +61,7 @@ Byte_buffer::Byte_buffer(Hex_string const &hs)
 Byte_buffer::Byte_buffer(const Byte *buf, size_t len)
 {
     byte_buf_.resize(len);
-    memcpy(&byte_buf_[0],buf,len);
-    //for (int i = 0; i < len; ++i) {
-    //    byte_buf_[i] = buf[i];
-    //}
+    memcpy(byte_buf_.data(), buf, len);
 }
 
 Byte_buffer Byte_buffer::get_part(size_t start, size_t length) const
@@ -95,40 +89,37 @@ void Byte_buffer::set_part(size_t start, Byte_buffer const &part)
     }
 }
 
-void Byte_buffer::initialise()
-{
-    byte_buf_.reserve(initial_reserved_size);
-}
-
 Byte_buffer &Byte_buffer::operator+=(Byte_buffer const &b)
 {
-    size_t len = b.size();
-    for (size_t i = 0; i < len; ++i) {
-        byte_buf_.push_back(b[i]);
-    }
+    size_t current_size = byte_buf_.size();
+    size_t b_size = b.size();
+    byte_buf_.resize(current_size + b_size);
+    memcpy(&byte_buf_[current_size], &b[0], b_size);
+
     return *this;
 }
 
 void Byte_buffer::pad_right(size_t new_length, Byte b)
 {
-    if (new_length < byte_buf_.size()) {
+    size_t current_size = byte_buf_.size();
+    if (new_length < current_size) {
         throw std::runtime_error("Byte_buffer.pad_right: already longer than this");
     }
-    size_t length_delta = new_length - byte_buf_.size();
-    for (size_t i = 0; i < length_delta; ++i) {
-        byte_buf_.push_back(b);
-    }
+    size_t size_delta = new_length - current_size;
+    Bytes tmp(size_delta, b);
+    memcpy(&byte_buf_[current_size], tmp.data(), size_delta);
+
 }
 
 void Byte_buffer::pad_left(size_t new_length, Byte b)
 {
     size_t current_size = byte_buf_.size();
     if (new_length < current_size) {
-        throw std::runtime_error("Byte_buffer.pad_right: already longer than this");
+        throw std::runtime_error("Byte_buffer.pad_left: already longer than this");
     }
     size_t length_delta = new_length - current_size;
     Bytes tmp(new_length, b);
-    memcpy(&tmp[length_delta], &byte_buf_[0], current_size);
+    memcpy(&tmp[length_delta], byte_buf_.data(), current_size);
     byte_buf_ = std::move(tmp);
 }
 
@@ -166,18 +157,26 @@ std::string bb_to_string(Byte_buffer const &bb)
 {
     size_t sz = bb.size();
     std::string ochar(sz, '\0');
-    memcpy(&ochar[0], &bb[0], sz);
+    memcpy(ochar.data(), bb.cdata(), sz);
 
     return ochar;
 }
 
-Byte_buffer uint32_to_bb(uint32_t const ui)
+Byte_buffer uint16_to_bb(uint16_t ui)
+{
+    Byte_buffer bb(2, 0);
+    bb[0] = static_cast<Byte>(ui / 256);
+    bb[1] = static_cast<Byte>(ui % 256);
+    return bb;
+}
+
+Byte_buffer uint32_to_bb(uint32_t ui)
 {
     Byte_buffer bb(4, 0);
     uint32_t ival = ui;
     for (uint32_t i = 0; i < 4; ++i) {
-        bb[3 - i] = (ival & 0xff); // NOLINT
-        ival >>= 8; // NOLINT
+        bb[3 - i] = (ival & 0xff);// NOLINT
+        ival >>= 8;// NOLINT
     }
     return bb;
 }
@@ -190,9 +189,9 @@ Byte_buffer serialise_bb(Byte_buffer const &bb)
         throw(std::runtime_error("serialise_bb: buffer to big to serialise"));
     }
     sbb.resize(sz + 2);
-    sbb[0] = static_cast<uint8_t>(sz/byte_base);
-    sbb[1] = static_cast<uint8_t>(sz%byte_base);
-    memcpy(&sbb[2], &bb[0], sz);
+    sbb[0] = static_cast<uint8_t>(sz / byte_base);
+    sbb[1] = static_cast<uint8_t>(sz % byte_base);
+    memcpy(&sbb[2], bb.cdata(), sz);
 
     return sbb;
 }
@@ -206,7 +205,7 @@ Byte_buffer deserialise_bb(Byte_buffer const &bb)
         throw(std::runtime_error("deserialise_bb: inconsistent buffer size"));
     }
     dbb.resize(sz);
-    memcpy(&dbb[0], &bb[2], sz);
+    memcpy(dbb.data(), &bb[2], sz);
 
     return dbb;
 }
@@ -218,8 +217,8 @@ Byte_buffer serialise_byte_buffers(std::vector<Byte_buffer> const &bbs)
         throw(std::runtime_error("serialised_byte_buffers: too many buffers to serialise"));
     }
     Byte_buffer sb;
-    sb.push_back(static_cast<uint8_t>(n_buffers/byte_base));
-    sb.push_back(static_cast<uint8_t>(n_buffers%byte_base));
+    sb.push_back(static_cast<uint8_t>(n_buffers / byte_base));
+    sb.push_back(static_cast<uint8_t>(n_buffers % byte_base));
 
     for (size_t i = 0; i < n_buffers; ++i) {
         sb += serialise_bb(bbs[i]);
@@ -256,18 +255,18 @@ std::vector<Byte_buffer> deserialise_byte_buffers(Byte_buffer const &bb)
 // terminated with whitespace NOT just with some non-hex character
 std::istream &operator>>(std::istream &is, Byte_buffer &bb)
 {
-    char c;
+    char c;// NOLINT
     std::string hstr(2, '\0');
-    Byte b;
+    Byte b;// NOLINT
     bb.byte_buf_.clear();
 
     uint8_t i = 0;
     is >> std::ws;// Skip whitespace
     while (is.get(c)) {
-        if (std::isspace(c)!=0) {
+        if (std::isspace(c) != 0) {
             break;
         }
-        hstr[i++]=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        hstr[i++] = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
         if (i == 2) {
             if (std::string::npos != hstr.find_first_not_of("0123456789ABCDEFabcdef")) {
                 throw(std::runtime_error("Byte_buffer::operator>>: bad character in input stream"));
@@ -291,18 +290,18 @@ std::ostream &operator<<(std::ostream &os, Byte_buffer const &bb)
     return os;
 }
 
-void print_character_bb(std::ostream &os, Byte_buffer const &bb)
+void print_bb_as_characters(std::ostream &os, Byte_buffer const &bb)
 {
-    // Trailing whitespace and nulls not handled yet!!!!!!!!!!!
+    // Remove trailing whitespace
     size_t last_char = bb.size();
     Byte ch;
     do {
         ch = bb[--last_char];
-    } while (ch == '\0' || std::isspace(ch)!=0);
+    } while (ch == '\0' || std::isspace(ch) != 0);
 
     for (size_t i = 0; i <= last_char; ++i) {
         ch = bb[i];
-        if (std::isspace(ch)!=0 || std::isprint(ch)!=0) {
+        if (std::isspace(ch) != 0 || std::isprint(ch) != 0) {
             os << ch;
         } else {
             os << '?';
