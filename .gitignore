@@ -165,5 +165,5 @@ data/
 **/tags
 
 # CMake build files
-**/Build
+**/build
 
