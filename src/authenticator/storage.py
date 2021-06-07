@@ -33,6 +33,7 @@ storage medium
 
 """
 from abc import ABC, abstractmethod
+from typing import Dict, List
 from ctap.credential_source import PublicKeyCredentialSource
 from authenticator.datatypes import PublicKeyCredentialDescriptor
 class DICEAuthenticatorStorage(ABC):
@@ -95,7 +96,23 @@ class DICEAuthenticatorStorage(ABC):
         Returns:
             bool: True if incremented and written, False otherwise
         """
+    @abstractmethod
+    def update_credential_source(self, rp_id: str,
+                                 credential_source: PublicKeyCredentialSource) -> bool:
+        """Updates the specified credential source with a new version. This is primarily
+        used for updating signature counters after a getAssertion call
 
+        When performing the update the implementer should call get_loaded_bytes
+        on the credential_source to get the originally loaded bytes and match based
+        on those.
+
+        Args:
+            rp_id (str): string of the rp_id
+            credential_source (PublicKeyCredentialSource): credential source to update
+
+        Returns:
+            bool: [description]
+        """
     @abstractmethod
     def add_credential_source(self,rp_id:str,user_id:bytes,
         credential_source:PublicKeyCredentialSource)->bool:
@@ -128,7 +145,7 @@ class DICEAuthenticatorStorage(ABC):
         """
 
     @abstractmethod
-    def get_credential_source_by_rp(self,rp_id:str, allow_list=None)->{PublicKeyCredentialSource}:
+    def get_credential_source_by_rp(self,rp_id:str, allow_list=None)->Dict:
         """Gets credential sources using the relying party ID as an index and then applying the
         passed in allow_list, if provided
 

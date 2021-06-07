@@ -166,6 +166,14 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
     def increment_signature_counter(self)->bool:
         return self._update_signature_counter(self.get_signature_counter() + 1)
 
+    def update_credential_source(self, rp_id: str,
+                                 credential_source: PublicKeyCredentialSource) -> bool:
+        if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
+            self._data[STORAGE_KEYS.CREDENTIALS][rp_id] = []
+        self._data[STORAGE_KEYS.CREDENTIALS][rp_id] = [credential_source.get_bytes().hex(
+        ) if i == credential_source.get_loaded_bytes().hex() else i for i in self._data[STORAGE_KEYS.CREDENTIALS][rp_id]]
+        return self._write_to_json()
+
     def add_credential_source(self,rp_id:str,user_id:bytes,
             credential_source:PublicKeyCredentialSource)->bool:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:

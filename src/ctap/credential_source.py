@@ -57,7 +57,8 @@ class PublicKeyCredentialSource():
         self._user_handle = None
         self._other_ui=None
         self._signature_counter= b'\x00\x00\x00\x00'.hex()
-
+        self._loaded_bytes=None
+        #TODO Add random alias so we don't use the RP name as the TPM Key, possibly in here or as an addition to the TPM class
     def init_new(self,alg:int, key_pair:AuthenticatorCryptoKeyPair,
         rp_entity:'PublicKeyCredentialRpEntity', user_entity:'PublicKeyCredentialUserEntity',
         keytype="public-key"):
@@ -176,6 +177,7 @@ class PublicKeyCredentialSource():
             without_id (bool, optional): True to exclude the ID (non-resident
             key), False to set the ID. Defaults to False.
         """
+        self._loaded_bytes = data
         data = json.loads(data.decode('utf-8'))
         self._type=data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.TYPE.value]
         if not without_id:
@@ -189,6 +191,14 @@ class PublicKeyCredentialSource():
                 data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.USER_HANDLE.value])
         self._other_ui=data[AUTHN_PUBLIC_KEY_CREDENTIAL_SOURCE.OTHER_UI.value]
 
+    def get_loaded_bytes(self)->bytes:
+        """Gets the bytes that were originally loaded for this credential source or None
+        if it is new. This is used to index and updated stored credential sources
+
+        Returns:
+            bytes: Original bytes loaded into the credential source or None if new
+        """
+        return self._loaded_bytes
 
     def get_cose_public_key(self):
         """Encodes the public key in a COSE compatible format
@@ -226,7 +236,7 @@ class PublicKeyCredentialSource():
     def increment_signature_counter(self):
         """Increments the signature counter
         """
-        self._signature_counter=(self.get_signature_counter() + 1).to_bytes(4, 'big')
+        self._signature_counter=(self.get_signature_counter() + 1).to_bytes(4, 'big').hex()
 
     def set_id(self, user_id:bytes):
         """Sets the credential id

@@ -379,6 +379,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         #We put this last so the returned value can be
         # updated - not sure this actually has any impact
         response[1]=credential_source.get_public_key_credential_descriptor()
+        self._storage.update_credential_source(params.get_rp_id(),credential_source)
         keep_alive.stop()
         return GetAssertionResp(response,number_of_credentials)
 
@@ -426,6 +427,7 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         # updated - not sure this actually has any impact
         response[1]=credential_source.get_public_key_credential_descriptor()
 
+        self._storage.update_credential_source(params.get_rp_id(),credential_source)
         return GetAssertionResp(response,number_of_credentials)
 
     def authenticator_reset(self, keep_alive:CTAPHIDKeepAlive) -> ResetResp:
