@@ -15,49 +15,54 @@
 #include <sstream>
 #include <string>
 #include <cctype>
+#include <cstdlib>
 #include <algorithm>
 #include "Io_utils.h"
 
 std::string make_filename(
-std::string const& baseDir,
-std::string const& name
-)
+  std::string const &baseDir,
+  std::string const &name)
 {
-    std::string fName=baseDir+dirSep+name;
+    std::string fName = baseDir + dirSep + name;
     // Now fix up the directory seperators as appropriate
-    std::string::size_type pos=0;
-    while ((pos=fName.find(altDirSep,pos))!=std::string::npos) {
-        fName.replace(pos,1,1,dirSep);
-    }	
+    std::string::size_type pos = 0;
+    while ((pos = fName.find(altDirSep, pos)) != std::string::npos) {
+        fName.replace(pos, 1, 1, dirSep);
+    }
     return fName;
 }
 
-void eat_white(std::istream& is)
+std::string get_environment_variable(
+  std::string const &var,
+  std::string def) noexcept
 {
-    char c;
-    while (std::isspace(is.peek())!=0) {
-            is.get(c);
+    const char *ret = std::getenv(var.c_str());
+    return ret != nullptr ? std::string(ret) : std::move(def);
+}
+
+void eat_white(std::istream &is)
+{
+    char c;// NOLINT
+    while (std::isspace(is.peek()) != 0) {
+        is.get(c);
     }
 }
 
 std::string str_tolower(
-std::string const& str
-)
+  std::string const &str)
 {
-    std::string s{str};
-    std::transform(s.begin(), s.end(), s.begin(), 
-        [](unsigned char c){ return std::tolower(c); });
+    std::string s{ str };
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
     return s;
 }
 
 void print_buffer(
-std::ostream& os,
-const uint8_t* buf,
-const size_t len,
-bool remove_leading
-)
+  std::ostream &os,
+  const uint8_t *buf,
+  const size_t len,
+  bool remove_leading)
 {
-    if (len==0) {
+    if (len == 0) {
         os << "buffer empty";
         return;
     }
@@ -65,14 +70,14 @@ bool remove_leading
     oldState.copyfmt(os);
     os << std::setfill('0') << std::hex;
     if (remove_leading) {
-        if (buf[0]!=0) {
-            os << 0+buf[0];
+        if (buf[0] != 0) {
+            os << 0 + buf[0];
         }
     } else {
-            os << std::setw(2) << 0 + buf[0];
-    } 
+        os << std::setw(2) << 0 + buf[0];
+    }
     for (size_t i = 1; i < len; ++i) {
-        os << std::setw(2) << 0 + buf[i];	// 0 + used to force conversion to an integer for printing
+        os << std::setw(2) << 0 + buf[i];// 0 + used to force conversion to an integer for printing
     }
 
     os.copyfmt(oldState);

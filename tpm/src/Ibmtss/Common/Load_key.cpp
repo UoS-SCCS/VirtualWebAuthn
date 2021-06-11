@@ -31,9 +31,9 @@ Load_Out* out
     load_key_in.inPrivate=tpm_private;
     load_key_in.inPublic=tpm_public;
     TPM_RC rc = TSS_Execute(tss_context,
-        (RESPONSE_PARAMETERS *)out,
-        (COMMAND_PARAMETERS *)&load_key_in,
-        NULL,
+        reinterpret_cast<RESPONSE_PARAMETERS *>(out),
+        reinterpret_cast<COMMAND_PARAMETERS *>(&load_key_in),
+        nullptr,
         TPM_CC_Load,
         TPM_RS_PW, (parent_auth.size()==0?nullptr:parent_auth.c_str()), 0,
         TPM_RH_NULL, NULL, 0);

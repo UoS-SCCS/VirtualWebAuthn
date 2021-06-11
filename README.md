@@ -142,8 +142,13 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
 * Follow the instructions in [Installing_IBM_software](Installing_IBM_software.md) to create and start the IBM Simulator
 * Once complete you should be able to run the simulator using `sudo /opt/ibmtpm/src/tpm_server`
     * use `sudo /opt/ibmtpm/src/tpm_server --rm` to reset the software TPM
-* In this respository navigate to `./tpm/` and run `make`
-    * Once complete you should have a `./tpm/lib/libwatpm.so` file
+* In this respository navigate to `./tpm/src` and then:
+   1. Create a Build directory at the top level
+   2. cd Build
+   3. cmake ..
+   4. make
+
+* Once complete you should have a `./tpm/lib/libwatpm.so` file
 
 ### Running DiceKey
 * Inside `./src` run `python3 dice_key.py`

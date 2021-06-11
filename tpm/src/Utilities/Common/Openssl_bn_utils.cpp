@@ -26,11 +26,11 @@ Byte_buffer bb_mod(Byte_buffer const &num, Byte_buffer const &modulus)
 {
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr mod_bn = new_bn();
-    BN_bin2bn(modulus.cdata(), modulus.size(), mod_bn.get());
+    BN_bin2bn(modulus.cdata(), static_cast<int>(modulus.size()), mod_bn.get());
 //    bb2bn(modulus,mod_bn.get());
 
     Bn_ptr n_bn = new_bn();
-    BN_bin2bn(num.cdata(), num.size(), n_bn.get());
+    BN_bin2bn(num.cdata(), static_cast<int>(num.size()), n_bn.get());
 //    bb2bn(num,n_bn.get());
 
     Byte_buffer result;
@@ -46,11 +46,11 @@ Byte_buffer bb_mod(Byte_buffer const &num, Byte_buffer const &modulus)
 Byte_buffer bb_add(Byte_buffer const &a, Byte_buffer const &b)
 {
     Bn_ptr a_bn = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), a_bn.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), a_bn.get());
 //    bb2bn(a,a_bn.get());
 
     Bn_ptr b_bn = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), b_bn.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), b_bn.get());
 //    bb2bn(b,b_bn.get());
 
     Byte_buffer result;
@@ -66,15 +66,15 @@ Byte_buffer bb_mod_add(Byte_buffer const &a, Byte_buffer const &b, Byte_buffer c
 {
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr a_bn = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), a_bn.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), a_bn.get());
 //    bb2bn(a,a_bn.get());
 
     Bn_ptr b_bn = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), b_bn.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), b_bn.get());
 //    bb2bn(b,b_bn.get());
 
     Bn_ptr n_bn = new_bn();
-    BN_bin2bn(n.cdata(), n.size(), n_bn.get());
+    BN_bin2bn(n.cdata(), static_cast<int>(n.size()), n_bn.get());
 //    bb2bn(n,n_bn.get());
 
     Byte_buffer result;
@@ -89,11 +89,11 @@ Byte_buffer bb_mod_add(Byte_buffer const &a, Byte_buffer const &b, Byte_buffer c
 Byte_buffer bb_sub(Byte_buffer const &a, Byte_buffer const &b)
 {
     Bn_ptr a_bn = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), a_bn.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), a_bn.get());
 //    bb2bn(a,a_bn.get());
 
     Bn_ptr b_bn = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), b_bn.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), b_bn.get());
 //    bb2bn(b,b_bn.get());
 
     Byte_buffer result;
@@ -109,15 +109,15 @@ Byte_buffer bb_mod_sub(Byte_buffer const &a, Byte_buffer const &b, Byte_buffer c
 {
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr a_bn = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), a_bn.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), a_bn.get());
 //    bb2bn(a,a_bn.get());
 
     Bn_ptr b_bn = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), b_bn.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), b_bn.get());
 //    bb2bn(b,b_bn.get());
 
     Bn_ptr n_bn = new_bn();
-    BN_bin2bn(n.cdata(), n.size(), n_bn.get());
+    BN_bin2bn(n.cdata(), static_cast<int>(n.size()), n_bn.get());
 //    bb2bn(n,n_bn.get());
 
     Byte_buffer result;
@@ -133,11 +133,11 @@ Byte_buffer bb_mul(Byte_buffer const &a, Byte_buffer const &b)
 {
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr a_bn = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), a_bn.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), a_bn.get());
 //    bb2bn(a,a_bn.get());
 
     Bn_ptr b_bn = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), b_bn.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), b_bn.get());
 //    bb2bn(b,b_bn.get());
 
     Byte_buffer result;
@@ -153,15 +153,15 @@ Byte_buffer bb_mod_mul(Byte_buffer const &a, Byte_buffer const &b, Byte_buffer c
 {
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr a_bn = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), a_bn.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), a_bn.get());
 //    bb2bn(a,a_bn.get());
 
     Bn_ptr b_bn = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), b_bn.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), b_bn.get());
 //    bb2bn(b,b_bn.get());
 
     Bn_ptr n_bn = new_bn();
-    BN_bin2bn(n.cdata(), n.size(), n_bn.get());
+    BN_bin2bn(n.cdata(), static_cast<int>(n.size()), n_bn.get());
 //    bb2bn(n,n_bn.get());
 
     Byte_buffer result;
@@ -177,19 +177,19 @@ Byte_buffer bb_signature_calc(Byte_buffer const &a, Byte_buffer const &b, Byte_b
 {
     Bn_ctx_ptr ctx = new_bn_ctx();
     Bn_ptr bn_n = new_bn();
-    BN_bin2bn(modulus.cdata(), modulus.size(), bn_n.get());
+    BN_bin2bn(modulus.cdata(), static_cast<int>(modulus.size()), bn_n.get());
 //    bb2bn(modulus,bn_n.get());
 
     Bn_ptr bn_a = new_bn();
-    BN_bin2bn(a.cdata(), a.size(), bn_a.get());
+    BN_bin2bn(a.cdata(), static_cast<int>(a.size()), bn_a.get());
 //    bb2bn(a,bn_a.get());
 
     Bn_ptr bn_b = new_bn();
-    BN_bin2bn(b.cdata(), b.size(), bn_b.get());
+    BN_bin2bn(b.cdata(), static_cast<int>(b.size()), bn_b.get());
 //    bb2bn(b,bn_b.get());
 
     Bn_ptr bn_tmp = new_bn();
-    BN_bin2bn(c.cdata(), c.size(), bn_tmp.get());
+    BN_bin2bn(c.cdata(), static_cast<int>(c.size()), bn_tmp.get());
 //    bb2bn(c,bn_tmp.get());
 
     Byte_buffer result;

@@ -17,19 +17,19 @@
 
 void Tss_setup::put(std::ostream& os) const
 {
-    std::cout << "Base class\n";
+   os << "Base class\n";
 }
 
 void Simulator_setup::put(std::ostream& os) const
 {
     Tss_setup::put(os);
-    std::cout << "Simulator setup class\n";
+    os << "Simulator setup class\n";
 }
 
 void Device_setup::put(std::ostream& os) const
 {
     Tss_setup::put(os);
-    std::cout << "Device setup class\n";
+    os << "Device setup class\n";
 }
 
 TPM_RC Tss_setup::set_properties(TSS_CONTEXT* context) const
@@ -37,7 +37,7 @@ TPM_RC Tss_setup::set_properties(TSS_CONTEXT* context) const
     TPM_RC rc=0;
     // For the moment just set the common setting and ignore the others
     if (trace_level.value != Tss_default::trace_level.value)
-		  rc=TSS_SetProperty(NULL,trace_level.type,trace_level.value);
+		  rc=TSS_SetProperty(nullptr,trace_level.type,trace_level.value);
 
     if (rc==0 && encrypt_sessions.value != Tss_default::encrypt_sessions.value)
 		  rc=TSS_SetProperty(context,encrypt_sessions.type,encrypt_sessions.value);

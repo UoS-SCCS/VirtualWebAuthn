@@ -47,7 +47,7 @@ Byte_buffer byte_array_to_bb(Byte_array const& ba)
 void bb_to_byte_array(Byte_array& ba, Byte_buffer const& bb)
 {
     release_byte_array(ba);
-    ba.size=bb.size();
+    ba.size=static_cast<uint16_t>(bb.size());
     ba.data=new Byte[ba.size];
     if (ba.data==nullptr)
     {

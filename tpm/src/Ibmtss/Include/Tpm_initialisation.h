@@ -21,6 +21,6 @@ TPM_RC shutdown(TSS_CONTEXT* tss_context);
 
 bool persistent_key_available(TSS_CONTEXT* tss_context,TPM_HANDLE handle);
 
-std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, size_t ph_count);
+std::vector<TPM_HANDLE> retrieve_persistent_handles(TSS_CONTEXT* tss_context, uint32_t ph_count);
 
 TPM_RC make_key_persistent(TSS_CONTEXT* tss_context,TPM_HANDLE key_handle,TPM_HANDLE persistent_handle);

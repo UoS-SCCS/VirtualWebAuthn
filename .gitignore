@@ -164,8 +164,6 @@ data/
 # ctags files
 **/tags
 
-# CMake build directory
-**/Build
+# CMake build files
+**/build
 
-tpm/src/Ibmtss/Test/Test_wa_tpm/ibmtss_test_wa_tpm
-tpm/src/Ibmtss/Test/Test_wa_tpm_2/ibmtss_test_wa_tpm_2

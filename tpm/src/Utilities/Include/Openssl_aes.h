@@ -25,6 +25,8 @@ constexpr size_t aes_key_bits=128;
 constexpr size_t aes_key_bytes=(aes_key_bits+7)/8;
 constexpr size_t aes_block_size=AES_BLOCK_SIZE;
 
+/*
+>>>>>>> using_cmake
 using Evp_cipher_ctx_ptr=std::unique_ptr<EVP_CIPHER_CTX,decltype(&::EVP_CIPHER_CTX_free)>;
 static Evp_cipher_ctx_ptr new_evp_cipher_ctx(){return Evp_cipher_ctx_ptr(EVP_CIPHER_CTX_new(), ::EVP_CIPHER_CTX_free);}
 
@@ -50,3 +52,4 @@ Byte_buffer const& id,
 Byte_buffer const& aes_key_bb,
 Byte_buffer const& initial_iv
 );
+*/

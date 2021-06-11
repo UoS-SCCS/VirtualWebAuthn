@@ -98,6 +98,7 @@ CreatePrimary_Out* out
         TPMU_SYM_MODE       mode;           // default mode 
     } TPMT_SYM_DEF_OBJECT;
 
+    */
     /* Table 128 - Definition of TPMT_SYM_DEF_OBJECT Structure
 
     typedef struct {
@@ -179,9 +180,9 @@ CreatePrimary_Out* out
     in.outsideInfo.t.size = 0;
     in.creationPCR.count = 0;
     rc = TSS_Execute(tss_context,
-            (RESPONSE_PARAMETERS *)out,
-            (COMMAND_PARAMETERS *)&in,
-            NULL,
+            reinterpret_cast<RESPONSE_PARAMETERS *>(out),
+            reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+            nullptr,
             TPM_CC_CreatePrimary,
             TPM_RS_PW, NULL, 0,     // Password auth., no password
             TPM_RH_NULL, NULL, 0);  // End of list of session 3-tuples

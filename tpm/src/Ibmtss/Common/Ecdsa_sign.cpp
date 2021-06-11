@@ -31,7 +31,7 @@ Sign_Out* sign_out
     sign_in.keyHandle=handle;
     sign_in.inScheme.scheme=TPM_ALG_ECDSA;
     sign_in.inScheme.details.ecdsa.hashAlg=TPM_ALG_SHA256;
-    sign_in.digest.t.size = digest_to_sign.size();
+    sign_in.digest.t.size = static_cast<uint16_t>(digest_to_sign.size());
     memcpy(&sign_in.digest.t.buffer,digest_to_sign.cdata(),digest_to_sign.size());
 
     sign_in.validation.tag = TPM_ST_HASHCHECK;
@@ -40,9 +40,9 @@ Sign_Out* sign_out
         
     if (rc == 0) {
         rc = TSS_Execute(tss_context,
-            (RESPONSE_PARAMETERS *)sign_out,
-            (COMMAND_PARAMETERS *)&sign_in,
-            NULL,
+            reinterpret_cast<RESPONSE_PARAMETERS *>(sign_out),
+            reinterpret_cast<COMMAND_PARAMETERS *>(&sign_in),
+            nullptr,
             TPM_CC_Sign,
             TPM_RS_PW, (ecdsa_auth.size()==0?nullptr:ecdsa_auth.c_str()), 0,            
             TPM_RH_NULL, NULL, 0);

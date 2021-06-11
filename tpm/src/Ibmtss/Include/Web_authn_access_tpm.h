@@ -24,39 +24,29 @@
 
 extern "C" {
 // Allocate memory for the TPM class and return a void* pointer to it
-void* install_tpm();
+void *install_tpm();
 
 // Setup the TPM
-int32_t setup_tpm(void* v_tpm_ptr, bool use_hw_tpm, const char* tpm_data_dir, const char* log_filename);
+TPM_RC setup_tpm(void *v_tpm_ptr, bool use_hw_tpm, const char *tpm_data_dir, const char *log_filename);
 
 // Return the last error
-const char* get_last_error(void* v_tpm_ptr);
+const char *get_last_error(void *v_tpm_ptr);
 
 // Call the TPM class' destructor, flushing any keys from the TPM and freeing any memory
-void uninstall_tpm(void* v_tpm_ptr);
+void uninstall_tpm(void *v_tpm_ptr);
 
 // No parent authorisation as we are using the SRK with no password.
-Key_data create_and_load_user_key(void* v_tpm_ptr, Byte_array user, Byte_array key_auth);
+Key_data create_and_load_user_key(void *v_tpm_ptr, Byte_array user, Byte_array key_auth);
 
 // No parent authorisation as we are using the SRK with no password, key authorisation not needed to load the key.
-TPM_RC load_user_key(void* v_tpm_ptr, Key_data kd, Byte_array user);
+TPM_RC load_user_key(void *v_tpm_ptr, Key_data kd, Byte_array user);
 
-Relying_party_key create_and_load_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);
+Relying_party_key create_and_load_rp_key(void *v_tpm_ptr, Byte_array relying_party, Byte_array user_auth, Byte_array rp_key_auth);
 
-Key_ecc_point load_rp_key(void* v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array user_auth);
+Key_ecc_point load_rp_key(void *v_tpm_ptr, Key_data kd, Byte_array relying_party, Byte_array user_auth);
 
-Ecdsa_sig sign_using_rp_key(void* v_tpm_ptr, Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth);
+Ecdsa_sig sign_using_rp_key(void *v_tpm_ptr, Byte_array relying_party, Byte_array signing_data, Byte_array rp_key_auth);
 
-TPM_RC flush_data(void* v_tpm_ptr);
+TPM_RC flush_data(void *v_tpm_ptr);
 
-// Temporary functions for testing
-Byte_array get_byte_array(void* v_tpm_ptr);
-
-void put_byte_array(void* v_tpm_ptr, Byte_array ba);
-
-Two_byte_arrays get_two_byte_arrays(void* v_tpm_ptr);
-
-void put_two_byte_arrays(void* v_tpm_ptr, Two_byte_arrays tba);
-
-
-} // end of extern "C"
+}// end of extern "C"

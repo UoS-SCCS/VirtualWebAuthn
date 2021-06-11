@@ -16,18 +16,18 @@
 EC_GROUP *get_ec_group_bnp256(void)
 {
 	int ok=0;
-	EC_GROUP *curve = NULL;
-	EC_POINT *generator = NULL;
+	EC_GROUP *curve = nullptr;
+	EC_POINT *generator = nullptr;
 	BN_CTX* ctx = BN_CTX_new();
-	BIGNUM   *tmp_1 = NULL, *tmp_2 = NULL, *tmp_3 = NULL;
+	BIGNUM   *tmp_1 = nullptr, *tmp_2 = nullptr, *tmp_3 = nullptr;
 
-	if ((tmp_1 = BN_bin2bn(&bnp256_p[0], bnp256_p.size(), NULL)) == NULL)
+	if ((tmp_1 = BN_bin2bn(bnp256_p.cdata(), static_cast<int>(bnp256_p.size()), nullptr)) == nullptr)
 		goto err;
-	if ((tmp_2 = BN_bin2bn(&bnp256_a[0], bnp256_a.size(), NULL)) == NULL)
+	if ((tmp_2 = BN_bin2bn(bnp256_a.cdata(), static_cast<int>(bnp256_a.size()), nullptr)) == nullptr)
 		goto err;
-	if ((tmp_3 = BN_bin2bn(&bnp256_b[0], bnp256_b.size(), NULL)) == NULL)
+	if ((tmp_3 = BN_bin2bn(bnp256_b.cdata(), static_cast<int>(bnp256_b.size()), nullptr)) == nullptr)
 		goto err;
-	if ((curve = EC_GROUP_new_curve_GFp(tmp_1, tmp_2, tmp_3, NULL)) == NULL)
+	if ((curve = EC_GROUP_new_curve_GFp(tmp_1, tmp_2, tmp_3, nullptr)) == nullptr)
 		goto err;
 
 //	std::cout << "p: " << BN_bn2hex(tmp_1) << '\n';
@@ -36,11 +36,11 @@ EC_GROUP *get_ec_group_bnp256(void)
 
 	/* build generator */
 	generator = EC_POINT_new(curve);
-	if (generator == NULL)
+	if (generator == nullptr)
 		goto err;
-	if ((tmp_1 = BN_bin2bn(&bnp256_gX[0], bnp256_gX.size(), tmp_1)) == NULL)
+	if ((tmp_1 = BN_bin2bn(bnp256_gX.cdata(), static_cast<int>(bnp256_gX.size()), tmp_1)) == nullptr)
 		goto err;
-	if ((tmp_2 = BN_bin2bn(&bnp256_gY[0], bnp256_gY.size(), tmp_2)) == NULL)
+	if ((tmp_2 = BN_bin2bn(bnp256_gY.cdata(), static_cast<int>(bnp256_gY.size()), tmp_2)) == nullptr)
 		goto err;
 	if (1!= EC_POINT_set_affine_coordinates_GFp(curve,generator,tmp_1,tmp_2,ctx))
 		goto err;
@@ -48,7 +48,7 @@ EC_GROUP *get_ec_group_bnp256(void)
 //	std::cout << "gX: " << BN_bn2hex(tmp_1) << '\n';
 //	std::cout << "gY: " << BN_bn2hex(tmp_2) << '\n';
 
-	if ((tmp_1 = BN_bin2bn(&bnp256_order[0], bnp256_order.size(), tmp_1)) == NULL)
+	if ((tmp_1 = BN_bin2bn(bnp256_order.cdata(), static_cast<int>(bnp256_order.size()), tmp_1)) == nullptr)
 		goto err;
 	BN_one(tmp_2);
 	if (1!= EC_GROUP_set_generator(curve,generator,tmp_1,tmp_2))
@@ -72,7 +72,7 @@ err:
 	if (!ok)
 		{
 		EC_GROUP_free(curve);
-		curve = NULL;
+		curve = nullptr;
 		}
 //	std::cout << "Returning to caller after generating curve\n";
 	return(curve);

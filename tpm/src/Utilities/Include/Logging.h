@@ -66,7 +66,7 @@ class Null_log : public Log
 {
 public:	
 	virtual std::ostream& os() {return null_stream_;}
-	virtual void write_to_log(std::string str){}
+	virtual void write_to_log(std::string str){null_stream_ << str;}
 	virtual ~Null_log() throw()=default;
 private:
     Null_stream null_stream_;

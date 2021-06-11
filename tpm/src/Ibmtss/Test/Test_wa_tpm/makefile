@@ -1,5 +1,5 @@
 # =============================================================================
-#  Makefile for test_daa_sign
+#  Makefile for test_wa_tpm_2
 # =============================================================================
 
 # Set paths and flags for TPM_experiments
@@ -14,10 +14,12 @@ CXXFLAGS=$(COMMON_CPPFLAGS) $(CXXFLAGS_COMMON) -pg -O2
 LDFLAGS= -pg $(LDFLAGS_COMMON) 
 
 # libraries
-LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
+#LDLIBS=$(LDLIBS_COMMON) -lssl -lcrypto  -L$(LIB_DIR) -lwatpm
+LDLIBS=$(LDLIBS_COMMON) -L$(LIB_DIR) -lwatpm
 
-TARGET=$(PREFIX)test_wa_tpm
-SRCS=Test_wa_tpm.cpp
+TARGET=test_wa_tpm_2
+SRCS=Test_wa_tpm_2.cpp \
+	Sha256.cpp
 
 $(TARGET): $(SRCS:.cpp=.o)
 	$(LD) $(TARGET_ARCH) $(LDFLAGS) $(SRCS:.cpp=.o) $(LDLIBS) -o $@
