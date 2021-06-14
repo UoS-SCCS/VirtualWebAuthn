@@ -23,9 +23,24 @@
 #include "Tpm_timer.h"
 #include "Web_authn_structures.h"
 
+
+/*! \mainpage WebAuthnLib
+ *
+ * WebAuthnLib is used to inteface the TPM with the WebAuthn Authenticator.
+ *
+ *  
+ * Comments:
+ * 
+ *  1. It uses the IBM TSS library and this needs to be installed.
+ *  2. It uses particular TPM routines relevant to WebAuthn. In particuler: the EC curve 
+ *     prime256v1, the SHA256 hash function and the ECDSA signing algorithm.
+ *	3. When using a hardware TPM, it addresses the TPM directly via /dev/tpm0, it does not
+ *     use the TPM resource manager, /dev/tpmrm0.
+ */
+
+
 /**
- * The Web_authn_tpm class, implements the calls needed for the VANET DAA protocol. Details of the protocol are
- * given separately.
+ * The Web_authn_tpm class, implements the TPM calls needed for the WebAuthn authenticator.
  *
  */
 class Web_authn_tpm
@@ -34,7 +49,7 @@ class Web_authn_tpm
     /**
 	 * Default constructor.
 	 */
-    Web_authn_tpm() : setup_{ false }, hw_tpm_(false), dbg_level_(1), tss_context_(nullptr), last_error_("No error") {}
+    Web_authn_tpm() : last_error_("No error") {}
 
     Web_authn_tpm(Web_authn_tpm const &t) = delete;
     Web_authn_tpm &operator=(Web_authn_tpm const &t) = delete;
@@ -48,6 +63,17 @@ class Web_authn_tpm
 	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 */
     TPM_RC setup(Tss_setup const &tps, std::string const &log_filename);
+
+    /**
+	 * Sets the debug level, options are:: 1 - minimal reporting, mostly just errors, 2 - some information as things proceed,
+	 * and 3 - debug information.
+	 * 
+	 * @param debug_level -  the required level of information in the log file.
+	 * 
+	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
+	 * 
+	 */
+    TPM_RC set_debug_level(int debug_level);
 
     /**
 	 * Creates a new user (storage) key and loads it ready for use. If a user key is already loaded, it and its
@@ -138,9 +164,8 @@ class Web_authn_tpm
     TSS_CONTEXT *get_context() { return tss_context_; }
 
   private:
-    bool setup_;
-    bool hw_tpm_;
-    uint32_t dbg_level_;
+    bool hw_tpm_{ false };
+    Debug_level dbg_level_{ Debug_level::info };
 
     TSS_CONTEXT *tss_context_{ nullptr };
     std::string data_dir_;
@@ -180,7 +205,5 @@ class Web_authn_tpm
 	 * @param str - the string to be written to the log+ newline
 	 * 
 	 */
-    void log(uint32_t dbg_level, std::string const &log_str);
+    void log(Debug_level dbg_level, std::string const &log_str);
 };
-
-void tba_copy(Two_byte_arrays &lhs, Two_byte_arrays const &rhs);

@@ -51,13 +51,15 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
         log_ptr_->set_debug_level(dbg_level_);
         data_dir_ = std::string(tps.data_dir.value);
 
-        log(1, "TPM setup started");
+        log(Debug_level::error, "TPM setup started");
+
+        log(Debug_level::info, vars_to_string("Debug level set to: ", dbg_level_));
 
         hw_tpm_ = (tps.t == Tpm_type::device);
         if (!hw_tpm_) {
             rc = powerup(tps);
             if (rc != 0) {
-                log(1, "Web_authn_tpm: setup: Simulator powerup failed");
+                log(Debug_level::error, "Web_authn_tpm: setup: Simulator powerup failed");
                 throw(Tpm_error("Simulator powerup failed\n"));
             }
         }
@@ -65,7 +67,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
         auto nc = set_new_context(tps);
         rc = nc.first;
         if (rc != 0) {
-            log(1, "Web_authn_tpm: setup: failed to create a TSS context");
+            log(Debug_level::error, "Web_authn_tpm: setup: failed to create a TSS context");
             throw(Tpm_error("Web_authn_tpm: setup: failed to create a TSS context\n"));
         }
         tss_context_ = nc.second;
@@ -76,7 +78,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
         rc = startup(tss_context_);
         if (rc != 0 && rc != TPM_RC_INITIALIZE) {
             shutdown(tss_context_);
-            log(1, "Web_authn_tpm: setup: TPM startup failed (reset the TPM)");
+            log(Debug_level::error, "Web_authn_tpm: setup: TPM startup failed (reset the TPM)");
             throw(Tpm_error("TPM startup failed (reset the TPM)"));
         }
 
@@ -85,11 +87,11 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
                                          TPMA_OBJECT_USERWITHAUTH;
             CreatePrimary_Out out;
             rc = create_primary_rsa_key(tss_context_, TPM_RH_OWNER, object_attributes, Byte_buffer(), &out);
-            log(1, "Primary key created");
+            log(Debug_level::debug, "Primary key created");
             rc = make_key_persistent(tss_context_, out.objectHandle, srk_persistent_handle);
-            log(1, "Primary key made persistent");
+            log(Debug_level::debug, "Primary key made persistent");
         } else {
-            log(1, "Primary key already installed");
+            log(Debug_level::debug, "Primary key already installed");
         }
     } catch (Tpm_error &e) {
         rc = 1;
@@ -102,15 +104,30 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
         last_error_ = "Web_authn_tpm: setup: failed - uncaught exception";
     }
 
-    log(1, vars_to_string("TPM setup completed with rc=", rc));
+    log(Debug_level::info, vars_to_string("TPM setup completed with rc=", rc));
+
+    return rc;
+}
+
+TPM_RC Web_authn_tpm::set_debug_level(int debug_level)
+{
+    TPM_RC rc = 0;
+
+    if (debug_level < Debug_level::error || debug_level > Debug_level::debug) {
+        last_error_ = vars_to_string("Invalid value for the debug level: ", debug_level, ". Should be between ", Debug_level::error, " and ", Debug_level::debug, ".");
+        log(Debug_level::error, last_error_);
+        rc = 1;
+    } else {
+        dbg_level_ = static_cast<Debug_level>(debug_level);
+    }
 
     return rc;
 }
 
 Key_data Web_authn_tpm::create_and_load_user_key(std::string const &user, std::string const &authorisation)
 {
-    log(1, "create_and_load_user_key");
-    log(1, vars_to_string("User: ", user, "\tAuthorisation: ", authorisation));
+    log(Debug_level::info, "create_and_load_user_key");
+    log(Debug_level::debug, vars_to_string("User: ", user));
 
     TPM_RC rc = 0;
     try {
@@ -120,28 +137,26 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const &user, std::s
         rc = create_storage_key(tss_context_, srk_persistent_handle, authorisation, &out);
         if (rc != 0) {
             error = vars_to_string("Unable to create the user key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
-        log(1, "User key created");
+        log(Debug_level::debug, "User key created");
 
         Load_Out load_out;
         rc = load_key(tss_context_, "", srk_persistent_handle, out.outPublic, out.outPrivate, &load_out);
         if (rc != 0) {
             error = vars_to_string("Unable to load the user key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
         user_handle_ = load_out.objectHandle;
-        if (dbg_level_ <= 1) {
-            log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << std::endl;
-        }
+        log(Debug_level::info, vars_to_string("User key loaded, handle: ", std::hex, user_handle_));
 
         Byte_buffer public_data_bb = marshal_public_data_B(&out.outPublic);
-        log(1, vars_to_string("User's public data: ", public_data_bb));
+        log(Debug_level::debug, vars_to_string("User's public data: ", public_data_bb));
         Byte_buffer private_data_bb = marshal_private_data_B(&out.outPrivate);
-        log(1, vars_to_string("User's private data: ", private_data_bb));
+        log(Debug_level::debug, vars_to_string("User's private data: ", private_data_bb));
 
         bb_to_byte_array(user_kd_.public_data, public_data_bb);
         bb_to_byte_array(user_kd_.private_data, private_data_bb);
@@ -164,7 +179,7 @@ Key_data Web_authn_tpm::create_and_load_user_key(std::string const &user, std::s
 
 TPM_RC Web_authn_tpm::load_user_key(Key_data const &key, std::string const &user)
 {
-    log(1, vars_to_string("load_user_key: User: ", user));
+    log(Debug_level::info, vars_to_string("load_user_key: User: ", user));
 
     TPM_RC rc = 0;
 
@@ -173,15 +188,15 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const &key, std::string const &user
         flush_user_key();
 
         Byte_buffer public_data_bb = byte_array_to_bb(key.public_data);
-        log(1, vars_to_string("User's public data: ", public_data_bb));
+        log(Debug_level::debug, vars_to_string("User's public data: ", public_data_bb));
         Byte_buffer private_data_bb = byte_array_to_bb(key.private_data);
-        log(1, vars_to_string("User's private data: ", private_data_bb));
+        log(Debug_level::debug, vars_to_string("User's private data: ", private_data_bb));
 
         TPM2B_PUBLIC tpm2b_public;
         rc = unmarshal_public_data_B(public_data_bb, &tpm2b_public);
         if (rc != 0) {
             error = vars_to_string("Unable to unmarshall the public data for the user key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
@@ -189,7 +204,7 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const &key, std::string const &user
         rc = unmarshal_private_data_B(private_data_bb, &tpm2b_private);
         if (rc != 0) {
             error = vars_to_string("Unable to unmarshall the private data for the user key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
@@ -197,16 +212,14 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const &key, std::string const &user
         rc = load_key(tss_context_, "", srk_persistent_handle, tpm2b_public, tpm2b_private, &load_out);
         if (rc != 0) {
             error = vars_to_string("Unable to load the user key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
         user_handle_ = load_out.objectHandle;
 
-        if (dbg_level_ <= 1) {
-            log_ptr_->os() << "User key loaded, handle: " << std::hex << user_handle_ << std::endl;
-        }
-        // !!!!!!!!!!!! Should I copy the key data to kd_ for consistency ? !!!!!!!!!!!!
+        log(Debug_level::info, vars_to_string("User key loaded, handle: ", std::hex, user_handle_));
+
     } catch (Tpm_error &e) {
         rc = 1;
         last_error_ = vars_to_string("Web_authn_tpm: load_user_key: Tpm_error: ", e.what());
@@ -223,8 +236,8 @@ TPM_RC Web_authn_tpm::load_user_key(Key_data const &key, std::string const &user
 
 Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const &relying_party, std::string const &user_auth, std::string const &rp_key_auth)
 {
-    log(1, "create_and_load_rp_key");
-    log(1, vars_to_string("Relying party: ", relying_party, "\tUser (parent) authorisation: ", user_auth, "\tRP auth: ", rp_key_auth));
+    log(Debug_level::info, "create_and_load_rp_key");
+    log(Debug_level::debug, vars_to_string("Relying party: ", relying_party));
 
     TPM_RC rc = 0;
 
@@ -236,35 +249,32 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const &relyi
         rc = create_ecdsa_key(tss_context_, user_handle_, user_auth, curve_ID, rp_key_auth, &out);
         if (rc != 0) {
             error = vars_to_string("Unable to create the RP key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
-        log(1, "Relying party key created");
+        log(Debug_level::info, "Relying party key created");
 
         TPMT_PUBLIC ecdsa_pub_out = out.outPublic.publicArea;
         Byte_buffer ecdsa_key_x = tpm2b_to_bb(ecdsa_pub_out.unique.ecc.x);
         Byte_buffer ecdsa_key_y = tpm2b_to_bb(ecdsa_pub_out.unique.ecc.y);
-        log(1, vars_to_string("RP ECDSA public key x: ", ecdsa_key_x));
-        log(1, vars_to_string("RP ECDSA public key y: ", ecdsa_key_y));
+        log(Debug_level::debug, vars_to_string("RP ECDSA public key x: ", ecdsa_key_x));
+        log(Debug_level::debug, vars_to_string("RP ECDSA public key y: ", ecdsa_key_y));
 
         Load_Out load_out;
         rc = load_key(tss_context_, user_auth, user_handle_, out.outPublic, out.outPrivate, &load_out);
         if (rc != 0) {
             error = vars_to_string("Unable to load the RP key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
         rp_handle_ = load_out.objectHandle;
-        if (dbg_level_ <= 1) {
-            log_ptr_->os() << "Relying party key loaded, handle: " << std::hex << rp_handle_ << std::endl;
-        }
-
+        log(Debug_level::info, vars_to_string("Relying party key loaded, handle: ", std::hex, rp_handle_));
 
         Byte_buffer public_data_bb = marshal_public_data_B(&out.outPublic);
-        log(1, vars_to_string("RP's public data: ", public_data_bb));
+        log(Debug_level::debug, vars_to_string("RP's public data: ", public_data_bb));
         Byte_buffer private_data_bb = marshal_private_data_B(&out.outPrivate);
-        log(1, vars_to_string("RP's private data: ", private_data_bb));
+        log(Debug_level::debug, vars_to_string("RP's private data: ", private_data_bb));
 
         Relying_party_key rpk;
         bb_to_byte_array(rp_kd_.public_data, public_data_bb);
@@ -292,7 +302,7 @@ Relying_party_key Web_authn_tpm::create_and_load_rp_key(std::string const &relyi
 
 Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const &key, std::string const &relying_party, std::string const &user_auth)
 {
-    log(1, vars_to_string("load_rp_key: relying party: ", relying_party, " User auth: ", user_auth));
+    log(Debug_level::info, vars_to_string("load_rp_key: relying party: ", relying_party));
 
     TPM_RC rc = 0;
 
@@ -301,15 +311,15 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const &key, std::string const 
         flush_rp_key();
 
         Byte_buffer public_data_bb = byte_array_to_bb(key.public_data);
-        log(1, vars_to_string("RP's public data: ", public_data_bb));
+        log(Debug_level::debug, vars_to_string("RP's public data: ", public_data_bb));
         Byte_buffer private_data_bb = byte_array_to_bb(key.private_data);
-        log(1, vars_to_string("RP's private data: ", private_data_bb));
+        log(Debug_level::debug, vars_to_string("RP's private data: ", private_data_bb));
 
         TPM2B_PUBLIC tpm2b_public;
         rc = unmarshal_public_data_B(public_data_bb, &tpm2b_public);
         if (rc != 0) {
             error = vars_to_string("Unable to unmarshall the public data for the RP key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
@@ -317,7 +327,7 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const &key, std::string const 
         rc = unmarshal_private_data_B(private_data_bb, &tpm2b_private);
         if (rc != 0) {
             error = vars_to_string("Unable to unmarshall the private data for the RP key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
@@ -325,26 +335,23 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const &key, std::string const 
         rc = load_key(tss_context_, user_auth, user_handle_, tpm2b_public, tpm2b_private, &load_out);
         if (rc != 0) {
             error = vars_to_string("Unable to load the RP key: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
         rp_handle_ = load_out.objectHandle;
 
-        if (dbg_level_ <= 1) {
-            log_ptr_->os() << "RP key loaded, handle: " << std::hex << user_handle_ << std::endl;
-        }
+        log(Debug_level::info, vars_to_string("RP key loaded, handle: ", std::hex, user_handle_));
 
         TPMT_PUBLIC ecdsa_pub_out = tpm2b_public.publicArea;
         Byte_buffer ecdsa_key_x = tpm2b_to_bb(ecdsa_pub_out.unique.ecc.x);
         Byte_buffer ecdsa_key_y = tpm2b_to_bb(ecdsa_pub_out.unique.ecc.y);
-        log(1, vars_to_string("RP ECDSA public key x: ", ecdsa_key_x));
-        log(1, vars_to_string("RP ECDSA public key y: ", ecdsa_key_y));
+        log(Debug_level::debug, vars_to_string("RP ECDSA public key x: ", ecdsa_key_x));
+        log(Debug_level::debug, vars_to_string("RP ECDSA public key y: ", ecdsa_key_y));
 
         bb_to_byte_array(pt_.x_coord, ecdsa_key_x);
         bb_to_byte_array(pt_.y_coord, ecdsa_key_y);
 
-        // !!!!!!!!!!!! Should I copy the key data to kd_ for consistency ? !!!!!!!!!!!!
     } catch (Tpm_error &e) {
         rc = 1;
         last_error_ = vars_to_string("Web_authn_tpm: load_rp_key: Tpm_error: ", e.what());
@@ -361,8 +368,8 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const &key, std::string const 
 
 Ecdsa_sig Web_authn_tpm::sign_using_rp_key(std::string const &relying_party, Byte_buffer const &digest, std::string const &rp_key_auth)
 {
-    log(1, vars_to_string("sign_using_rp_key: RP: ", relying_party, " RP auth: ", rp_key_auth));
-    log(1, vars_to_string("digest to sign: ", digest));
+    log(Debug_level::info, vars_to_string("sign_using_rp_key: RP: ", relying_party, " RP auth: ", rp_key_auth));
+    log(Debug_level::debug, vars_to_string("digest to sign: ", digest));
 
     TPM_RC rc = 0;
 
@@ -374,7 +381,7 @@ Ecdsa_sig Web_authn_tpm::sign_using_rp_key(std::string const &relying_party, Byt
         rc = ecdsa_sign(tss_context_, rp_handle_, digest, rp_key_auth, &sign_out);
         if (rc != 0) {
             error = vars_to_string("Sign operation failed: ", get_tpm_error(rc));
-            log(1, error);
+            log(Debug_level::error, error);
             throw Tpm_error(error.c_str());
         }
 
@@ -383,8 +390,8 @@ Ecdsa_sig Web_authn_tpm::sign_using_rp_key(std::string const &relying_party, Byt
         Byte_buffer sig_r = tpm2b_to_bb(sig.signatureR);
         Byte_buffer sig_s = tpm2b_to_bb(sig.signatureS);
 
-        log(1, vars_to_string("ECDSA signature R: ", sig_r));
-        log(1, vars_to_string("ECDSA signature S: ", sig_s));
+        log(Debug_level::debug, vars_to_string("ECDSA signature R: ", sig_r));
+        log(Debug_level::debug, vars_to_string("ECDSA signature S: ", sig_s));
 
         bb_to_byte_array(sig_.sig_r, sig_r);
         bb_to_byte_array(sig_.sig_s, sig_s);
@@ -424,11 +431,11 @@ void Web_authn_tpm::flush_user_key()
     flush_rp_key();
     TPM_RC rc = flush_context(tss_context_, user_handle_);
     if (rc != 0) {
-        log(0, "Unable to flush the user key");
+        log(Debug_level::error, "Unable to flush the user key");
         throw Tpm_error("Unable to flush the user key");
     }
     user_handle_ = 0;
-    log(1, "User key flushed");
+    log(Debug_level::info, "User key flushed");
 }
 
 void Web_authn_tpm::flush_rp_key()
@@ -443,16 +450,16 @@ void Web_authn_tpm::flush_rp_key()
 
     TPM_RC rc = flush_context(tss_context_, rp_handle_);
     if (rc != 0) {
-        log(0, "Unable to flush the relying party key");
+        log(Debug_level::info, "Unable to flush the relying party key");
         throw Tpm_error("Unable to flush the relying party key");
     }
     rp_handle_ = 0;
-    log(1, "Relying party key flushed");
+    log(Debug_level::info, "Relying party key flushed");
 }
 
 void Web_authn_tpm::release_memory()
 {
-    log(1, "Release TPM byte arrays");
+    log(Debug_level::info, "Release TPM byte arrays");
     release_byte_array(user_kd_.public_data);
     release_byte_array(user_kd_.private_data);
     release_byte_array(rp_kd_.public_data);
@@ -463,7 +470,7 @@ void Web_authn_tpm::release_memory()
     release_byte_array(sig_.sig_s);
 }
 
-void Web_authn_tpm::log(uint32_t dbg_level, std::string const &log_str)
+void Web_authn_tpm::log(Debug_level dbg_level, std::string const &log_str)
 {
     if (dbg_level > dbg_level_) {
         return;
@@ -473,7 +480,7 @@ void Web_authn_tpm::log(uint32_t dbg_level, std::string const &log_str)
 
 TPM_RC Web_authn_tpm::flush_data()
 {
-    log(1, "Flush_data");
+    log(Debug_level::info, "Flush_data");
     release_memory();
 
     TPM_RC rc = 0;
@@ -490,42 +497,42 @@ TPM_RC Web_authn_tpm::flush_data()
         last_error_ = "Flush_data: failed - uncaught exception";
     }
 
-    log(1, "Flush_data completed");
+    log(Debug_level::debug, "Flush_data completed");
     return rc;
 }
 
 Web_authn_tpm::~Web_authn_tpm()
 {
-    log(1, "Tidying up ...");
+    log(Debug_level::error, "Tidying up ...");
 
     release_memory();
 
     TPM_RC rc = 0;
 
     if (user_handle_ != 0) {
-        log(1, "Flush user key");
+        log(Debug_level::debug, vars_to_string("Flush user key, handle: ", user_handle_));
         rc = flush_context(tss_context_, user_handle_);
         if (rc != 0) {
-            log_ptr->os() << "Failed to flush the user key, handle: " << user_handle_ << '\n';
+            log(Debug_level::error, vars_to_string("Failed to flush the user key, handle: ", user_handle_));
         }
         user_handle_ = 0;
     }
 
     if (rp_handle_ != 0) {
-        log(1, "Flush relying pary key");
+        log(Debug_level::debug, vars_to_string("Flush relying pary key, handle: ", rp_handle_));
         rc = flush_context(tss_context_, rp_handle_);
         if (rc != 0) {
-            log_ptr->os() << "Failed to flush the RP key, handle: " << rp_handle_ << std::endl;
+            log(Debug_level::error, vars_to_string("Failed to flush the RP key, handle: ", rp_handle_));
         }
         rp_handle_ = 0;
     }
 
     if (tss_context_) {
-        log(1, "Delete TPM context");
+        log(Debug_level::debug, "Delete TPM context");
         shutdown(tss_context_);
         TSS_Delete(tss_context_);
         tss_context_ = nullptr;
     }
 
-    log(1, "Tidying up completed");
+    log(Debug_level::debug, "Tidying up completed");
 }

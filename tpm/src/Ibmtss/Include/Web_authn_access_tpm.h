@@ -29,6 +29,9 @@ void *install_tpm();
 // Setup the TPM
 TPM_RC setup_tpm(void *v_tpm_ptr, bool use_hw_tpm, const char *tpm_data_dir, const char *log_filename);
 
+// Set the debug level
+TPM_RC set_debug_level(void *v_tpm_ptr, int debug_level);
+
 // Return the last error
 const char *get_last_error(void *v_tpm_ptr);
 

@@ -28,7 +28,8 @@ function(set_project_warnings project_name)
       -Wnon-virtual-dtor # warn the user if a class with virtual functions has a
                          # non-virtual destructor. This helps catch hard to
                          # track down memory errors
-#      -Wold-style-cast # warn for c-style casts
+      -Wno-old-style-cast # don't warn for c-style casts
+                          # causes problems with IBMTSS
       -Woverloaded-virtual # warn if you overload (not override) a virtual
                            # function
   )
@@ -42,15 +43,20 @@ function(set_project_warnings project_name)
       -Wmisleading-indentation # warn if identation implies blocks where blocks
                                # do not exist
       -Wduplicated-cond # warn if if / else chain has duplicated conditions
-#      -Wduplicated-branches # warn if if / else branches have duplicated code
+      -Wduplicated-branches # warn if if / else branches have duplicated code
       -Wlogical-op # warn about logical operations being used where bitwise were
                    # probably wanted
-#      -Wuseless-cast # warn if you perform a cast to the same type
+      -Wuseless-cast # warn if you perform a cast to the same type
   )
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(PROJECT_WARNINGS ${CLANG_WARNINGS} -Wno-extern-c-compat -Wno-cast-align)
+    set(PROJECT_WARNINGS ${CLANG_WARNINGS}
+            -Wno-extern-c-compat
+            -Wno-cast-align
+            -Wno-return-type-c-linkage
+    )
     # cast-align causes issues with IBM TSS code
+    # return-type-linkage causes warning aout the code for the Python interface
   else()
     set(PROJECT_WARNINGS ${GCC_WARNINGS})
   endif()

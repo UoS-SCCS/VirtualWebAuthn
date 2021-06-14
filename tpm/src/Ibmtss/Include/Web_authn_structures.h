@@ -16,20 +16,13 @@
 #include "Byte_array.h"
 #include "Tss_includes.h"
 
-struct Two_byte_arrays
-{
-	Byte_array one;
-	Byte_array two;
-};
-
-
 /* The key data. Memory for the public and private data returned when the key is
  * created will be allocated and freed in in the C++ code.
  */
 struct Key_data
 {
-	Byte_array public_data;
-	Byte_array private_data;
+    Byte_array public_data;
+    Byte_array private_data;
 };
 
 /* The public ECC key, a point on the chosen ECC curve the curve will initially
@@ -38,8 +31,8 @@ struct Key_data
 */
 struct Key_ecc_point
 {
-	Byte_array x_coord;
-	Byte_array y_coord;
+    Byte_array x_coord;
+    Byte_array y_coord;
 };
 
 /* The key data and the public key (ECC point). Memory needed will be allocated
@@ -47,9 +40,9 @@ struct Key_ecc_point
 */
 struct Relying_party_key
 {
-	Key_data key_blob;
-	Key_ecc_point key_point;
-}; 
+    Key_data key_blob;
+    Key_ecc_point key_point;
+};
 
 /* The data to be signed, this cannot be larger then the size of the hash being
  * used - SHA256 in our case. Note that MAX_DIGEST_SIZE may be larger than
@@ -64,6 +57,6 @@ struct Relying_party_key
 */
 struct Ecdsa_sig
 {
-	Byte_array sig_r;
-	Byte_array sig_s;
+    Byte_array sig_r;
+    Byte_array sig_s;
 };

@@ -16,7 +16,7 @@
 #include <memory>
 
 class Log;
-using Log_ptr=std::unique_ptr<Log>;
+using Log_ptr = std::unique_ptr<Log>;
 extern Log_ptr log_ptr;
 
 /*
@@ -32,84 +32,91 @@ also see the example in:
 
 class Null_buffer : public std::streambuf
 {
-public:
-	Null_buffer()=default;
-	int overflow(int c) { return c; }
-	~Null_buffer()=default;	
+  public:
+    Null_buffer() = default;
+    int overflow(int c) override { return c; }
+    ~Null_buffer() override = default;
 };
 
 class Null_stream : public std::ostream
 {
-public: 
-  Null_stream() : std::ostream(&m_sb) {}
+  public:
+    Null_stream() : std::ostream(&m_sb) {}
 
-private:
- Null_buffer m_sb;
+  private:
+    Null_buffer m_sb;
 };
 
+// Start at 1 as std::atoi returns 0 if there is no conversion
+enum Debug_level : int { error = 1,
+    info,
+    debug };
 
 class Log
 {
-public:
-	Log() : debug_(0) {}
-	virtual std::ostream& os()=0;
-	virtual void write_to_log(std::string str)=0;
-	void set_debug_level(uint dl) {debug_=dl;}
-	uint  debug_level() const {return debug_;}
-	virtual ~Log()=default;
+  public:
+    Log() = default;
+    virtual std::ostream &os() = 0;
+    virtual void write_to_log(std::string str) = 0;
+    void set_debug_level(Debug_level dl) { debug_ = dl; }
+    Debug_level debug_level() const { return debug_; }
+    virtual ~Log() = default;
 
-private:
-	uint debug_;
+  private:
+    Debug_level debug_{ Debug_level::error };
 };
 
 class Null_log : public Log
 {
-public:	
-	virtual std::ostream& os() {return null_stream_;}
-	virtual void write_to_log(std::string str){null_stream_ << str;}
-	virtual ~Null_log() throw()=default;
-private:
+  public:
+    std::ostream &os() override { return null_stream_; }
+    void write_to_log(std::string) override {}
+    ~Null_log() override = default;
+
+  private:
     Null_stream null_stream_;
 };
 
 class Cout_log : public Log
 {
-public:	
-	virtual std::ostream& os() {return std::cout;}
-	virtual void write_to_log(std::string str){std::cout << str << std::flush;}
-	virtual ~Cout_log()=default;
+  public:
+    std::ostream &os() override { return std::cout; }
+    void write_to_log(std::string str) override { std::cout << str << std::flush; }
+    ~Cout_log() override = default;
 };
 
 class Timed_cout_log : public Log
 {
-public:	
-	virtual std::ostream& os();
-	virtual void write_to_log(std::string str);
-	virtual ~Timed_cout_log()=default;
+  public:
+    std::ostream &os() override;
+    void write_to_log(std::string str) override;
+    ~Timed_cout_log() override = default;
 };
 
 class File_log : public Log
 {
-public:
-	File_log()=delete;
-	explicit File_log(std::string filename);
-	virtual std::ostream& os() {return os_;}
-	virtual void write_to_log(std::string str){os_ << str << std::flush;}
-	virtual ~File_log();
-private:
-	std::ofstream os_;
+  public:
+    File_log() = delete;
+    explicit File_log(std::string const &filename);
+    std::ostream &os() override { return os_; }
+    void write_to_log(std::string str) override { os_ << str << std::flush; }
+    ~File_log() override;
+
+  private:
+    std::ofstream os_;
 };
 
 class Timed_file_log : public Log
 {
-public:
-	Timed_file_log()=delete;
-	explicit Timed_file_log(std::string filename);
-	virtual std::ostream& os();
-	virtual void write_to_log(std::string str);
-	virtual ~Timed_file_log();
-private:
-	std::ofstream os_;
+  public:
+    Timed_file_log() = delete;
+    explicit Timed_file_log(std::string const &filename);
+    std::ostream &os() override;
+    void write_to_log(std::string str) override;
+    ~Timed_file_log() override;
+
+  private:
+    std::ofstream os_;
 };
 
 std::string generate_log_number();
@@ -117,11 +124,11 @@ std::string generate_log_number();
 std::string generate_log_date_time();
 
 std::string generate_log_filename(
-std::string const& base_dir,
-std::string const& prefix
-);
+  std::string const &base_dir,
+  std::string const &prefix);
 
 std::string generate_date_time_log_filename(
-std::string const& base_dir,
-std::string const& prefix
-);
+  std::string const &base_dir,
+  std::string const &prefix);
+
+void log(Debug_level level, std::string const &log_msg);

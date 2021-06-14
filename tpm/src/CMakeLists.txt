@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Set the project name to your project name
-project(webAuthnLib CXX)
+project(WebAuthnLib CXX)
 include(Cmake/StandardProjectSettings.cmake)
 
 # Link this 'library' to set the c++ standard / compile-time options requested
