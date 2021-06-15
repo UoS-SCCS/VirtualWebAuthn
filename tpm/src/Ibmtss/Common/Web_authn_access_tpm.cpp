@@ -54,7 +54,7 @@ TPM_RC setup_tpm(void *v_tpm_ptr, bool use_hw_tpm, const char *tpm_data_dir, con
     return tpm_ptr->setup(*sp, log_filename);
 }
 
-TPM_RC set_debug_level(void *v_tpm_ptr, int debug_level)
+TPM_RC set_log_level(void *v_tpm_ptr, int log_level)
 {
     if (v_tpm_ptr == nullptr) {
         return WEB_AUTHN_ERROR;
@@ -62,7 +62,7 @@ TPM_RC set_debug_level(void *v_tpm_ptr, int debug_level)
 
     auto *tpm_ptr = reinterpret_cast<Web_authn_tpm *>(v_tpm_ptr);
 
-    return tpm_ptr->set_debug_level(debug_level);
+    return tpm_ptr->set_log_level(log_level);
 }
 
 const char *get_last_error(void *v_tpm_ptr)

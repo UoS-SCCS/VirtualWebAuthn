@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
     // NOw set the debug level, so we see what's happening
-    if (set_debug_level(v_tpm_ptr, debug_level) != 0) {
+    if (set_log_level(v_tpm_ptr, debug_level) != 0) {
         std::cerr << get_last_error(v_tpm_ptr) << '\n';
         return EXIT_FAILURE;
     }

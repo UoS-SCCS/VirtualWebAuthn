@@ -73,7 +73,7 @@ class Web_authn_tpm
 	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 * 
 	 */
-    TPM_RC set_debug_level(int debug_level);
+    TPM_RC set_log_level(int debug_level);
 
     /**
 	 * Creates a new user (storage) key and loads it ready for use. If a user key is already loaded, it and its
@@ -165,7 +165,7 @@ class Web_authn_tpm
 
   private:
     bool hw_tpm_{ false };
-    Debug_level dbg_level_{ Debug_level::info };
+    Log_level log_level_{ Log_level::info };
 
     TSS_CONTEXT *tss_context_{ nullptr };
     std::string data_dir_;
@@ -200,10 +200,10 @@ class Web_authn_tpm
     /*
 	 * Write the given string to the log file
 	 * 
-	 * @param dbg_level - write to the log if the given value is less
-	 *                    than or equal to dbg_level_
+	 * @param log_level - write to the log if the given value is less
+	 *                    than or equal to log_level_
 	 * @param str - the string to be written to the log+ newline
 	 * 
 	 */
-    void log(Debug_level dbg_level, std::string const &log_str);
+    void log(Log_level log_level, std::string const &log_str);
 };

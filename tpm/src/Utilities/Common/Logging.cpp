@@ -117,7 +117,7 @@ std::string generate_date_time_log_filename(
     return oss.str();
 }
 
-void log(Debug_level level, std::string const &log_msg)
+void log(Log_level level, std::string const &log_msg)
 {
     if (level <= log_ptr->debug_level()) {
         log_ptr->write_to_log(log_msg);

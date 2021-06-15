@@ -48,7 +48,7 @@ class Null_stream : public std::ostream
 };
 
 // Start at 1 as std::atoi returns 0 if there is no conversion
-enum Debug_level : int { error = 1,
+enum Log_level : int { error = 1,
     info,
     debug };
 
@@ -58,12 +58,12 @@ class Log
     Log() = default;
     virtual std::ostream &os() = 0;
     virtual void write_to_log(std::string str) = 0;
-    void set_debug_level(Debug_level dl) { debug_ = dl; }
-    Debug_level debug_level() const { return debug_; }
+    void set_log_level(Log_level dl) { debug_ = dl; }
+    Log_level debug_level() const { return debug_; }
     virtual ~Log() = default;
 
   private:
-    Debug_level debug_{ Debug_level::error };
+    Log_level debug_{ Log_level::error };
 };
 
 class Null_log : public Log
@@ -131,4 +131,4 @@ std::string generate_date_time_log_filename(
   std::string const &base_dir,
   std::string const &prefix);
 
-void log(Debug_level level, std::string const &log_msg);
+void log(Log_level level, std::string const &log_msg);
