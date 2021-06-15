@@ -53,7 +53,7 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
 
         log(Log_level::error, "TPM setup started");
 
-        log(Log_level::info, vars_to_string("Debug level set to: ", log_level_));
+        log(Log_level::info, vars_to_string("Debug level set to: ", log_level_to_string(log_level_)));
 
         hw_tpm_ = (tps.t == Tpm_type::device);
         if (!hw_tpm_) {
@@ -113,8 +113,8 @@ TPM_RC Web_authn_tpm::set_log_level(int log_level)
 {
     TPM_RC rc = 0;
 
-    if (log_level < Log_level::error || log_level > Log_level::debug) {
-        last_error_ = vars_to_string("Invalid value for the debug level: ", log_level, ". Should be between ", Log_level::error, " and ", Log_level::debug, ".");
+    if (!log_level_ok(log_level)) {// Change this if the options change
+        last_error_ = vars_to_string("Invalid value for the log level: ", log_level, ". Should be between ", static_cast<int>(Log_level::error), " and ", static_cast<int>(Log_level::debug), ".");
         log(Log_level::error, last_error_);
         rc = 1;
     } else {
@@ -368,7 +368,7 @@ Key_ecc_point Web_authn_tpm::load_rp_key(Key_data const &key, std::string const 
 
 Ecdsa_sig Web_authn_tpm::sign_using_rp_key(std::string const &relying_party, Byte_buffer const &digest, std::string const &rp_key_auth)
 {
-    log(Log_level::info, vars_to_string("sign_using_rp_key: RP: ", relying_party, " RP auth: ", rp_key_auth));
+    log(Log_level::info, vars_to_string("sign_using_rp_key: RP: ", relying_party));
     log(Log_level::debug, vars_to_string("digest to sign: ", digest));
 
     TPM_RC rc = 0;

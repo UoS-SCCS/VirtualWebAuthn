@@ -65,15 +65,15 @@ class Web_authn_tpm
     TPM_RC setup(Tss_setup const &tps, std::string const &log_filename);
 
     /**
-	 * Sets the debug level, options are:: 1 - minimal reporting, mostly just errors, 2 - some information as things proceed,
+	 * Sets the logging level, options are:: 1 - minimal reporting, mostly just errors, 2 - some information as things proceed,
 	 * and 3 - debug information.
 	 * 
-	 * @param debug_level -  the required level of information in the log file.
+	 * @param log_level -  the required level of information in the log file.
 	 * 
 	 * @return TPM_RC - this will be zero for a successful call. If non-zero use get_last_error() to return the error.
 	 * 
 	 */
-    TPM_RC set_log_level(int debug_level);
+    TPM_RC set_log_level(int log_level);
 
     /**
 	 * Creates a new user (storage) key and loads it ready for use. If a user key is already loaded, it and its

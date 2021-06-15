@@ -48,9 +48,28 @@ class Null_stream : public std::ostream
 };
 
 // Start at 1 as std::atoi returns 0 if there is no conversion
-enum Log_level : int { error = 1,
+enum class Log_level : int { error = 1,
     info,
     debug };
+
+// Keep it here with the enum class definition
+inline bool log_level_ok(int log_level)
+{
+    return static_cast<int>(Log_level::error) <= log_level && static_cast<int>(Log_level::debug) >= log_level;
+}
+
+inline std::string log_level_to_string(Log_level log_level)
+{
+    switch (log_level) {
+    case Log_level::error:
+        return "error";
+    case Log_level::info:
+        return "info";
+    case Log_level::debug:
+        return "debug";
+    }
+    return "invalid log level given";
+}
 
 class Log
 {
