@@ -24,17 +24,16 @@
 
 // Create a primary key in the given hierarchy
 TPM_RC create_primary_rsa_key(
-TSS_CONTEXT* tss_context,
-TPMI_RH_HIERARCHY primary_handle,
-uint32_t attributes,
-Byte_buffer policy,
-CreatePrimary_Out* out
-)
+  TSS_CONTEXT *tss_context,
+  TPMI_RH_HIERARCHY primary_handle,
+  uint32_t attributes,
+  Byte_buffer policy,
+  CreatePrimary_Out *out)
 {
     TPM_RC rc = 0;
-    
+
     CreatePrimary_In in;
- 
+
     /*
     typedef struct {
         TPMI_RH_HIERARCHY           primaryHandle;
@@ -136,7 +135,8 @@ CreatePrimary_Out* out
         UINT16                      size;           // size of sensitive in octets (may not be zero)
         TPMS_SENSITIVE_CREATE       sensitive;      // data to be sealed or a symmetric key value.
     } TPM2B_SENSITIVE_CREATE;
-    *//* command line argument defaults 
+    */
+    /* command line argument defaults 
         objectAttributes.val = 0;
         objectAttributes.val |= TPMA_OBJECT_NODA;
         objectAttributes.val |= TPMA_OBJECT_SENSITIVEDATAORIGIN;
@@ -149,16 +149,16 @@ CreatePrimary_Out* out
         objectAttributes.val |= TPMA_OBJECT_FIXEDPARENT;
     */
 
-    in.primaryHandle=primary_handle;
+    in.primaryHandle = primary_handle;
     in.inSensitive.sensitive.userAuth.t.size = 0;
     in.inSensitive.sensitive.data.t.size = 0;
 
-    // construct the template using the default IWG template 
-    TPMT_PUBLIC& tpmt_public=in.inPublic.publicArea;
+    // construct the template using the default IWG template
+    TPMT_PUBLIC &tpmt_public = in.inPublic.publicArea;
     tpmt_public.type = TPM_ALG_RSA;
     tpmt_public.nameAlg = TPM_ALG_SHA256;
-    tpmt_public.objectAttributes.val=attributes;
-/*    tpmt_public.objectAttributes.val = TPMA_OBJECT_FIXEDTPM |
+    tpmt_public.objectAttributes.val = attributes;
+    /*    tpmt_public.objectAttributes.val = TPMA_OBJECT_FIXEDTPM |
 				       TPMA_OBJECT_FIXEDPARENT |
     			       TPMA_OBJECT_SENSITIVEDATAORIGIN |
 				       TPMA_OBJECT_USERWITHAUTH |
@@ -167,11 +167,11 @@ CreatePrimary_Out* out
 				       TPMA_OBJECT_DECRYPT;
 */
 
-    tpmt_public.authPolicy=bb_to_tpm2b<TPM2B_DIGEST>(policy);
+    tpmt_public.authPolicy = bb_to_tpm2b<TPM2B_DIGEST>(policy);
 
     tpmt_public.parameters.rsaDetail.symmetric.algorithm = TPM_ALG_AES;
     tpmt_public.parameters.rsaDetail.symmetric.keyBits.aes = aes_key_bits;
-    tpmt_public.parameters.rsaDetail.symmetric.mode.aes=TPM_ALG_CFB;
+    tpmt_public.parameters.rsaDetail.symmetric.mode.aes = TPM_ALG_CFB;
     tpmt_public.parameters.rsaDetail.scheme.scheme = TPM_ALG_NULL;
     tpmt_public.parameters.rsaDetail.keyBits = 2048;
     tpmt_public.parameters.rsaDetail.exponent = 0;
@@ -180,16 +180,16 @@ CreatePrimary_Out* out
     in.outsideInfo.t.size = 0;
     in.creationPCR.count = 0;
     rc = TSS_Execute(tss_context,
-            reinterpret_cast<RESPONSE_PARAMETERS *>(out),
-            reinterpret_cast<COMMAND_PARAMETERS *>(&in),
-            nullptr,
-            TPM_CC_CreatePrimary,
-            TPM_RS_PW, NULL, 0,     // Password auth., no password
-            TPM_RH_NULL, NULL, 0);  // End of list of session 3-tuples
-    if (rc != 0)
-    {
-        throw(Tpm_error("create primary rsa key failed"));
-    }
+      reinterpret_cast<RESPONSE_PARAMETERS *>(out),
+      reinterpret_cast<COMMAND_PARAMETERS *>(&in),
+      nullptr,
+      TPM_CC_CreatePrimary,
+      TPM_RS_PW,
+      NULL,
+      0,// Password auth., no password
+      TPM_RH_NULL,
+      NULL,
+      0);// End of list of session 3-tuples
 
     /* CreatePrimary_Out data structure
         typedef struct {
@@ -200,7 +200,6 @@ CreatePrimary_Out* out
             TPMT_TK_CREATION    creationTicket;
             TPM2B_NAME          name;
         } CreatePrimary_Out;
-    */    
+    */
     return rc;
 }
-

@@ -85,10 +85,21 @@ TPM_RC Web_authn_tpm::setup(Tss_setup const &tps, std::string const &log_filenam
         if (!persistent_key_available(tss_context_, srk_persistent_handle)) {
             uint32_t object_attributes = obj_primary |// TPMA_OBJECT is a bit field
                                          TPMA_OBJECT_USERWITHAUTH;
+            std::string err;
             CreatePrimary_Out out;
             rc = create_primary_rsa_key(tss_context_, TPM_RH_OWNER, object_attributes, Byte_buffer(), &out);
+            if (rc != 0) {
+                err = vars_to_string("Creating the primary key failed: ", get_tpm_error(rc));
+                log(Log_level::error, "Web_authn_tpm: setup: " + err);
+                throw Tpm_error(err.c_str());
+            }
             log(Log_level::debug, "Primary key created");
             rc = make_key_persistent(tss_context_, out.objectHandle, srk_persistent_handle);
+            if (rc != 0) {
+                err = vars_to_string("Making the primary key persistent failed: ", get_tpm_error(rc));
+                log(Log_level::error, "Web_authn_tpm: setup: " + err);
+                throw Tpm_error(err.c_str());
+            }
             log(Log_level::debug, "Primary key made persistent");
         } else {
             log(Log_level::debug, "Primary key already installed");
@@ -450,7 +461,7 @@ void Web_authn_tpm::flush_rp_key()
 
     TPM_RC rc = flush_context(tss_context_, rp_handle_);
     if (rc != 0) {
-        log(Log_level::info, "Unable to flush the relying party key");
+        log(Log_level::error, "Unable to flush the relying party key");
         throw Tpm_error("Unable to flush the relying party key");
     }
     rp_handle_ = 0;

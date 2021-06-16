@@ -14,6 +14,7 @@
 #include "Clock_utils.h"
 #include "Logging.h"
 
+// Do nothing unless the pointer is reset to a 'real' log.
 Log_ptr log_ptr = Log_ptr(new Null_log);
 
 std::ostream &Timed_cout_log::os()

@@ -171,7 +171,6 @@ TPM_RC make_key_persistent(
   TPM_HANDLE persistent_handle)
 {
     TPM_RC rc = 0;
-    std::string error;
 
     rc = make_key_persistent(tss_context, TPM_RH_OWNER, key_handle, persistent_handle);
     if (rc == TPM_RC_NV_DEFINED) {
@@ -181,16 +180,13 @@ TPM_RC make_key_persistent(
         }
     }
     if (rc != 0) {
-        error = "Unable to make the key persistent, removing it";
-        log(Log_level::error, error);
-        throw Tpm_error(error.c_str());
-    }
-
-    rc = flush_context(tss_context, key_handle);
-    if (rc != 0) {
-        error = vars_to_string("Unable to flush the key, handle: ", std::hex, key_handle);
-        log(Log_level::error, error);
-        throw Tpm_error(error.c_str());
+        log(Log_level::error, "Unable to make the key persistent, removing it");
+        TPM_RC rc1 = flush_context(tss_context, key_handle);
+        if (rc1 != 0) {
+            log(Log_level::error, vars_to_string("Unable to flush the key, handle: ", std::hex, key_handle));
+        } else {
+            log(Log_level::error, vars_to_string("Key with handle: ", std::hex, key_handle, " flushed"));
+        }
     }
 
     return rc;
