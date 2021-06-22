@@ -5,7 +5,7 @@
 * Author:      Chris Newton
 * Created:     Wednesday 1 May 2013
 *
-* (C) Copyright 2013, Hewlett-Packard Ltd, all rights reserved.
+* (C) Copyright 2013, Chris Newton, all rights reserved
 *
 **********************************************************************/
 

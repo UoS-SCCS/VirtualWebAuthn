@@ -39,15 +39,21 @@
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << "<debug level (1, 2 or 3>\n";
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <data directory> <log level (1, 2 or 3>\n";
         return EXIT_FAILURE;
     }
-    int debug_level = std::atoi(argv[1]);
+
+    std::string data_dir{ argv[1] };
+    int log_level = std::atoi(argv[2]);
+    if (log_level < 1 || log_level > 3) {
+        std::cerr << "Invalid value for the log level: " << log_level << ".\n";
+        std::cerr << "Usage: " << argv[0] << " <data directory> <log level (1, 2 or 3>\n";
+        return EXIT_FAILURE;
+    }
 
     bool tests_ok{ true };
     bool use_hw_tpm{ false };
-    std::string data_dir{ "/home/cn0016/TPM_data" };
     std::string log_file_prefix{ "log" };
 
     // curve_name corresponds to TPMI_ECC_CURVE curve_ID=TPM_ECC_NIST_P256;
@@ -58,8 +64,8 @@ int main(int argc, char *argv[])
         std::cerr << "Unable to install the Web_authn_tpm class\n";
         return EXIT_FAILURE;
     }
-    // NOw set the debug level, so we see what's happening
-    if (set_log_level(v_tpm_ptr, debug_level) != 0) {
+    // Now set the debug level, so we see what's happening
+    if (set_log_level(v_tpm_ptr, log_level) != 0) {
         std::cerr << get_last_error(v_tpm_ptr) << '\n';
         return EXIT_FAILURE;
     }

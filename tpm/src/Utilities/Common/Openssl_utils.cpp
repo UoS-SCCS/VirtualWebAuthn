@@ -5,7 +5,7 @@
 * Author:      Chris Newton
 * Created:     Monday 7 May 2018
 *
-* (C) Copyright 2018, University of Surrey.
+* (C) Copyright 2018, University of Surrey, all rights reserved.
 *
 ****************************************************************************/
 

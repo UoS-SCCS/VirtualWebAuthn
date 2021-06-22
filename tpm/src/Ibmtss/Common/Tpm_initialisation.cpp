@@ -6,7 +6,7 @@
 *
 * Created:     Saturday 25 May 2019
 *
-* (C) Copyright 2019, University of Surrey.
+* (C) Copyright 2019, University of Surrey, all rights reserved.
 *
 ****************************************************************************/
 

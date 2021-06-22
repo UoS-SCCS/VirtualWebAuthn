@@ -5,7 +5,7 @@
 * Author:      Chris Newton
 * Created:     Thursday 1 December 2016
 *
-* (C) Copyright 2016, Chris Newton.
+* (C) Copyright 2016, Chris Newton, all rights reserved.
 *
 ******************************************************************************/
 

@@ -6,7 +6,7 @@
 * Author:      Chris Newton
 * Created:     Wednesay 21 March 2018
 *
-* (C) Copyright 2018, University of Surrey.
+* (C) Copyright 2018, University of Surrey, all rights reserved.
 *
 ***************************************************************************************/
 
