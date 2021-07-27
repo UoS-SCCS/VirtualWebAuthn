@@ -2052,7 +2052,7 @@ RPs etc</p>
 
 <dl class="method">
 <dt id="authenticator.json_storage.JSONAuthenticatorStorage.get_credential_source_by_rp">
-<code class="descname">get_credential_source_by_rp</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>allow_list=None</em><span class="sig-paren">)</span> &#x2192; {&lt;class 'ctap.credential_source.PublicKeyCredentialSource'&gt;}<a class="reference internal" href="_modules/authenticator/json_storage.html#JSONAuthenticatorStorage.get_credential_source_by_rp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.json_storage.JSONAuthenticatorStorage.get_credential_source_by_rp" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_credential_source_by_rp</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>allow_list=None</em><span class="sig-paren">)</span> &#x2192; List[ctap.credential_source.PublicKeyCredentialSource]<a class="reference internal" href="_modules/authenticator/json_storage.html#JSONAuthenticatorStorage.get_credential_source_by_rp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.json_storage.JSONAuthenticatorStorage.get_credential_source_by_rp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets credential sources using the relying party ID as an index and then applying the
 passed in allow_list, if provided</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -2371,6 +2371,34 @@ other data.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="authenticator.json_storage.JSONAuthenticatorStorage.update_credential_source">
+<code class="descname">update_credential_source</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>credential_source: ctap.credential_source.PublicKeyCredentialSource</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/authenticator/json_storage.html#JSONAuthenticatorStorage.update_credential_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.json_storage.JSONAuthenticatorStorage.update_credential_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the specified credential source with a new version. This is primarily
+used for updating signature counters after a getAssertion call</p>
+<p>When performing the update the implementer should call get_loaded_bytes
+on the credential_source to get the originally loaded bytes and match based
+on those.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a>) – string of the rp_id</li>
+<li><strong>credential_source</strong> (<a class="reference internal" href="ctap.html#ctap.credential_source.PublicKeyCredentialSource" title="ctap.credential_source.PublicKeyCredentialSource"><em>PublicKeyCredentialSource</em></a>) – credential source to update</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">[description]</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="authenticator.json_storage.JSONAuthenticatorStorage.update_signature_counter">
 <code class="descname">update_signature_counter</code><span class="sig-paren">(</span><em>new_counter: int</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/authenticator/json_storage.html#JSONAuthenticatorStorage.update_signature_counter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.json_storage.JSONAuthenticatorStorage.update_signature_counter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the global signature counter with the new value</p>
@@ -2532,14 +2560,19 @@ used in the JSON file</p>
 <p>Abstract Authenticator Storage class defines interface
 that storage mechanisms must implement to act as storage
 provider for an Authenticator.</p>
-<p>Should consider also how to encrypt/protect the underlying
-storage medium</p>
+<p>Should consider also how to encrypt/protect the underlying storage medium</p>
 <dl class="class">
 <dt id="authenticator.storage.DICEAuthenticatorStorage">
-<em class="property">class </em><code class="descclassname">authenticator.storage.</code><code class="descname">DICEAuthenticatorStorage</code><a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">authenticator.storage.</code><code class="descname">DICEAuthenticatorStorage</code><span class="sig-paren">(</span><em>**args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
 <p>Abstract authenticator storage class defining core
 functionality that storage methods must provide</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Args:</dt>
+<dd>**args: variable number of named arguments to handle subclassing</dd>
+</dl>
+</div></blockquote>
 <dl class="method">
 <dt id="authenticator.storage.DICEAuthenticatorStorage.add_credential_source">
 <code class="descname">add_credential_source</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>user_id: bytes</em>, <em>credential_source: ctap.credential_source.PublicKeyCredentialSource</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage.add_credential_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage.add_credential_source" title="Permalink to this definition">¶</a></dt>
@@ -2567,7 +2600,7 @@ functionality that storage methods must provide</p>
 
 <dl class="method">
 <dt id="authenticator.storage.DICEAuthenticatorStorage.convert_allow_list_to_map">
-<code class="descname">convert_allow_list_to_map</code><span class="sig-paren">(</span><em>allow_list: [&lt;class 'authenticator.datatypes.PublicKeyCredentialDescriptor'&gt;]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage.convert_allow_list_to_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage.convert_allow_list_to_map" title="Permalink to this definition">¶</a></dt>
+<code class="descname">convert_allow_list_to_map</code><span class="sig-paren">(</span><em>allow_list: List[authenticator.datatypes.PublicKeyCredentialDescriptor]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage.convert_allow_list_to_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage.convert_allow_list_to_map" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts an allow list received from the client into a
 map for use with filtering credentials. In effect iterates
 through credentials in allow list and indexes them by
@@ -2659,7 +2692,7 @@ RPs etc</p>
 
 <dl class="method">
 <dt id="authenticator.storage.DICEAuthenticatorStorage.get_credential_source_by_rp">
-<code class="descname">get_credential_source_by_rp</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>allow_list=None</em><span class="sig-paren">)</span> &#x2192; {&lt;class 'ctap.credential_source.PublicKeyCredentialSource'&gt;}<a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage.get_credential_source_by_rp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage.get_credential_source_by_rp" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_credential_source_by_rp</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>allow_list=None</em><span class="sig-paren">)</span> &#x2192; Dict[KT, VT]<a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage.get_credential_source_by_rp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage.get_credential_source_by_rp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets credential sources using the relying party ID as an index and then applying the
 passed in allow_list, if provided</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -2968,6 +3001,34 @@ other data.</p>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if set, False if not</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="authenticator.storage.DICEAuthenticatorStorage.update_credential_source">
+<code class="descname">update_credential_source</code><span class="sig-paren">(</span><em>rp_id: str</em>, <em>credential_source: ctap.credential_source.PublicKeyCredentialSource</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/authenticator/storage.html#DICEAuthenticatorStorage.update_credential_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#authenticator.storage.DICEAuthenticatorStorage.update_credential_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the specified credential source with a new version. This is primarily
+used for updating signature counters after a getAssertion call</p>
+<p>When performing the update the implementer should call get_loaded_bytes
+on the credential_source to get the originally loaded bytes and match based
+on those.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a>) – string of the rp_id</li>
+<li><strong>credential_source</strong> (<a class="reference internal" href="ctap.html#ctap.credential_source.PublicKeyCredentialSource" title="ctap.credential_source.PublicKeyCredentialSource"><em>PublicKeyCredentialSource</em></a>) – credential source to update</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">[description]</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></p>
+</td>
 </tr>
 </tbody>
 </table>

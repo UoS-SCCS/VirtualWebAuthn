@@ -199,7 +199,6 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">platform</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 
 <span class="kn">from</span> <span class="nn">enum</span> <span class="k">import</span> <span class="n">Enum</span>
@@ -208,10 +207,13 @@
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Ka-Ping Yee &lt;ping@zesty.ca&gt;&#39;</span>
 
 <span class="c1"># The recognized platforms - known behaviors</span>
-<span class="n">_AIX</span>     <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;AIX&#39;</span>
-<span class="n">_DARWIN</span>  <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Darwin&#39;</span>
-<span class="n">_LINUX</span>   <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span>
-<span class="n">_WINDOWS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;Windows&#39;</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;win32&#39;</span><span class="p">,</span> <span class="s1">&#39;darwin&#39;</span><span class="p">):</span>
+    <span class="n">_AIX</span> <span class="o">=</span> <span class="n">_LINUX</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">platform</span>
+    <span class="n">_platform_system</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
+    <span class="n">_AIX</span>     <span class="o">=</span> <span class="n">_platform_system</span> <span class="o">==</span> <span class="s1">&#39;AIX&#39;</span>
+    <span class="n">_LINUX</span>   <span class="o">=</span> <span class="n">_platform_system</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span>
 
 <span class="n">RESERVED_NCS</span><span class="p">,</span> <span class="n">RFC_4122</span><span class="p">,</span> <span class="n">RESERVED_MICROSOFT</span><span class="p">,</span> <span class="n">RESERVED_FUTURE</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s1">&#39;reserved for NCS compatibility&#39;</span><span class="p">,</span> <span class="s1">&#39;specified in RFC 4122&#39;</span><span class="p">,</span>
@@ -842,9 +844,9 @@
 <span class="c1">#     @unittest.skipUnless(_uuid._ifconfig_getnode in _uuid._GETTERS, ...)</span>
 <span class="k">if</span> <span class="n">_LINUX</span><span class="p">:</span>
     <span class="n">_OS_GETTERS</span> <span class="o">=</span> <span class="p">[</span><span class="n">_ip_getnode</span><span class="p">,</span> <span class="n">_ifconfig_getnode</span><span class="p">]</span>
-<span class="k">elif</span> <span class="n">_DARWIN</span><span class="p">:</span>
+<span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;darwin&#39;</span><span class="p">:</span>
     <span class="n">_OS_GETTERS</span> <span class="o">=</span> <span class="p">[</span><span class="n">_ifconfig_getnode</span><span class="p">,</span> <span class="n">_arp_getnode</span><span class="p">,</span> <span class="n">_netstat_getnode</span><span class="p">]</span>
-<span class="k">elif</span> <span class="n">_WINDOWS</span><span class="p">:</span>
+<span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
     <span class="n">_OS_GETTERS</span> <span class="o">=</span> <span class="p">[</span><span class="n">_netbios_getnode</span><span class="p">,</span> <span class="n">_ipconfig_getnode</span><span class="p">]</span>
 <span class="k">elif</span> <span class="n">_AIX</span><span class="p">:</span>
     <span class="n">_OS_GETTERS</span> <span class="o">=</span> <span class="p">[</span><span class="n">_netstat_getnode</span><span class="p">]</span>

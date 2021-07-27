@@ -201,7 +201,7 @@
 <span class="kn">from</span> <span class="nn">crypto.es256_crypto_provider</span> <span class="k">import</span> <span class="n">ES256CryptoProvider</span>
 <span class="kn">from</span> <span class="nn">crypto.aes_credential_wrapper</span> <span class="k">import</span> <span class="n">AESCredentialWrapper</span>
 <span class="kn">from</span> <span class="nn">crypto.algs</span> <span class="k">import</span> <span class="n">PUBLIC_KEY_ALG</span>
-<span class="kn">from</span> <span class="nn">authenticator.ui</span> <span class="k">import</span> <span class="n">DICEAuthenticatorListener</span>
+<span class="kn">from</span> <span class="nn">authenticator.ui</span> <span class="k">import</span> <span class="n">DICEAuthenticatorListener</span><span class="p">,</span><span class="n">DICEAuthenticatorUI</span>
 <span class="kn">from</span> <span class="nn">authenticator.diceauthenticator</span> <span class="k">import</span> <span class="n">DICEAuthenticator</span>
 <span class="kn">from</span> <span class="nn">authenticator.datatypes</span> <span class="k">import</span> <span class="p">(</span><span class="n">DICEAuthenticatorException</span><span class="p">,</span><span class="n">AuthenticatorGetClientPINParameters</span><span class="p">,</span>
     <span class="n">AuthenticatorGetAssertionParameters</span><span class="p">,</span><span class="n">AuthenticatorMakeCredentialParameters</span><span class="p">,</span>
@@ -209,6 +209,7 @@
 <span class="kn">from</span> <span class="nn">authenticator.cbor</span> <span class="k">import</span> <span class="p">(</span><span class="n">GetAssertionResp</span><span class="p">,</span><span class="n">MakeCredentialResp</span><span class="p">,</span><span class="n">GetClientPINResp</span><span class="p">,</span>
     <span class="n">GetInfoResp</span><span class="p">,</span><span class="n">ResetResp</span><span class="p">,</span><span class="n">AUTHN_GETINFO_OPTION</span><span class="p">,</span><span class="n">AUTHN_GETINFO_TRANSPORT</span><span class="p">,</span><span class="n">AUTHN_GETINFO_VERSION</span><span class="p">,</span>
     <span class="n">AUTHN_GETINFO_PIN_UV_PROTOCOL</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">authenticator.storage</span> <span class="k">import</span> <span class="n">DICEAuthenticatorStorage</span>
 <span class="kn">from</span> <span class="nn">authenticator.json_storage</span> <span class="k">import</span> <span class="n">EncryptedJSONAuthenticatorStorage</span>
 <span class="kn">from</span> <span class="nn">authenticator.ui</span> <span class="k">import</span> <span class="n">QTAuthenticatorUI</span>
 <span class="kn">import</span> <span class="nn">ctap.constants</span>
@@ -228,25 +229,36 @@
     <span class="n">VERSION</span> <span class="o">=</span> <span class="n">AuthenticatorVersion</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">DICEKEY_AUTHENTICATOR_AAGUID</span> <span class="o">=</span> <span class="n">UUID</span><span class="p">(</span><span class="s2">&quot;c9181f2f-eb16-452a-afb5-847e621b92aa&quot;</span><span class="p">)</span>
     <span class="n">KEEP_ALIVE_TIME_MS</span><span class="o">=</span><span class="mi">180000</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1">#allow list of crypto providers, may be a subset of all available providers</span>
-        <span class="c1">#super().__init__(ui=QTAuthenticatorUI())</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ui</span><span class="o">=</span><span class="n">QTAuthenticatorUI</span><span class="p">())</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Instantiate an instance of DICEKey</span>
+
+<span class="sd">    This provides an example concrete implementation. It can be subclasses and</span>
+<span class="sd">    overridden to modify only some functions, whilst leaving the remain as the</span>
+<span class="sd">    default implementation.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        storage_cls (DICEAuthenticatorStorage): a class reference to a storage object</span>
+<span class="sd">            which will be instantiated after the UI has loaded. It will be passed two</span>
+<span class="sd">            named arguments, path specifiying the string path to the storage file and</span>
+<span class="sd">            pwd which represents the user password. Defaults to</span>
+<span class="sd">            EncrypedJSONAuthenticatorStorage.</span>
+
+<span class="sd">            PLEASE NOTE: this must be a class reference not an instance.</span>
+
+<span class="sd">        ui (DICEAuthenticatorUI): instance of a UI class to use for user interactions</span>
+<span class="sd">            with the authenticator. Defaults to QTAuthenticatorUI</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage_cls</span><span class="p">:</span><span class="n">DICEAuthenticatorStorage</span><span class="o">=</span><span class="n">EncryptedJSONAuthenticatorStorage</span><span class="p">,</span><span class="n">ui</span><span class="p">:</span><span class="n">DICEAuthenticatorUI</span><span class="o">=</span><span class="n">QTAuthenticatorUI</span><span class="p">()):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ui</span><span class="o">=</span><span class="n">ui</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage_cls</span> <span class="o">=</span> <span class="n">storage_cls</span>
         <span class="c1">#prepare authenticator</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_user_verification_capable</span> <span class="o">=</span> <span class="kc">False</span>
 
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_providers</span> <span class="o">=</span> <span class="p">[]</span>
 
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_credential_wrapper</span> <span class="o">=</span> <span class="n">AESCredentialWrapper</span><span class="p">()</span>
-        <span class="c1">#This can be user configurable</span>
 
-
-
-        <span class="c1">#self._providers_idx = {}</span>
-        <span class="c1">#for provider in crypto_providers:</span>
-        <span class="c1">#    self._providers_idx[provider.get_alg()] = provider</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">get_info_resp</span> <span class="o">=</span> <span class="n">GetInfoResp</span><span class="p">(</span><span class="n">DICEAuthenticator</span><span class="o">.</span><span class="n">AUTHENTICATOR_AAGUID</span><span class="o">.</span><span class="n">bytes</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">get_info_resp</span><span class="o">.</span><span class="n">set_auguid</span><span class="p">(</span><span class="n">DICEKey</span><span class="o">.</span><span class="n">DICEKEY_AUTHENTICATOR_AAGUID</span><span class="p">)</span>
 
@@ -309,7 +321,8 @@
         <span class="n">pwd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui</span><span class="o">.</span><span class="n">get_user_password</span><span class="p">(</span><span class="s2">&quot;Please enter your password:&quot;</span><span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Initialising Encrypted Storage&quot;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span> <span class="o">=</span> <span class="n">EncryptedJSONAuthenticatorStorage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefs</span><span class="o">.</span><span class="n">get_auth_store_path</span><span class="p">(),</span><span class="n">pwd</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage_cls</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefs</span><span class="o">.</span><span class="n">get_auth_store_path</span><span class="p">(),</span><span class="n">pwd</span><span class="o">=</span><span class="n">pwd</span><span class="p">)</span>
+
         <span class="k">except</span> <span class="n">InvalidToken</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Incorrect password entered&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_ui</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
@@ -533,6 +546,7 @@
         <span class="c1">#We put this last so the returned value can be</span>
         <span class="c1"># updated - not sure this actually has any impact</span>
         <span class="n">response</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">credential_source</span><span class="o">.</span><span class="n">get_public_key_credential_descriptor</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">update_credential_source</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get_rp_id</span><span class="p">(),</span><span class="n">credential_source</span><span class="p">)</span>
         <span class="n">keep_alive</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">GetAssertionResp</span><span class="p">(</span><span class="n">response</span><span class="p">,</span><span class="n">number_of_credentials</span><span class="p">)</span></div>
 
@@ -580,6 +594,7 @@
         <span class="c1"># updated - not sure this actually has any impact</span>
         <span class="n">response</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">credential_source</span><span class="o">.</span><span class="n">get_public_key_credential_descriptor</span><span class="p">()</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">update_credential_source</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get_rp_id</span><span class="p">(),</span><span class="n">credential_source</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">GetAssertionResp</span><span class="p">(</span><span class="n">response</span><span class="p">,</span><span class="n">number_of_credentials</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="DICEKey.authenticator_reset"><a class="viewcode-back" href="../dice_key.html#dice_key.DICEKey.authenticator_reset">[docs]</a>    <span class="k">def</span> <span class="nf">authenticator_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keep_alive</span><span class="p">:</span><span class="n">CTAPHIDKeepAlive</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResetResp</span><span class="p">:</span>
