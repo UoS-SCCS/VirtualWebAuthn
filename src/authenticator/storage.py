@@ -2,11 +2,10 @@
 that storage mechanisms must implement to act as storage
 provider for an Authenticator.
 
-Should consider also how to encrypt/protect the underlying
-storage medium
+Should consider also how to encrypt/protect the underlying storage medium
+"""
+"""
 
-"""
-"""
  © Copyright 2020-2021 University of Surrey
 
  Redistribution and use in source and binary forms, with or without
@@ -40,8 +39,10 @@ class DICEAuthenticatorStorage(ABC):
     """Abstract authenticator storage class defining core
     functionality that storage methods must provide
 
+     Args:
+            \*\*args: variable number of named arguments to handle subclassing
     """
-    def __init__(self):
+    def __init__(self,**args):
         pass
 
     @abstractmethod
@@ -294,7 +295,7 @@ class DICEAuthenticatorStorage(ABC):
         """
 
 
-    def convert_allow_list_to_map(self, allow_list:[PublicKeyCredentialDescriptor]):
+    def convert_allow_list_to_map(self, allow_list:List[PublicKeyCredentialDescriptor]):
         """Converts an allow list received from the client into a
         map for use with filtering credentials. In effect iterates
         through credentials in allow list and indexes them by

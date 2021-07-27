@@ -42,7 +42,7 @@ import json
 import logging
 import os
 import base64
-
+from typing import  List
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -186,7 +186,7 @@ class JSONAuthenticatorStorage(DICEAuthenticatorStorage):
             return None
         return self.get_credential_source_by_rp(rp_id,[{"id":user_id,"type":"public-key"}])
 
-    def get_credential_source_by_rp(self,rp_id:str,allow_list=None)->{PublicKeyCredentialSource}:
+    def get_credential_source_by_rp(self,rp_id:str,allow_list=None)->List[PublicKeyCredentialSource]:
         if not rp_id in self._data[STORAGE_KEYS.CREDENTIALS]:
             return []
         allowed = None

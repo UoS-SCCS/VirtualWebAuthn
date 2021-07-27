@@ -47,7 +47,7 @@ from crypto.tpm_es256_crypto_provider import TPMES256CryptoProvider
 from crypto.es256_crypto_provider import ES256CryptoProvider
 from crypto.aes_credential_wrapper import AESCredentialWrapper
 from crypto.algs import PUBLIC_KEY_ALG
-from authenticator.ui import DICEAuthenticatorListener
+from authenticator.ui import DICEAuthenticatorListener,DICEAuthenticatorUI
 from authenticator.diceauthenticator import DICEAuthenticator
 from authenticator.datatypes import (DICEAuthenticatorException,AuthenticatorGetClientPINParameters,
     AuthenticatorGetAssertionParameters,AuthenticatorMakeCredentialParameters,
@@ -55,6 +55,7 @@ from authenticator.datatypes import (DICEAuthenticatorException,AuthenticatorGet
 from authenticator.cbor import (GetAssertionResp,MakeCredentialResp,GetClientPINResp,
     GetInfoResp,ResetResp,AUTHN_GETINFO_OPTION,AUTHN_GETINFO_TRANSPORT,AUTHN_GETINFO_VERSION,
     AUTHN_GETINFO_PIN_UV_PROTOCOL)
+from authenticator.storage import DICEAuthenticatorStorage
 from authenticator.json_storage import EncryptedJSONAuthenticatorStorage
 from authenticator.ui import QTAuthenticatorUI
 import ctap.constants
@@ -74,25 +75,36 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
     VERSION = AuthenticatorVersion(2,1,0,0)
     DICEKEY_AUTHENTICATOR_AAGUID = UUID("c9181f2f-eb16-452a-afb5-847e621b92aa")
     KEEP_ALIVE_TIME_MS=180000
-    def __init__(self):
-        #allow list of crypto providers, may be a subset of all available providers
-        #super().__init__(ui=QTAuthenticatorUI())
-        super().__init__(ui=QTAuthenticatorUI())
+
+    """
+    Instantiate an instance of DICEKey
+
+    This provides an example concrete implementation. It can be subclasses and
+    overridden to modify only some functions, whilst leaving the remain as the
+    default implementation.
+
+    Args:
+        storage_cls (DICEAuthenticatorStorage): a class reference to a storage object
+            which will be instantiated after the UI has loaded. It will be passed two
+            named arguments, path specifiying the string path to the storage file and
+            pwd which represents the user password. Defaults to
+            EncrypedJSONAuthenticatorStorage.
+
+            PLEASE NOTE: this must be a class reference not an instance.
+
+        ui (DICEAuthenticatorUI): instance of a UI class to use for user interactions
+            with the authenticator. Defaults to QTAuthenticatorUI
+    """
+    def __init__(self, storage_cls:DICEAuthenticatorStorage=EncryptedJSONAuthenticatorStorage,ui:DICEAuthenticatorUI=QTAuthenticatorUI()):
+        super().__init__(ui=ui)
+        self._storage_cls = storage_cls
         #prepare authenticator
         self._user_verification_capable = False
 
-
         self._providers = []
 
-
         self._credential_wrapper = AESCredentialWrapper()
-        #This can be user configurable
 
-
-
-        #self._providers_idx = {}
-        #for provider in crypto_providers:
-        #    self._providers_idx[provider.get_alg()] = provider
         self.get_info_resp = GetInfoResp(DICEAuthenticator.AUTHENTICATOR_AAGUID.bytes)
         self.get_info_resp.set_auguid(DICEKey.DICEKEY_AUTHENTICATOR_AAGUID)
 
@@ -155,7 +167,8 @@ class DICEKey(DICEAuthenticator,DICEAuthenticatorListener):
         pwd = self._ui.get_user_password("Please enter your password:")
         log.debug("Initialising Encrypted Storage")
         try:
-            self._storage = EncryptedJSONAuthenticatorStorage(self._prefs.get_auth_store_path(),pwd)
+            self._storage = self._storage_cls(path=self._prefs.get_auth_store_path(),pwd=pwd)
+
         except InvalidToken:
             log.debug("Incorrect password entered")
             self._ui.shutdown()
