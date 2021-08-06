@@ -67,7 +67,7 @@
 int main(int argc, char *argv[])
 {
     if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <data directory> <log level (1, 2 or 3>\n";
+        std::cerr << "Usage: " << argv[0] << " <data directory> <log level (1, 2 or 3)>\n";
         return EXIT_FAILURE;
     }
 
