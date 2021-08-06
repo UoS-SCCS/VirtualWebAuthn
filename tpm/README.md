@@ -20,8 +20,15 @@ storage root key.
    3. cmake ..
    4. make
 
-* Once complete you should have a `./tpm/lib/libwatpm.so` file
-
+* Once complete you should have a `./tpm/lib/libwatpm.so` file and a simple test
+program ./tpm/src/Build/bin/test_wa_tpm. This does a simple test of the TPM library.
+To run the program, first start the TPM simulator and set the environment variables
+as given below. Then run the program:
+   bin/test_wa_tpm <data directory> <log level (1, 2 or 3>
+The data directory is where the log file and any TPM temporary files will be stored.
+The program displays some intermediate results and should end with:
+   OpenSSL verified the ECDSA Signature.
+   
 ### Setting Environment Variables
 * Note:  as described in [Installing_IBM_software](Installing_IBM_software.md) you
 will need to have set the environment variables in the terminal where you launch
