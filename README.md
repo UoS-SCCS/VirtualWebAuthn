@@ -15,7 +15,7 @@ Helen Treharne
 
 [1]: arxiv link <br>
 [2]: https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/N028295/1 <br>
-[3]: https://dblp.org/pid/37/5761.html <br>
+[3]: Privacy-Preserving Electronic Ticket Scheme with Attribute-Based Credentials. https://dblp.org/pid/37/5761.html <br>
 [4}: https://link.springer.com/chapter/10.1007%2F978-3-030-64455-0_2  <br>
 
 ## Setup
