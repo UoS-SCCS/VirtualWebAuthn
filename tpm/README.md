@@ -21,7 +21,7 @@ storage root key.
    4. make
 
 * Once complete you should have a `./tpm/lib/libwatpm.so` file and a simple test
-program ./tpm/src/Build/bin/test_wa_tpm. This does a simple test of the TPM library.
+program `./tpm/src/Build/bin/test_wa_tpm`. This does a simple test of the TPM library.
 
 To run the program, first start the TPM simulator and set the environment variables
 as given below. Then run the program:
