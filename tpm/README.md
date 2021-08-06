@@ -22,11 +22,9 @@ storage root key.
 
 * Once complete you should have a `./tpm/lib/libwatpm.so` file and a simple test
 program `./tpm/src/Build/bin/test_wa_tpm`. This does a simple test of the TPM library.
-
 To run the program, first start the TPM simulator and set the environment variables
 as given below. Then run the program:
    * bin/test_wa_tpm <data directory> <log level (1, 2 or 3>
-   
 The data directory is where the log file and any TPM temporary files will be stored.
 The program displays some intermediate results and should end with:
    * OpenSSL verified the ECDSA Signature.
