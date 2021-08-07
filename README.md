@@ -1,7 +1,7 @@
 # Virtual WebAuthn Authenticator
 This repository contains the development of a Virtual CTAP2 WebAuthn authenticator. The authenticator is intended to provide a platform for testing and development of WebAuthn/CTAP2 protocols and extensions.
 
-It provides a code base for two kinds of authenticators. Firstly, a software only authenticator and secondly, a proof of concept implementation of a Trusted Platform Module (TPM) based authenticator, with associated interfaces and libraries for using a TPM as the underlying credential store. It is the first in a series of open source contributions that we will make in the area of WebAuthn authenticator platforms.
+It provides a code base for two kinds of authenticators. Firstly, a software only authenticator, second, a proof of concept implementation of a Trusted Platform Module (TPM) based authenticator, with associated interfaces and libraries for using a TPM as the underlying credential store. It is the first in a series of open source contributions that we will make in the area of WebAuthn authenticator platforms.
 
 There is documentation within the code repository and an accompanying technical report on [Arxiv]().
 
