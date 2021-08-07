@@ -2,10 +2,10 @@
 This repository contains work in progress for building a Virtual WebAuthN Token.
 
 ## Current Status
-Proof of concept implementation, currently status:
+Proof of concept implementation, current status:
 ### Implemented
 * CTAPHID commands
-    * CTAPHID_MSG
+    * CTAPHID_MSG (partial)
     * CTAPHID_CBOR
     * CTAPHID_INIT
     * CTAPHID_PING
@@ -33,24 +33,14 @@ Proof of concept implementation, currently status:
 
 ### TODO
 * CTAPHID commands
-    * CTAPHID_MSG - Will not implement in this version, it is for CTAP1/U2F which doesn't provide the functionality we want in any case
+    * CTAPHID_MSG - The framework for this implemented but he current proof of concept authenticator does not handle this message since it is for CTAP1/U2F which doesn't provide the functionality being explored
     * ~~CTAPHID_LOCK~~ implemented but not tested due to client not using it
-* ~~Full parameters validation with associated error message returns for all of the above. Functional validation is there, i.e. incorrect PIN, but format and structure checks are still to be implemented - This is largely complete, some additional validation will be required once all options and extensions are supported~~
-* ~~Extensions and options in MakeCredential and GetAssertion~~
-    * ~~options (rk and uv) are in principle implemented by require some UI additions~~
-* ~~_Resident Key Option_~~ This is now complete, it is a parameter option
-* ~~UI to obtain presence/user verification and display relying party information~~
-    * ~~initial implementation has started - further investigation of exactly what constitutes verification and consent~~
 * Additional Attestation Statement formats
-* ~~Additional Crypto Providers~~ TPM Crypto provider implemented
 * Additional Attestation Types
-* ~~Documentation~~ code level documentation complete - all functions/methods classes
 * Expand to handle different simultaneous TPM and non-TPM crypto providers for the same algorithm
 
-**You should now run dice_key.py to start the authenticator**
-
 ## Setup
-I would recommed performing the following in a Virtual Machine, I've tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device.
+We would recommed performing the following in a Virtual Machine, it has been tested on Ubuntu 20.04. The kernel version needs to be fairly recent to include a patch that would cause errors when creating the virtual USB device.
 
 ### Virtual Machine Setup
 * Download VirtualBox [https://www.virtualbox.org/](https://www.virtualbox.org/)
@@ -136,7 +126,7 @@ I would recommed performing the following in a Virtual Machine, I've tested on U
     [26094.309302] hid-generic 0003:16C0:05DF.0002: hiddev0,hidraw0: USB HID v1.01 Device [DICEProject DICEKey Software Authenticator] on usb-dummy_hcd.0-1/input0
 
     ```
-* At this point you should see three new devices, twoprefixed with `hidraw` and `hidg` (For example, `hidraw0` and `hidg0`), and one called `dicekey`. I have had some problems with this happening, particularly after a soft restart, i.e. out of suspend. If in doubt reboot and repeat the steps above.
+* At this point you should see three new devices, two prefixed with `hidraw` and `hidg` (For example, `hidraw0` and `hidg0`), and one called `dicekey`. If you have any problems in not seening these devices try rebooting the machine first and trying again.
 
 #### Setup TPM
 * Follow the instructions in [Installing_IBM_software](Installing_IBM_software.md) to create and start the IBM Simulator
