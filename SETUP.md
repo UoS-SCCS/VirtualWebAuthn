@@ -33,7 +33,7 @@ Proof of concept implementation, current status:
 
 ### TODO
 * CTAPHID commands
-    * CTAPHID_MSG - The framework for this implemented but he current proof of concept authenticator does not handle this message since it is for CTAP1/U2F which doesn't provide the functionality being explored
+    * CTAPHID_MSG - The USB handling of this is implemented in the framework but no message handling code has been written since it is for CTAP1/U2F which doesn't provide the functionality being explored in the current project. Such functionality could be added by extending the process\_msg\_request function in ctap.py and adding the necessary functions to the authenticator framework.
     * ~~CTAPHID_LOCK~~ implemented but not tested due to client not using it
 * Additional Attestation Statement formats
 * Additional Attestation Types
