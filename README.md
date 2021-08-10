@@ -3,7 +3,7 @@ This repository contains the development of a Virtual CTAP2 WebAuthn authenticat
 
 It provides a code base for two kinds of authenticators. Firstly, a software only authenticator, second, a proof of concept implementation of a Trusted Platform Module (TPM) based authenticator, with associated interfaces and libraries for using a TPM as the underlying credential store. It is the first in a series of open source contributions that we will make in the area of WebAuthn authenticator platforms.
 
-There is documentation within the code repository and an accompanying technical report on [Arxiv]().
+There is documentation within the code repository and an accompanying technical report on [Arxiv](http://arxiv.org/abs/2108.04131).
 
 The code was produced as part of the [EPSRC project](https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/N028295/1) that focused on Data to Improve the Customer Experience (DICE). The project's main application domain was intelligent transport systems (ITS) but the scope included ensuring security and data privacy when using web services, for example in the case of [smart ticketing](https://doi.org/10.1109/TDSC.2019.2940946) and [emerging technologies](https://doi.org/10.1007/978-3-030-64455-0_2) that could be applicable in the ITS domain.
 
